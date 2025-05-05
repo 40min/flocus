@@ -1,11 +1,11 @@
 import pytest
-from app.api.schemas.user import UserCreate, UserResponse
+from app.api.schemas.user import UserCreateRequest, UserResponse
 from app.core.config import settings
 
 pytestmark = pytest.mark.asyncio
 
 async def test_register_user(async_client, test_db):
-    user_data = UserCreate(
+    user_data = UserCreateRequest(
         username="testuser",
         email="test@example.com",
         first_name="Test",
@@ -28,7 +28,7 @@ async def test_register_user(async_client, test_db):
 
 async def test_login_user(async_client, test_db):
     # First register the user
-    register_data = UserCreate(
+    register_data = UserCreateRequest(
         username="testuser",
         email="test@example.com",
         first_name="Test",

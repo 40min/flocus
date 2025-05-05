@@ -3,10 +3,9 @@ import asyncio
 from async_generator import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from odmantic import AIOEngine
-from fastapi import FastAPI
 from httpx import AsyncClient, ASGITransport
 from app.core.config import settings
-from app.models.user import User
+from app.db.models.user import User
 from app.main import app
 from app.db.connection import set_test_engine
 import pytest_asyncio

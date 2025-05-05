@@ -4,18 +4,18 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta
 from jose import jwt
 
-from app.api.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.api.schemas.user import UserCreateRequest, UserUpdateRequest, UserResponse
 from app.db.models.user import User
 from app.db.connection import get_database
 from app.core.security import create_access_token, verify_password, hash_password
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, settings
 from odmantic import AIOEngine
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
-async def register(user_data: UserCreate, database: AIOEngine = Depends(get_database)):
+async def register(user_data: UserCreateRequest, database: AIOEngine = Depends(get_database)):
     # Check if user already exists by username
     existing_user = await database.find_one(User, {"username": user_data.username})
     if existing_user:
@@ -34,7 +34,16 @@ async def register(user_data: UserCreate, database: AIOEngine = Depends(get_data
         hashed_password=hashed_password
     )
     created_user = await database.save(user)
-    return created_user
+    
+    # Convert the user object to a dict and explicitly convert ObjectId to string
+    user_dict = {
+        "id": str(created_user.id),
+        "username": created_user.username,
+        "email": created_user.email,
+        "first_name": created_user.first_name,
+        "last_name": created_user.last_name
+    }
+    return user_dict
 
 @router.post("/login", response_model=dict)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), database: AIOEngine = Depends(get_database)):
@@ -55,8 +64,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), database: AIOE
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(token: str = Depends(oauth2_scheme), database: AIOEngine = Depends(get_database)):
     try:
-        
-        payload = jwt.decode(token, "YOUR_SECRET_KEY", algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         username = payload.get("sub")
         if username is None:
             raise HTTPException(
@@ -72,24 +80,55 @@ async def get_current_user(token: str = Depends(oauth2_scheme), database: AIOEng
     user = await database.find_one(User, {"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    
+    # Convert the user object to a dict and explicitly convert ObjectId to string
+    user_dict = {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }
+    return user_dict
 
 @router.get("/", response_model=List[UserResponse])
 async def get_all_users(current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
     users = await database.find(User)
-    return users
+    
+    # Convert each user object to a dict with string ID
+    user_list = []
+    for user in users:
+        user_dict = {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
+        user_list.append(user_dict)
+    
+    return user_list
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str, current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
     user = await database.find_one(User, User.id == user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    
+    # Convert the user object to a dict and explicitly convert ObjectId to string
+    user_dict = {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }
+    return user_dict
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
-    user_id: str, 
-    user_data: UserUpdate, 
+    user_id: str,
+    user_data: UserUpdateRequest,
     current_user: User = Depends(get_current_user),
     database: AIOEngine = Depends(get_database)
 ):
@@ -112,16 +151,25 @@ async def update_user(
     
     # Update fields if provided
     if user_data.email is not None:
-    existing_user.email = user_data.email
-if user_data.first_name is not None:
-    existing_user.first_name = user_data.first_name
-if user_data.last_name is not None:
-    existing_user.last_name = user_data.last_name
+        existing_user.email = user_data.email
+    if user_data.first_name is not None:
+        existing_user.first_name = user_data.first_name
+    if user_data.last_name is not None:
+        existing_user.last_name = user_data.last_name
     if user_data.password:
         existing_user.hashed_password = hash_password(user_data.password)
-    
+
     updated_user = await database.save(existing_user)
-    return updated_user
+    
+    # Convert the user object to a dict and explicitly convert ObjectId to string
+    user_dict = {
+        "id": str(updated_user.id),
+        "username": updated_user.username,
+        "email": updated_user.email,
+        "first_name": updated_user.first_name,
+        "last_name": updated_user.last_name
+    }
+    return user_dict
 
 @router.delete("/{user_id}", response_model=dict)
 async def delete_user(user_id: str, current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):

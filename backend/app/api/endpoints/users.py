@@ -4,11 +4,15 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta
 from jose import jwt
 
+from bson import ObjectId
+from bson.errors import InvalidId
+
 from app.api.schemas.user import UserCreateRequest, UserUpdateRequest, UserResponse
 from app.db.models.user import User
 from app.db.connection import get_database
 from app.core.security import create_access_token, verify_password, hash_password
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, settings
+from app.core.dependencies import get_validated_user_id # Import the dependency validator
 from odmantic import AIOEngine
 
 router = APIRouter()
@@ -22,6 +26,14 @@ async def register(user_data: UserCreateRequest, database: AIOEngine = Depends(g
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered"
+        )
+
+    # Check if user already exists by email
+    existing_user_email = await database.find_one(User, {"email": user_data.email})
+    if existing_user_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
         )
 
     # Create new user with hashed password
@@ -92,9 +104,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), database: AIOEng
     return user_dict
 
 @router.get("/", response_model=List[UserResponse])
-async def get_all_users(current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
+async def get_all_users(current_user: dict = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
     users = await database.find(User)
-    
     # Convert each user object to a dict with string ID
     user_list = []
     for user in users:
@@ -110,8 +121,9 @@ async def get_all_users(current_user: User = Depends(get_current_user), database
     return user_list
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: str, current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
-    user = await database.find_one(User, User.id == user_id)
+async def get_user(user_id: ObjectId = Depends(get_validated_user_id), current_user: dict = Depends(get_current_user), database: AIOEngine = Depends(get_database)): # Dependency returns dict
+        
+    user = await database.find_one(User, User.id == user_id) # Use the validated user_id directly
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -127,20 +139,23 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user),
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
-    user_id: str,
     user_data: UserUpdateRequest,
-    current_user: User = Depends(get_current_user),
+    user_id: ObjectId = Depends(get_validated_user_id),
+    current_user: dict = Depends(get_current_user), # Dependency returns dict
     database: AIOEngine = Depends(get_database)
 ):
-    existing_user = await database.find_one(User, User.id == user_id)
+    # user_id is now automatically validated and converted to ObjectId by the dependency
+        
+    existing_user = await database.find_one(User, User.id == user_id) # Use the validated user_id directly
     if existing_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Only allow users to update their own data
-    if str(existing_user.id) != str(current_user.id):
+    # Compare string IDs: existing user's ObjectId converted to str vs current_user dict's 'id' field
+    if str(existing_user.id) != current_user['id']:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
     
-    # Check if new username is provided and already taken
+    # Check if new email is provided and already taken (compare with existing_user model)
     if user_data.email != existing_user.email:
         email_taken = await database.find_one(User, {"email": user_data.email})
         if email_taken:
@@ -172,13 +187,16 @@ async def update_user(
     return user_dict
 
 @router.delete("/{user_id}", response_model=dict)
-async def delete_user(user_id: str, current_user: User = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
-    user = await database.find_one(User, User.id == user_id)
+async def delete_user(user_id: ObjectId = Depends(get_validated_user_id), current_user: dict = Depends(get_current_user), database: AIOEngine = Depends(get_database)): # Dependency returns dict
+    # user_id is now automatically validated and converted to ObjectId by the dependency
+        
+    user = await database.find_one(User, User.id == user_id) # Use the validated user_id directly
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Only allow users to delete their own account
-    if str(user.id) != str(current_user.id):
+    # Compare string IDs: fetched user's ObjectId converted to str vs current_user dict's 'id' field
+    if str(user.id) != current_user['id']:
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
     
     await database.delete(user)

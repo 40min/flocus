@@ -1,0 +1,2 @@
+* When you start new task with backend always do `cd /Users/40min/www/flocus/backend && source venv/bin/activate`
+* Tests can be run with the command `pytest`

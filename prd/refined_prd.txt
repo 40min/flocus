@@ -1,0 +1,101 @@
+# Overview
+
+A "personal scheduler" application designed to help software engineers plan their workday effectively. The application will be used locally on macOS, with the potential for future extension to different clients. It features a decoupled frontend (React, TypeScript, Tailwind) and backend (Python/FastAPI) interacting through a REST API. Data will be stored in MongoDB.
+
+# Core Features
+
+-   **Customizable Day Templates:** Users can create custom templates for their day, dividing it into categorized time windows (e.g., Tasks, Daily Routines, Learning, Development).
+-   **Adjustable Time Intervals:** Each time window category can have an adjustable time interval, which can be further adjusted on a per-day basis.
+-   **Task Management:** Windows are filled from non-completed tasks from the previous day and a categorized heap of new tasks. A separate page allows adding new tasks.
+-   **Pomodoro Integration:** The app uses the Pomodoro technique with adjustable time intervals to plan tasks based on "clear time" (excluding rest time).
+-   **Time Tracking:** The working day page includes sections for:
+    -   Overall available time (excluding rest)
+    -   Lacking time (if more tasks are added than the working day allows)
+    -   Missing time (time lost due to distractions, calculated based on Pomodoro pauses)
+    -   Stopped time (time of starting a distraction pause)
+-   **Daily Planning:** Sections for target task of the day, notes for tomorrow, and a self-reflection section ("How do I feel") to be filled every morning for the previous day (Bad/Problems, Good).
+
+# User Experience
+
+-   **User Personas:** Software engineers who want to optimize their workday and track their time effectively.
+-   **Key User Flows:**
+    -   Creating a custom day template with categorized time windows.
+    -   Adjusting time intervals for each category.
+    -   Adding new tasks to the categorized heap.
+    -   Planning the working day based on the template and available tasks.
+    -   Tracking time and managing distractions.
+    -   Reviewing daily progress and self-reflection.
+-   **UI/UX Considerations:**
+    -   Intuitive GUI for macOS.
+    -   Clear visualization of time windows and tasks.
+    -   Easy-to-use Pomodoro timer.
+    -   Self-reflection prompts to encourage mindful work habits.
+
+# Technical Architecture
+
+-   **System Components:**
+    -   Frontend (React, TypeScript, Tailwind): Handles user interface and interactions.
+    -   Backend (Python/FastAPI): Manages data, API endpoints, and business logic.
+    -   Database (MongoDB): Stores user data, templates, tasks, and time tracking information.
+-   **Data Models:**
+    -   User: Stores user preferences, templates, and historical data.
+    -   Template: Defines the structure of a day with categorized time windows.
+    -   Task: Represents a task with category, description, and time estimate.
+    -   TimeLog: Records time tracking information for each day.
+-   **APIs and Integrations:**
+    -   REST API for communication between frontend and backend.
+-   **Infrastructure Requirements:**
+    -   macOS environment for local application use.
+    -   MongoDB instance for data storage.
+
+# Development Roadmap
+
+-   **MVP Requirements:**
+    -   Basic day template creation and customization.
+    -   Task management (adding, categorizing, and prioritizing tasks).
+    -   Pomodoro timer with adjustable intervals.
+    -   Time tracking (overall available, lacking, missing, stopped).
+    -   Basic UI for macOS.
+-   **Future Enhancements:**
+    -   Integration with other calendar applications.
+    -   Mobile app versions (iOS, Android).
+    -   Advanced reporting and analytics.
+    -   Collaboration features.
+
+# Logical Dependency Chain
+
+1.  **Backend Setup:**
+    -   Set up the Python/FastAPI backend with basic API endpoints.
+    -   Connect to MongoDB.
+    -   Implement data models.
+2.  **Frontend Development:**
+    -   Develop the React frontend with TypeScript and Tailwind.
+    -   Implement basic UI components.
+    -   Connect to the backend API.
+3.  **Core Features:**
+    -   Implement day template creation and customization.
+    -   Implement task management.
+    -   Implement Pomodoro timer.
+    -   Implement time tracking.
+4.  **UI/UX Improvements:**
+    -   Refine the UI based on user feedback.
+    -   Add self-reflection prompts.
+
+# Risks and Mitigations
+
+-   **Technical Challenges:**
+    -   Ensuring seamless communication between frontend and backend.
+        -   Mitigation: Thorough testing and documentation of the API.
+    -   Optimizing data storage and retrieval.
+        -   Mitigation: Use appropriate indexing and caching strategies.
+-   **MVP Definition:**
+    -   Identifying the core features that can be delivered quickly and provide value to users.
+        -   Mitigation: Prioritize features based on user needs and technical feasibility.
+-   **Resource Constraints:**
+    -   Limited development resources.
+        -   Mitigation: Focus on delivering the MVP and prioritize future enhancements based on available resources.
+
+# Appendix
+
+-   Research findings on time management techniques and productivity tools.
+-   Technical specifications for the API endpoints and data models.

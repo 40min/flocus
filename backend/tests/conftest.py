@@ -10,14 +10,6 @@ from app.main import app
 from app.db.connection import set_test_engine
 import pytest_asyncio
 
-@pytest_asyncio.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
-
 @asynccontextmanager
 async def get_test_db():
     """Get test database."""

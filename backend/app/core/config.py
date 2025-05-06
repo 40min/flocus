@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
@@ -7,9 +7,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = None
     react_app_api_base_url: str = "https://api.example.com"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
     
 settings = Settings()
 

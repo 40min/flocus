@@ -1,4 +1,4 @@
-from pydantic import EmailStr, BaseModel, Field as PydanticField
+from pydantic import EmailStr, BaseModel, Field as PydanticField, ConfigDict
 from typing import Optional
 from bson import ObjectId
 
@@ -25,9 +25,10 @@ class UserResponse(UserBase):
     id: str
     username: str
 
-    class Config:
-        from_attributes = True
-        json_encoders = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
             # Convert ObjectId to str for JSON serialization
-            ObjectId: lambda v: str(v)
-        }
+            ObjectId: lambda v: str(v),
+        },
+    )

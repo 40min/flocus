@@ -1,8 +1,11 @@
-from odmantic import Model, Field as ODMField
-from pydantic import EmailStr, ConfigDict
+from odmantic import Field as ODMField
+from odmantic import Model
+from pydantic import ConfigDict, EmailStr
+
 
 class User(Model):
     """Database model for users"""
+
     username: str = ODMField(unique=True)
     email: EmailStr
     first_name: str

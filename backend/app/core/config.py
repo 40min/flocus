@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DATABASE_NAME: str = "flocus"
@@ -11,7 +12,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
     )
-    
+
+
 settings = Settings()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

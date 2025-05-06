@@ -1,9 +1,11 @@
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse
 import logging
 import traceback
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 logger = logging.getLogger(__name__)
+
 
 async def error_handling_middleware(request: Request, call_next):
     try:

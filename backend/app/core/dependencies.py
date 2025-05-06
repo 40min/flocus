@@ -1,6 +1,6 @@
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import HTTPException, Path, Query, Body
+from fastapi import HTTPException, Path
 
 
 def validate_object_id(id_value: str) -> ObjectId:
@@ -25,6 +25,8 @@ def validate_object_id(id_value: str) -> ObjectId:
         )
 
 
-def get_validated_user_id(user_id: str = Path(..., alias="user_id", description="The ID of the user to retrieve.")) -> ObjectId:
+def get_validated_user_id(
+    user_id: str = Path(..., alias="user_id", description="The ID of the user to retrieve.")
+) -> ObjectId:
     """Dependency function to get and validate the user_id path parameter."""
     return validate_object_id(user_id)

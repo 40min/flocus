@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.endpoints import users
+from app.core.config import settings  # Import settings
 from app.core.middleware import error_handling_middleware
-from app.core.config import settings # Import settings
 
 app = FastAPI()
 

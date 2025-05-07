@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DATABASE_NAME: str = "flocus"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = None
+    SECRET_KEY: str
     react_app_api_base_url: str = "https://api.example.com"
 
     model_config = SettingsConfigDict(

@@ -15,6 +15,16 @@
     ```
 3.  **Update the `.env` file with your actual configuration values.**
 
+4.  **Set the `SECRET_KEY` environment variable:**
+    The `SECRET_KEY` is crucial for securing the application and is a mandatory setting. The application will not start if it's not provided.
+    You can generate a strong, random key using the following command:
+    ```bash
+    openssl rand -hex 32
+    ```
+    Add this key to your `.env` file:
+    ```
+    SECRET_KEY=your_generated_secret_key
+    ```
 ## Installation
 
 1.  **Install dependencies using Poetry:**

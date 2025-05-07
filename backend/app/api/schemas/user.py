@@ -3,6 +3,7 @@ from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, ConfigDict, EmailStr
 from pydantic import Field as PydanticField
+from pydantic import field_validator
 
 
 class UserBase(BaseModel):
@@ -32,13 +33,21 @@ class UserUpdateRequest(BaseModel):
 class UserResponse(UserBase):
     """Schema for user responses"""
 
-    id: str
+    id: str  # Keep as str, validation will handle conversion
     username: str
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_objectid_to_str(cls, value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        return value
 
     model_config = ConfigDict(
         from_attributes=True,
+        # json_encoders are for serialization, not validation input
+        # ObjectId to str conversion for output is still good.
         json_encoders={
-            # Convert ObjectId to str for JSON serialization
             ObjectId: lambda v: str(v),
         },
     )

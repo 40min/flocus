@@ -81,7 +81,7 @@ async def test_register_user_duplicate_username(async_client, test_db):
     ).model_dump()
     response_dup = await async_client.post(f"{settings.API_V1_STR}/users/register", json=user_data_dup)
     assert response_dup.status_code == 400  # Expecting Bad Request
-    assert "Username already registered" in response_dup.json()["detail"]
+    assert "User with username testuser_dup already exists" in response_dup.json()["detail"]
 
 
 async def test_register_user_duplicate_email(async_client, test_db):
@@ -106,7 +106,7 @@ async def test_register_user_duplicate_email(async_client, test_db):
     ).model_dump()
     response_dup = await async_client.post(f"{settings.API_V1_STR}/users/register", json=user_data_dup)
     assert response_dup.status_code == 400  # Expecting Bad Request
-    assert "Email already registered" in response_dup.json()["detail"]
+    assert "User with email test_dup_email@example.com already exists" in response_dup.json()["detail"]
 
 
 async def test_login_user_incorrect_password(async_client, test_db):

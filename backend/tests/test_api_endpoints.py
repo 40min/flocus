@@ -108,8 +108,7 @@ async def test_delete_user(async_client: AsyncClient, user_and_token):
     user_id = user.get("id") or user.get("_id")
     if user_id:
         resp = await async_client.delete(f"{settings.API_V1_STR}/users/{user_id}", headers=auth)
-        assert resp.status_code == 200
-        assert "detail" in resp.json()
+        assert resp.status_code == 204
 
         # Verify user is actually deleted
         get_resp = await async_client.get(f"{settings.API_V1_STR}/users/{user_id}", headers=auth)

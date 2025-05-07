@@ -79,14 +79,6 @@ async def test_get_current_user(async_client: AsyncClient, user_and_token):
 
 
 @pytest.mark.asyncio
-async def test_get_all_users(async_client: AsyncClient, user_and_token):
-    auth = user_and_token["auth"]
-    resp = await async_client.get(f"{settings.API_V1_STR}/users/", headers=auth)
-    assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
-
-
-@pytest.mark.asyncio
 async def test_get_user_by_id(async_client: AsyncClient, user_and_token):
     auth = user_and_token["auth"]
     user = user_and_token["user"]

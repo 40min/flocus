@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import List
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -96,24 +95,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), database: AIOEng
         "last_name": user.last_name,
     }
     return user_dict
-
-
-@router.get("/", response_model=List[UserResponse])
-async def get_all_users(current_user: dict = Depends(get_current_user), database: AIOEngine = Depends(get_database)):
-    users = await database.find(User)
-    # Convert each user object to a dict with string ID
-    user_list = []
-    for user in users:
-        user_dict = {
-            "id": str(user.id),
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-        }
-        user_list.append(user_dict)
-
-    return user_list
 
 
 @router.get("/{user_id}", response_model=UserResponse)

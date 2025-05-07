@@ -1,0 +1,25 @@
+meta {
+  name: Update User
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{base_url}}/api/v1/users/{{user_id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+
+body:json {
+  {
+    "email": "newemail@example.com",
+    "first_name": "UpdatedFirst",
+    "last_name": "UpdatedLast",
+    "password": "newpassword123"
+  }
+}

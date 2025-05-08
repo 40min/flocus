@@ -1,11 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+from odmantic import AIOEngine
 
 from app.api.endpoints import users
 from app.core.config import settings  # Import settings
 from app.core.middleware import error_handling_middleware
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Setup
+    app.state.motor_client = AsyncIOMotorClient(settings.MONGODB_URL)
+    app.state.engine = AIOEngine(client=app.state.motor_client, database=settings.MONGODB_DATABASE_NAME)
+    yield
+    # Cleanup
+    app.state.motor_client.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

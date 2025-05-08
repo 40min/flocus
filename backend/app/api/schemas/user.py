@@ -20,6 +20,11 @@ class UserCreateRequest(UserBase):
     username: str = PydanticField(..., min_length=3, description="Unique username")
     password: str = PydanticField(..., min_length=8, description="User's password")
 
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.lower()
+
 
 class UserUpdateRequest(BaseModel):
     """Schema for user update requests"""
@@ -28,6 +33,13 @@ class UserUpdateRequest(BaseModel):
     first_name: Optional[str] = PydanticField(None, min_length=1)
     last_name: Optional[str] = PydanticField(None, min_length=1)
     password: Optional[str] = PydanticField(None, min_length=8)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: Optional[EmailStr]) -> Optional[EmailStr]:
+        if value:
+            return value.lower()
+        return value
 
 
 class UserResponse(UserBase):

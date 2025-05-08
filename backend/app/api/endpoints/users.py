@@ -3,12 +3,13 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from app.api.schemas.user import UserCreateRequest, UserResponse, UserUpdateRequest
+from app.core.config import settings
 from app.core.dependencies import get_validated_user_id
 from app.db.models.user import User
 from app.services.user_service import UserService
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/users/login")
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)

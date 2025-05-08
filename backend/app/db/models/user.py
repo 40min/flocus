@@ -7,7 +7,7 @@ class User(Model):
     """Database model for users"""
 
     username: str = ODMField(unique=True)
-    email: EmailStr
+    email: EmailStr = ODMField(unique=True)
     first_name: str
     last_name: str
     hashed_password: str

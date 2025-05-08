@@ -7,12 +7,16 @@ from odmantic import AIOEngine
 
 from app.api.endpoints import users
 from app.core.config import settings  # Import settings
+from app.core.logging_config import setup_logging
 from app.core.middleware import error_handling_middleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Setup
+    # Setup logging first
+    setup_logging()
+
+    # Setup database connection
     app.state.motor_client = AsyncIOMotorClient(settings.MONGODB_URL)
     app.state.engine = AIOEngine(client=app.state.motor_client, database=settings.MONGODB_DATABASE_NAME)
     yield

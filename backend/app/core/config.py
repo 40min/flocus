@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"  # Added algorithm for JWT
     react_app_api_base_url: str = "https://api.example.com"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week
+    LOG_LEVEL: str = "INFO"  # Default log level
 
     model_config = SettingsConfigDict(
         env_file=".env",

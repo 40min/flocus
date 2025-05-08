@@ -7,7 +7,7 @@ from jose import jwt
 from odmantic import AIOEngine
 
 from app.api.schemas.user import UserCreateRequest, UserUpdateRequest
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, settings
+from app.core.config import settings
 from app.core.exceptions import ForbiddenException  # Renamed from AuthorizationException
 from app.core.exceptions import InvalidCredentialsException  # Renamed from AuthenticationException
 from app.core.exceptions import (
@@ -50,7 +50,7 @@ class UserService:
         if not user or not verify_password(password, user.hashed_password):
             raise InvalidCredentialsException()  # Use default detail
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
         return access_token  # Return only the token
 

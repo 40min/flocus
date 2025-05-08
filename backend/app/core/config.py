@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"  # Added algorithm for JWT
     react_app_api_base_url: str = "https://api.example.com"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -16,5 +17,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 30

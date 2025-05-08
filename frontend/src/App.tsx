@@ -24,17 +24,18 @@ function App() {
 
   return (
     <Router>
-      <nav>
-        <ul>
-          <li><Link to="/">Home</Link></li>
-          <li><Link to="/about">About</Link></li>
-          {!isLoading && !isAuthenticated && <li><Link to="/login">Login</Link></li>}
-          {!isLoading && !isAuthenticated && <li><Link to="/register">Register</Link></li>}
-          {!isLoading && isAuthenticated && <li><button onClick={logout}>Logout</button></li>}
-        </ul>
-      </nav>
-      <hr />
-      <Routes>
+      <div className="flex flex-col min-h-screen">
+        <nav className="bg-gray-100 p-4">
+          <ul className="flex space-x-4">
+            <li><Link to="/">Home</Link></li>
+            <li><Link to="/about">About</Link></li>
+            {!isLoading && !isAuthenticated && <li><Link to="/login">Login</Link></li>}
+            {!isLoading && !isAuthenticated && <li><Link to="/register">Register</Link></li>}
+            {!isLoading && isAuthenticated && <li><button onClick={logout}>Logout</button></li>}
+          </ul>
+        </nav>
+        <main className="flex-grow container mx-auto p-4">
+          <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
@@ -54,7 +55,9 @@ function App() {
           }
         />
         {/* Add other protected routes here */}
-      </Routes>
+          </Routes>
+        </main>
+      </div>
     </Router>
   );
 }

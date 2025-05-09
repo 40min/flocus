@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerUser, type UserRegistrationData } from '../services/authService';
+import { RetroGrid } from '../components/magicui/RetroGrid';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState<UserRegistrationData>({
@@ -26,8 +27,35 @@ const RegisterPage: React.FC = () => {
       setSuccessMessage('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
-      console.error(err);
+      let errorMessage = 'Registration failed. Please try again.'; // Default message
+
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          // Assuming detail is an array of FastAPI error objects like { msg: string, loc: string[] }
+          errorMessage = detail
+            .map((errorItem: any) => {
+              // FastAPI error format: { loc: ["path", "field"], msg: "message" } or { loc: ["body", "field"], msg: "message" }
+              const field = errorItem.loc && errorItem.loc.length > 1 ? errorItem.loc[errorItem.loc.length - 1] : 'Validation';
+              return `${field.charAt(0).toUpperCase() + field.slice(1)}: ${errorItem.msg}`;
+            })
+            .join('. ');
+          if (!errorMessage.trim()) { // Handle case where map results in empty or whitespace-only string
+            errorMessage = 'Multiple validation errors occurred. Please check your input.';
+          }
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      } else if (err.message) {
+        // Fallback to Axios error message if detail is not available
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      console.error('Registration error object:', err);
+      if (err.response?.data) {
+        console.error('Error response data:', err.response.data);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -42,8 +70,10 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+    <div className="relative flex flex-col flex-grow h-screen w-full items-center justify-center overflow-hidden rounded-lg border bg-background md:shadow-xl">
+      <RetroGrid />
+      {/* Ensure the form is on top and centered */}
+      <div className="z-10 max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div>
           <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900">
             Create your account
@@ -166,7 +196,7 @@ const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200"
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200"
             >
               {isLoading ? (
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -181,7 +211,7 @@ const RegisterPage: React.FC = () => {
 
         <div className="flex items-center justify-center mt-6">
           <div className="text-sm">
-            <a href="/login" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
+            <a href="/login" className="font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200">
               Already have an account? Sign in here
             </a>
           </div>

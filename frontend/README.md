@@ -1,4 +1,8 @@
-# Getting Started with Create React App
+# Flocus Frontend
+
+This directory contains the React/TypeScript frontend application for the Personal Scheduler Application.
+
+For an overview of the entire project, please see the main [README.md](../README.md:1).
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

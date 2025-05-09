@@ -1,6 +1,12 @@
-# Backend Setup Instructions
+# Flocus Backend
 
-## Environment Setup
+This directory contains the Python/FastAPI backend application for the Personal Scheduler Application.
+
+For an overview of the entire project, please see the main [README.md](../README.md:1).
+
+## Setup Instructions
+
+### Environment Setup
 
 1.  **Create a virtual environment:**
 

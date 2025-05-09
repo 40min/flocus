@@ -52,3 +52,7 @@ env/
 *.pyo
 *.dist-info/
 *.egg
+
+# Project specific
+.roo/
+prd/

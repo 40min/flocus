@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { registerUser, type UserRegistrationData } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
+import { AxiosError } from 'axios';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState<UserRegistrationData>({
@@ -22,38 +23,38 @@ const RegisterPage: React.FC = () => {
     setSuccessMessage(null);
     setIsLoading(true);
 
+    interface FastAPIErrorDetail { loc: string[]; msg: string; }
+
     try {
       await registerUser(formData);
       setSuccessMessage('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any) {
-      let errorMessage = 'Registration failed. Please try again.'; // Default message
-
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
+    } catch (err) {
+      setIsLoading(false); // As per example
+      let errorMessage = 'Registration failed. Please try again.';
+      if (err instanceof AxiosError) {
+        const detail = err.response?.data?.detail;
         if (Array.isArray(detail)) {
-          // Assuming detail is an array of FastAPI error objects like { msg: string, loc: string[] }
           errorMessage = detail
-            .map((errorItem: any) => {
-              // FastAPI error format: { loc: ["path", "field"], msg: "message" } or { loc: ["body", "field"], msg: "message" }
+            .map((errorItem: FastAPIErrorDetail) => {
               const field = errorItem.loc && errorItem.loc.length > 1 ? errorItem.loc[errorItem.loc.length - 1] : 'Validation';
               return `${field.charAt(0).toUpperCase() + field.slice(1)}: ${errorItem.msg}`;
             })
             .join('. ');
-          if (!errorMessage.trim()) { // Handle case where map results in empty or whitespace-only string
-            errorMessage = 'Multiple validation errors occurred. Please check your input.';
+          if (!errorMessage.trim()) {
+            errorMessage = 'Multiple validation errors occurred.';
           }
         } else if (typeof detail === 'string') {
           errorMessage = detail;
+        } else if (err.message) { // Fallback to Axios error message
+          errorMessage = err.message;
         }
-      } else if (err.message) {
-        // Fallback to Axios error message if detail is not available
+      } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-
       setError(errorMessage);
       console.error('Registration error object:', err);
-      if (err.response?.data) {
+      if (err instanceof AxiosError && err.response?.data) {
         console.error('Error response data:', err.response.data);
       }
     } finally {
@@ -211,9 +212,9 @@ const RegisterPage: React.FC = () => {
 
         <div className="flex items-center justify-center mt-6">
           <div className="text-sm">
-            <a href="/login" className="font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200">
+            <Link to="/login" className="font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200">
               Already have an account? Sign in here
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginUser, type UserCredentials } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
+import { AxiosError } from 'axios';
 
 const LoginPage: React.FC = () => {
   const [credentials, setCredentials] = useState<UserCredentials>({
@@ -22,8 +23,14 @@ const LoginPage: React.FC = () => {
       const response = await loginUser(credentials);
       await login(response.access_token);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
+    } catch (err) {
+      let message = 'Login failed. Please check your credentials.';
+      if (err instanceof AxiosError) {
+        message = err.response?.data?.detail || message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -121,9 +128,9 @@ const LoginPage: React.FC = () => {
 
         <div className="flex items-center justify-center mt-6">
           <div className="text-sm">
-            <a href="/register" className="font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200">
+            <Link to="/register" className="font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200">
               Don't have an account? Register here
-            </a>
+            </Link>
           </div>
         </div>
         </div>

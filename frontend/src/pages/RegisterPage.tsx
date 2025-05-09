@@ -94,7 +94,7 @@ const RegisterPage: React.FC = () => {
                 name="username"
                 type="text"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="form-input-custom"
                 placeholder="Choose a username"
                 value={formData.username}
                 onChange={handleChange}
@@ -109,7 +109,7 @@ const RegisterPage: React.FC = () => {
                 name="email"
                 type="email"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="form-input-custom"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleChange}
@@ -124,7 +124,7 @@ const RegisterPage: React.FC = () => {
                 name="first_name"
                 type="text"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="form-input-custom"
                 placeholder="Enter your first name"
                 value={formData.first_name}
                 onChange={handleChange}
@@ -139,7 +139,7 @@ const RegisterPage: React.FC = () => {
                 name="last_name"
                 type="text"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="form-input-custom"
                 placeholder="Enter your last name"
                 value={formData.last_name}
                 onChange={handleChange}
@@ -154,7 +154,7 @@ const RegisterPage: React.FC = () => {
                 name="password"
                 type="password"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="form-input-custom"
                 placeholder="Choose a strong password"
                 value={formData.password}
                 onChange={handleChange}

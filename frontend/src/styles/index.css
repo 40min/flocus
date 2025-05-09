@@ -31,31 +31,6 @@
 
 /* Custom components */
 @layer components {
-  /* Navigation styles */
-  nav {
-    background-color: #1f2937; /* Equivalent to Tailwind's gray-800 */
-    padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  nav ul {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    gap: 1rem;
-  }
-
-  nav a {
-    color: #4338ca;
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  nav a:hover {
-    color: #312e81;
-    text-decoration: underline;
-  }
 
   /* Form specific styles */
 

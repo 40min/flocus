@@ -1,14 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 import { getCurrentUser } from '../services/userService';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-}
+import { User } from '../types/user';
 
 interface AuthContextType {
   isAuthenticated: boolean;

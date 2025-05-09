@@ -1,16 +1,10 @@
 import api from './api';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-}
+import { User } from '../types/user';
+import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 export const getAllUsers = async (): Promise<User[]> => {
   try {
-    const response = await api.get<User[]>('/users/');
+    const response = await api.get<User[]>(`${API_ENDPOINTS.USERS_BASE}/`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch users:', error);
@@ -20,7 +14,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 export const getCurrentUser = async (): Promise<User> => {
   try {
-    const response = await api.get<User>('/users/me');
+    const response = await api.get<User>(API_ENDPOINTS.USERS_ME);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch current user:', error);
@@ -30,7 +24,7 @@ export const getCurrentUser = async (): Promise<User> => {
 
 export const getUserById = async (id: string): Promise<User> => {
   try {
-    const response = await api.get<User>(`/users/${id}`);
+    const response = await api.get<User>(API_ENDPOINTS.USER_BY_ID(id));
     return response.data;
   } catch (error) {
     console.error('Failed to fetch user:', error);
@@ -40,7 +34,7 @@ export const getUserById = async (id: string): Promise<User> => {
 
 export const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
   try {
-    const response = await api.put<User>(`/users/${id}`, userData);
+    const response = await api.put<User>(API_ENDPOINTS.USER_BY_ID(id), userData);
     return response.data;
   } catch (error) {
     console.error('Failed to update user:', error);

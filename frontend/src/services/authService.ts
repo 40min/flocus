@@ -1,4 +1,6 @@
 import api from './api';
+import { User } from '../types/user';
+import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 // API Schemas matching backend
 export interface AuthResponse {
@@ -19,21 +21,13 @@ export interface UserRegistrationData {
   last_name: string;
 }
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-}
-
 export const loginUser = async (credentials: UserCredentials): Promise<AuthResponse> => {
   const formData = new URLSearchParams();
   formData.append('username', credentials.username);
   formData.append('password', credentials.password);
 
   try {
-    const response = await api.post<AuthResponse>('/users/login', formData, {
+    const response = await api.post<AuthResponse>(API_ENDPOINTS.LOGIN, formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -47,7 +41,7 @@ export const loginUser = async (credentials: UserCredentials): Promise<AuthRespo
 
 export const registerUser = async (userData: UserRegistrationData): Promise<User> => {
   try {
-    const response = await api.post<User>('/users/register', userData);
+    const response = await api.post<User>(API_ENDPOINTS.REGISTER, userData);
     return response.data;
   } catch (error) {
     console.error('Registration failed:', error);

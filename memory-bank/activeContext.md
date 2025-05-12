@@ -21,8 +21,14 @@ The primary goals for this sprint (Sprint 2) are:
 ## Ongoing Tasks
 
 *   [ ] Set up project architecture with React, TypeScript, Tailwind frontend, Python/FastAPI backend, and MongoDB database - *Assigned to: All*
-*   [ ] Design and implement data models - *Assigned to: All*
-*   [ ] Develop REST API endpoints - *Assigned to: All*
+*   [ ] Design data model for Day Templates (ID 15) - *Assigned to: All*
+*   [ ] Develop API endpoints for Day Templates (ID 16) - *Assigned to: All*
+*   [ ] Design data model for Task Categories (ID 17) - *Assigned to: All*
+*   [ ] Develop API endpoints for Task Categories (ID 18) - *Assigned to: All*
+*   [ ] Design data model for Tasks (ID 19) - *Assigned to: All*
+*   [ ] Develop API endpoints for Tasks (ID 20) - *Assigned to: All*
+*   [ ] Design data model for Working Days (ID 21) - *Assigned to: All*
+*   [ ] Develop API endpoints for Working Days (ID 22) - *Assigned to: All*
 *   [ ] Build frontend UI framework - *Assigned to: All*
 *   [ ] Implement template creation and management - *Assigned to: All*
 *   [ ] Develop task management system - *Assigned to: All*

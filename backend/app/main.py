@@ -28,10 +28,10 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=settings.ALLOWED_ORIGINS,  # Use origins from settings
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Restrict methods
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],  # Restrict headers
 )
 
 app.middleware("http")(error_handling_middleware)

@@ -25,9 +25,6 @@ async def create_day_template(
     Creates a new day template associated with the current user.
     Requires authentication.
     """
-    # Note: Currently, DayTemplate model doesn't link to a user.
-    # This might need adjustment based on requirements (e.g., add user_id field).
-    # For now, authentication ensures only logged-in users can create templates.
     created_template = await service.create_day_template(template_data=template_data, current_user_id=current_user_id)
     return created_template
 

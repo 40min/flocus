@@ -23,7 +23,6 @@ class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
 
 class DayTemplateResponse(DayTemplateBase):
     id: ObjectId  # Use ObjectId for the ID
-    user: ObjectId  # Changed from user_id to user, type is ObjectId for the response
     time_windows: List[TimeWindowResponse] = []  # Include full TimeWindow details
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

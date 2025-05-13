@@ -25,6 +25,7 @@ class TimeWindowUpdateRequest(BaseModel):  # Allow partial updates
 
 class TimeWindowResponse(TimeWindowBase):
     id: ObjectId  # Use ObjectId for the ID
+    user: ObjectId  # Changed from user_id to user, type is ObjectId
     category: CategoryResponse  # Nested category details
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

@@ -22,5 +22,6 @@ class CategoryUpdateRequest(BaseModel):  # Allow partial updates for all fields
 
 class CategoryResponse(CategoryBase):
     id: ObjectId  # Use ObjectId for the ID
+    user: ObjectId  # Changed from user_id to user, type is ObjectId
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

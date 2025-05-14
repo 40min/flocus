@@ -1,9 +1,11 @@
 from typing import List, Optional
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from .time_window import TimeWindowResponse  # Import TimeWindowResponse
+from app.db.models.user import User
+
+from .time_window import TimeWindowResponse
 
 
 class DayTemplateBase(BaseModel):
@@ -12,7 +14,7 @@ class DayTemplateBase(BaseModel):
 
 
 class DayTemplateCreateRequest(DayTemplateBase):
-    time_windows: List[ObjectId] = []  # List of TimeWindow ObjectIds to associate
+    time_windows: List[ObjectId] = Field(..., min_length=1)  # Require at least one
 
 
 class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
@@ -22,7 +24,17 @@ class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
 
 
 class DayTemplateResponse(DayTemplateBase):
-    id: ObjectId  # Use ObjectId for the ID
-    time_windows: List[TimeWindowResponse] = []  # Include full TimeWindow details
+    id: ObjectId
+    user: User  # Add the user field, will be populated by from_attributes
+    time_windows: List[TimeWindowResponse] = []
 
-    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+    @computed_field(return_type=ObjectId)
+    def user_id(self) -> ObjectId:
+
+        return self.user.id
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        arbitrary_types_allowed=True,
+        fields={"user": {"exclude": True}},  # Exclude the 'user' object from response if only 'user_id' is needed
+    )

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status  # Removed HTTPException
 from odmantic import ObjectId
 
 from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateResponse, DayTemplateUpdateRequest
-from app.core.dependencies import get_validated_user_id  # For authentication
+from app.core.dependencies import get_current_active_user_id  # Changed dependency
 from app.services.day_template_service import DayTemplateService
 
 router = APIRouter()
@@ -19,7 +19,7 @@ router = APIRouter()
 async def create_day_template(
     template_data: DayTemplateCreateRequest,
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_validated_user_id),  # Authenticated route
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Creates a new day template associated with the current user.
@@ -36,7 +36,7 @@ async def create_day_template(
 )
 async def get_all_day_templates(
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_validated_user_id),  # Authenticated route
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Retrieves a list of all day templates.
@@ -55,7 +55,7 @@ async def get_all_day_templates(
 async def get_day_template_by_id(
     template_id: ObjectId,
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_validated_user_id),  # Authenticated route
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Retrieves a specific day template by its unique ID.
@@ -75,7 +75,7 @@ async def update_day_template(
     template_id: ObjectId,
     template_data: DayTemplateUpdateRequest,
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_validated_user_id),  # Authenticated route
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Updates an existing day template.
@@ -98,7 +98,7 @@ async def update_day_template(
 async def delete_day_template(
     template_id: ObjectId,
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_validated_user_id),  # Authenticated route
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Deletes a day template by its unique ID.

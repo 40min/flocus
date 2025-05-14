@@ -1,5 +1,7 @@
+from typing import Optional
+
 from fastapi import HTTPException, status
-from odmantic import ObjectId  # Import ObjectId
+from odmantic import ObjectId
 
 
 class UserServiceException(HTTPException):
@@ -88,7 +90,7 @@ class DayTemplateNameExistsException(DayTemplateServiceException):
     def __init__(self, name: str):
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Day template with name '{name}' already exists",
+            detail=f"Day template with name '{name}' already exists for this user",
         )
 
 
@@ -111,8 +113,9 @@ class DayTemplateNotFoundException(DayTemplateServiceException):
 class NotOwnerException(
     DayTemplateServiceException
 ):  # Or a more generic base? For now, under DayTemplateServiceException
-    def __init__(self, resource: str = "resource"):
+    def __init__(self, resource: str = "resource", detail_override: Optional[str] = None):  # Add detail_override
+        detail_to_use = detail_override | f"Not authorized to access this {resource}"
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Not authorized to access this {resource}",
+            detail=detail_to_use,  # Use the determined detail
         )

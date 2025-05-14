@@ -1,9 +1,7 @@
 from typing import List, Optional
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field, computed_field
-
-from app.db.models.user import User
+from pydantic import BaseModel, ConfigDict, Field
 
 from .time_window import TimeWindowResponse
 
@@ -25,16 +23,12 @@ class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
 
 class DayTemplateResponse(DayTemplateBase):
     id: ObjectId
-    user: User  # Add the user field, will be populated by from_attributes
+    user_id: ObjectId  # Changed from user: UserResponse
     time_windows: List[TimeWindowResponse] = []
 
-    @computed_field(return_type=ObjectId)
-    def user_id(self) -> ObjectId:
-
-        return self.user.id
+    # @computed_field removed as user_id is now a direct field
 
     model_config = ConfigDict(
-        from_attributes=True,
+        from_attributes=True,  # Will pick up template.user.id if template.user is a User model
         arbitrary_types_allowed=True,
-        fields={"user": {"exclude": True}},  # Exclude the 'user' object from response if only 'user_id' is needed
     )

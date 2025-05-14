@@ -68,7 +68,7 @@ async def user_one_category(test_db, test_user_one):
         name=f"Category_{uuid.uuid4()}",
         description="Test category for user one",
         color="#FF0000",
-        user=test_user_one,
+        user=test_user_one.id,  # Changed to ObjectId
     )
     await test_db.save(category)
     return category
@@ -82,8 +82,8 @@ async def user_one_time_window(test_db, test_user_one, user_one_category):
         "name": f"TW_UserOne_{uuid.uuid4()}",
         "start_time": 9 * 60,  # int
         "end_time": 17 * 60,  # int
-        "category": user_one_category,  # Pass model instance
-        "user": test_user_one,  # Pass model instance
+        "category": user_one_category.id,  # Changed to ObjectId
+        "user": test_user_one.id,  # Changed to ObjectId
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)
@@ -97,7 +97,7 @@ async def user_two_category(test_db, test_user_two):
         name=f"Category_UserTwo_{uuid.uuid4()}",
         description="Test category for user two",
         color="#00FF00",
-        user=test_user_two,
+        user=test_user_two.id,  # Changed to ObjectId
     )
     await test_db.save(category)
     return category
@@ -111,8 +111,8 @@ async def user_two_time_window(test_db, test_user_two, user_two_category):
         "name": f"TW_UserTwo_{uuid.uuid4()}",
         "start_time": 10 * 60,  # int
         "end_time": 18 * 60,  # int
-        "category": user_two_category,  # Pass model instance
-        "user": test_user_two,  # Pass model instance
+        "category": user_two_category.id,  # Changed to ObjectId
+        "user": test_user_two.id,  # Changed to ObjectId
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)

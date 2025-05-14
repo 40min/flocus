@@ -40,7 +40,7 @@ async def test_create_day_template_success(
     created_day_template = DayTemplateResponse(**response.json())
     assert created_day_template.name == day_template_data.name
     assert created_day_template.description == day_template_data.description
-    assert str(created_day_template.user_id) == str(test_user_one.id)
+    assert created_day_template.user_id == test_user_one.id  # Now directly ObjectId
     assert len(created_day_template.time_windows) == 1
     retrieved_tw = created_day_template.time_windows[0]
     assert str(retrieved_tw.id) == str(user_one_time_window.id)
@@ -48,11 +48,12 @@ async def test_create_day_template_success(
     # After parsing the response, TimeWindowResponse.start_time and .end_time are integers
     assert retrieved_tw.start_time == user_one_time_window.start_time, "Parsed start_time should be integer minutes"
     assert retrieved_tw.end_time == user_one_time_window.end_time, "Parsed end_time should be integer minutes"
-    assert str(retrieved_tw.category.id) == str(user_one_category.id)
+    assert retrieved_tw.category.id == user_one_category.id  # category is CategoryResponse, id is ObjectId
     assert retrieved_tw.category.name == user_one_category.name
     # Ensure category color is also checked if it's part of CategoryResponse and relevant
-    if hasattr(retrieved_tw.category, "color") and hasattr(user_one_category, "color"):
+    if hasattr(retrieved_tw.category, "color") and hasattr(user_one_category, "color"):  # user_one_category is a model
         assert retrieved_tw.category.color == user_one_category.color
+    assert retrieved_tw.user_id == test_user_one.id  # Check user_id on TimeWindowResponse
 
 
 async def test_create_day_template_name_conflict_same_user(
@@ -137,13 +138,14 @@ async def test_create_day_template_name_conflict_different_user(
     assert response_user2.status_code == 201, response_user2.text
     created_template_user2 = DayTemplateResponse(**response_user2.json())
     assert created_template_user2.name == template_name
-    assert str(created_template_user2.user_id) == str(test_user_two.id)
+    assert created_template_user2.user_id == test_user_two.id  # Now directly ObjectId
     assert len(created_template_user2.time_windows) == 1
     retrieved_tw_user2 = created_template_user2.time_windows[0]
-    assert str(retrieved_tw_user2.id) == str(user_two_time_window.id)
+    assert retrieved_tw_user2.id == user_two_time_window.id  # id is ObjectId
     # After parsing, times are integers
     assert retrieved_tw_user2.start_time == user_two_time_window.start_time
     assert retrieved_tw_user2.end_time == user_two_time_window.end_time
+    assert retrieved_tw_user2.user_id == test_user_two.id  # Check user_id on TimeWindowResponse
 
 
 async def test_create_day_template_non_existent_time_window(
@@ -357,13 +359,14 @@ async def test_get_day_template_by_id_success(
 
     assert retrieved_template.id == ObjectId(created_template_id)
     assert retrieved_template.name == day_template_data.name
-    assert str(retrieved_template.user_id) == str(test_user_one.id)
+    assert retrieved_template.user_id == test_user_one.id  # Now directly ObjectId
     assert len(retrieved_template.time_windows) == 1
     tw_resp = retrieved_template.time_windows[0]
-    assert str(tw_resp.id) == str(user_one_time_window.id)
+    assert tw_resp.id == user_one_time_window.id  # id is ObjectId
     assert tw_resp.start_time == user_one_time_window.start_time  # Integer comparison
     assert tw_resp.end_time == user_one_time_window.end_time  # Integer comparison
-    assert str(tw_resp.category.id) == str(user_one_category.id)
+    assert tw_resp.category.id == user_one_category.id  # category.id is ObjectId
+    assert tw_resp.user_id == test_user_one.id  # Check user_id on TimeWindowResponse
 
 
 async def test_get_all_day_templates_success(
@@ -379,8 +382,8 @@ async def test_get_all_day_templates_success(
         "name": "Alt TW for Get All",
         "start_time": hhmm_to_minutes("10:00"),
         "end_time": hhmm_to_minutes("11:00"),
-        "category": user_one_category,  # Pass the Category model instance
-        "user": test_user_one,  # Pass the User model instance
+        "category": user_one_category.id,
+        "user": test_user_one.id,
     }
     # Need to import TimeWindow model to save directly
     from app.db.models.time_window import TimeWindow as TimeWindowModel
@@ -432,7 +435,7 @@ async def test_update_day_template_full(
     from app.db.models.category import Category as CategoryModel
 
     new_category_model = CategoryModel(
-        name="Updated Category", color="#00FF00", user=test_user_one
+        name="Updated Category", color="#00FF00", user=test_user_one.id
     )  # Pass User instance
     await test_db.save(new_category_model)
 
@@ -442,8 +445,8 @@ async def test_update_day_template_full(
         name="Updated TW",
         start_time=hhmm_to_minutes("14:00"),
         end_time=hhmm_to_minutes("15:00"),
-        category=new_category_model,  # Pass Category instance
-        user=test_user_one,  # Pass User instance
+        category=new_category_model.id,
+        user=test_user_one.id,
     )
     await test_db.save(new_tw_model)
 
@@ -463,11 +466,12 @@ async def test_update_day_template_full(
     assert updated_template.description == "New Description"
     assert len(updated_template.time_windows) == 1
     updated_tw_resp = updated_template.time_windows[0]
-    assert str(updated_tw_resp.id) == str(new_tw_model.id)
+    assert updated_tw_resp.id == new_tw_model.id  # id is ObjectId
     assert updated_tw_resp.start_time == new_tw_model.start_time  # Integer comparison
     assert updated_tw_resp.end_time == new_tw_model.end_time  # Integer comparison
-    assert str(updated_tw_resp.category.id) == str(new_category_model.id)
+    assert updated_tw_resp.category.id == new_category_model.id  # category.id is ObjectId
     assert updated_tw_resp.category.name == new_category_model.name
+    assert updated_tw_resp.user_id == test_user_one.id  # Check user_id on TimeWindowResponse
 
 
 async def test_update_day_template_clear_time_windows(

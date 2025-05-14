@@ -110,11 +110,21 @@ class DayTemplateNotFoundException(DayTemplateServiceException):
         )
 
 
+class CategoryNotFoundException(DayTemplateServiceException):
+    def __init__(self, category_id: Optional[ObjectId | str] = None, detail: Optional[str] = None):
+        if detail is None:
+            detail = f"Category with ID '{category_id}' not found" if category_id else "Category not found"
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=detail,
+        )
+
+
 class NotOwnerException(
     DayTemplateServiceException
 ):  # Or a more generic base? For now, under DayTemplateServiceException
     def __init__(self, resource: str = "resource", detail_override: Optional[str] = None):  # Add detail_override
-        detail_to_use = detail_override | f"Not authorized to access this {resource}"
+        detail_to_use = detail_override if detail_override is not None else f"Not authorized to access this {resource}"
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=detail_to_use,  # Use the determined detail

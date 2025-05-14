@@ -38,6 +38,7 @@ class TimeWindowBaseModel(BaseModel):
 
     name: str = Field(default_factory=lambda: f"TimeWindow_{uuid.uuid4()}")
     category: ObjectId
+    user: ObjectId  # Added
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
@@ -69,6 +70,7 @@ class TimeWindowUpdateRequest(BaseModel):  # Not inheriting to make all fields o
     start_time: Optional[str] = None  # Expected as "HH:MM"
     end_time: Optional[str] = None  # Expected as "HH:MM"
     category: Optional[ObjectId] = None
+    user: Optional[ObjectId] = None  # Added
 
     @field_validator("start_time", "end_time")
     @classmethod
@@ -92,6 +94,7 @@ class TimeWindowResponse(TimeWindowBaseModel):
     start_time: int  # Internally stored as int (minutes)
     end_time: int  # Internally stored as int (minutes)
     category: CategoryResponse
+    user_id: ObjectId = Field(..., alias="user")  # Populate from 'user' attribute of the model/dict
 
     @field_validator("start_time", "end_time", mode="before")  # mode='before' to catch input before type validation
     @classmethod

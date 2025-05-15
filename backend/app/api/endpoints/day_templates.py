@@ -35,8 +35,8 @@ async def create_day_template(
     summary="Get all Day Templates",
 )
 async def get_all_day_templates(
+    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency, moved first
     service: DayTemplateService = Depends(DayTemplateService),
-    current_user_id: ObjectId = Depends(get_current_active_user_id),  # Changed dependency
 ):
     """
     Retrieves a list of all day templates.

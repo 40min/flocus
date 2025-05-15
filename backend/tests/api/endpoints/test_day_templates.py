@@ -412,6 +412,176 @@ async def test_get_all_day_templates_success(
     assert dt2_resp.time_windows[0].start_time == user_one_time_window_alt.start_time  # Integer
 
 
+async def test_get_day_template_by_id_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+) -> None:
+    """
+    Test getting a day template by a non-existent ID.
+    Should return 404.
+    """
+    non_existent_id = "605f585dd5a2a60d39f3b3c9"  # Example non-existent ObjectId
+    response = await async_client.get(
+        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        headers=auth_headers_user_one,
+    )
+    assert response.status_code == 404, response.text
+    assert f"Day template with ID '{non_existent_id}' not found" == response.json()["detail"]
+
+
+async def test_get_day_template_by_id_not_owner(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],  # For creating template for user one
+    test_user_two: User,
+    auth_headers_user_two: dict[str, str],  # For attempting to access as user two
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test getting a day template owned by another user.
+    Should return 403.
+    """
+    # User one creates a template
+    template_data = DayTemplateCreateRequest(
+        name="User One Template For Not Owner Test",
+        time_windows=[user_one_time_window.id],
+    )
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201
+    template_id = create_response.json()["id"]
+
+    # User two tries to get it
+    response = await async_client.get(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_two,  # Authenticated as user two
+    )
+    assert response.status_code == 403, response.text
+    assert "Ownership check failed" == response.json()["detail"]
+
+
+async def test_get_day_template_by_id_unauthenticated(
+    async_client: AsyncClient,
+    test_user_one: User,  # To create a template
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test getting a day template by ID without authentication.
+    Should return 401.
+    """
+    # Create a template first
+    template_data = DayTemplateCreateRequest(
+        name="Template for Unauth Get Test",
+        time_windows=[user_one_time_window.id],
+    )
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201
+    template_id = create_response.json()["id"]
+
+    # Attempt to get without auth
+    response = await async_client.get(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        # No auth headers
+    )
+    assert response.status_code == 401, response.text
+    assert response.json()["detail"] == "Not authenticated"
+
+
+async def test_get_all_day_templates_empty_list(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],  # User one has no templates yet in this specific test
+    test_user_one: User,  # Ensure user exists
+    test_db,  # To ensure clean state if needed, though typically handled by test isolation
+) -> None:
+    """
+    Test getting all day templates when the user has none.
+    Should return an empty list.
+    """
+    # Note: This test assumes user_one doesn't have templates from other tests.
+    # For robust isolation, one might clear templates for user_one before this test,
+    # or use a dedicated user with no templates.
+    # For now, we rely on the fact that this user's templates are created within specific tests.
+    response = await async_client.get(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == []
+
+
+async def test_get_all_day_templates_filters_by_owner(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_user_two: User,
+    auth_headers_user_two: dict[str, str],
+    user_two_time_window: TimeWindow,
+    test_db,
+):
+    """
+    Test that GET /day-templates/ only returns templates owned by the authenticated user.
+    """
+    # User One creates a template
+    dt_user_one_data = DayTemplateCreateRequest(name="UserOneOnly DT", time_windows=[user_one_time_window.id])
+    create_resp_one = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=dt_user_one_data.model_dump(mode="json")
+    )
+    assert create_resp_one.status_code == 201
+
+    # User Two creates a template
+    dt_user_two_data = DayTemplateCreateRequest(name="UserTwoOnly DT", time_windows=[user_two_time_window.id])
+    create_resp_two = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_two, json=dt_user_two_data.model_dump(mode="json")
+    )
+    assert create_resp_two.status_code == 201
+
+    # User One gets their templates
+    response_user_one = await async_client.get(DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one)
+    assert response_user_one.status_code == 200
+    templates_user_one = [DayTemplateResponse(**item) for item in response_user_one.json()]
+
+    # Filter out any other templates that might exist from other tests for user_one
+    user_one_specific_template = [t for t in templates_user_one if t.name == "UserOneOnly DT"]
+    assert len(user_one_specific_template) == 1
+    assert user_one_specific_template[0].user_id == test_user_one.id
+
+    # User Two gets their templates
+    response_user_two = await async_client.get(DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_two)
+    assert response_user_two.status_code == 200
+    templates_user_two = [DayTemplateResponse(**item) for item in response_user_two.json()]
+
+    # Filter out any other templates that might exist from other tests for user_two
+    user_two_specific_template = [t for t in templates_user_two if t.name == "UserTwoOnly DT"]
+    assert len(user_two_specific_template) == 1
+    assert user_two_specific_template[0].user_id == test_user_two.id
+
+
+async def test_get_all_day_templates_unauthenticated(
+    async_client: AsyncClient,
+) -> None:
+    """
+    Test getting all day templates without authentication.
+    Should return 401.
+    """
+    response = await async_client.get(
+        DAY_TEMPLATES_ENDPOINT,
+        # No auth headers
+    )
+    assert response.status_code == 401, response.text
+    assert response.json()["detail"] == "Not authenticated"
+
+
 async def test_update_day_template_full(
     async_client: AsyncClient,
     test_user_one: User,
@@ -497,6 +667,359 @@ async def test_update_day_template_clear_time_windows(
     updated_template = DayTemplateResponse(**update_response.json())
     assert updated_template.name == "DT for Clearing TWs"  # Name should not change
     assert len(updated_template.time_windows) == 0
+
+
+async def test_update_day_template_name_conflict_same_user(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test updating a day template to a name that already exists for the same user (another template).
+    Should return a 400 error.
+    """
+    # Create first template
+    dt1_data = DayTemplateCreateRequest(
+        name="DT1 Original Name For Update Conflict", time_windows=[user_one_time_window.id]
+    )
+    create_resp1 = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=dt1_data.model_dump(mode="json")
+    )
+    assert create_resp1.status_code == 201
+
+    # Create second template
+    dt2_data = DayTemplateCreateRequest(name="DT2 To Be Updated For Conflict", time_windows=[user_one_time_window.id])
+    create_resp2 = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=dt2_data.model_dump(mode="json")
+    )
+    assert create_resp2.status_code == 201
+    dt2_id = create_resp2.json()["id"]
+
+    # Attempt to update DT2 to have the same name as DT1
+    update_payload = {"name": "DT1 Original Name For Update Conflict"}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{dt2_id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert response.status_code == 400, response.text
+    assert "already exists for this user" in response.json()["detail"]
+
+
+async def test_update_day_template_non_existent_time_window(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,  # Valid TW for initial creation
+    test_db,
+) -> None:
+    """
+    Test updating a day template with a non-existent time_window_id.
+    Should return a 404 error.
+    """
+    # Create a template first
+    initial_data = DayTemplateCreateRequest(
+        name="DT for Invalid TW Update Test", time_windows=[user_one_time_window.id]
+    )
+    create_resp = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=initial_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    template_id = create_resp.json()["id"]
+
+    non_existent_tw_id = "605f585dd5a2a60d39f3b3c0"  # Example non-existent ObjectId string
+    update_payload = {"time_windows": [non_existent_tw_id]}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert response.status_code == 404, response.text
+    assert f"Time window with ID '{non_existent_tw_id}' not found" in response.json()["detail"]
+
+
+async def test_update_day_template_time_window_unowned(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,  # User one's TW for initial creation
+    user_two_time_window: TimeWindow,  # User two's TW for update attempt
+    test_db,
+) -> None:
+    """
+    Test updating a day template with a time_window_id owned by another user.
+    Should return a 404 error.
+    """
+    # Create a template for user one
+    initial_data = DayTemplateCreateRequest(
+        name="DT for Unowned TW Update Test", time_windows=[user_one_time_window.id]
+    )
+    create_resp = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=initial_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    template_id = create_resp.json()["id"]
+
+    # Attempt to update with user two's time window
+    update_payload = {"time_windows": [str(user_two_time_window.id)]}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert response.status_code == 404, response.text
+    assert f"Time window with ID '{str(user_two_time_window.id)}' not found" in response.json()["detail"]
+
+
+async def test_update_day_template_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+) -> None:
+    """
+    Test updating a non-existent day template.
+    Should return 404.
+    """
+    non_existent_id = "605f585dd5a2a60d39f3b3c1"
+    update_payload = {"name": "New Name for Non Existent DT"}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert response.status_code == 404, response.text
+    assert f"Day template with ID '{non_existent_id}' not found" == response.json()["detail"]
+
+
+async def test_update_day_template_not_owner(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],  # For user one to create
+    user_one_time_window: TimeWindow,
+    auth_headers_user_two: dict[str, str],  # For user two to attempt update
+    test_db,
+) -> None:
+    """
+    Test updating a day template owned by another user.
+    Should return 403.
+    """
+    # User one creates a template
+    initial_data = DayTemplateCreateRequest(
+        name="DT User One - Update Fail Test", time_windows=[user_one_time_window.id]
+    )
+    create_resp = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=initial_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    template_id = create_resp.json()["id"]
+
+    # User two attempts to update it
+    update_payload = {"description": "User Two's update attempt on User One DT"}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_two,  # Authenticated as user two
+        json=update_payload,
+    )
+    assert response.status_code == 403, response.text
+    assert "Ownership check failed" in response.json()["detail"]
+
+
+async def test_update_day_template_unauthenticated(
+    async_client: AsyncClient,
+    test_user_one: User,  # To create a template
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test updating a day template without authentication.
+    Should return 401.
+    """
+    # Create a template first
+    initial_data = DayTemplateCreateRequest(name="DT for Unauth Update Test", time_windows=[user_one_time_window.id])
+    create_resp = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=initial_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    template_id = create_resp.json()["id"]
+
+    update_payload = {"name": "Unauthenticated Update Attempt"}
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        json=update_payload,  # No auth headers
+    )
+    assert response.status_code == 401, response.text
+    assert response.json()["detail"] == "Not authenticated"
+
+
+@pytest.mark.parametrize(
+    "update_payload, expected_status, expected_detail_part",
+    [
+        ({"name": ""}, 422, "String should have at least 1 character"),
+        ({"name": "a" * 101}, 422, "String should have at most 100 characters"),
+        ({"description": "a" * 256}, 422, "String should have at most 255 characters"),
+        ({"time_windows": ["not-an-object-id"]}, 422, "Input should be an instance of ObjectId"),
+    ],
+)
+async def test_update_day_template_validation_errors(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+    update_payload: dict,
+    expected_status: int,
+    expected_detail_part: str,
+) -> None:
+    """
+    Test updating a day template with various validation errors in the payload.
+    """
+    # Create a template to update
+    initial_data = DayTemplateCreateRequest(
+        name="DT for Validation Update Test", time_windows=[user_one_time_window.id]
+    )
+    create_resp = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one, json=initial_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    template_id = create_resp.json()["id"]
+
+    response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert response.status_code == expected_status, response.text
+    response_json = response.json()
+    assert "detail" in response_json
+
+    if isinstance(response_json["detail"], list):
+        found_error = any(
+            "msg" in error and expected_detail_part.lower() in error["msg"].lower() for error in response_json["detail"]
+        )
+        assert found_error, f"Expected detail part '{expected_detail_part}' not found in {response_json['detail']}"
+    else:
+        assert (
+            expected_detail_part.lower() in response_json["detail"].lower()
+        ), f"Expected detail part '{expected_detail_part}' not found in {response_json['detail']}"
+
+
+async def test_delete_day_template_success(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test successful deletion of a day template.
+    Should return 204 No Content and the template should be gone.
+    """
+    # Create a template to delete
+    template_data = DayTemplateCreateRequest(name="DT to Delete Successfully", time_windows=[user_one_time_window.id])
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201
+    template_id_to_delete = create_response.json()["id"]
+
+    # Delete the template
+    delete_response = await async_client.delete(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_delete}",
+        headers=auth_headers_user_one,
+    )
+    assert delete_response.status_code == 204, delete_response.text
+    assert not delete_response.content  # No content for 204
+
+    # Verify it's gone
+    get_response = await async_client.get(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_delete}",
+        headers=auth_headers_user_one,
+    )
+    assert get_response.status_code == 404
+
+
+async def test_delete_day_template_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+) -> None:
+    """
+    Test deleting a non-existent day template.
+    Should return 404.
+    """
+    non_existent_id = "605f585dd5a2a60d39f3b3c2"  # Example non-existent ObjectId
+    response = await async_client.delete(
+        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        headers=auth_headers_user_one,
+    )
+    assert response.status_code == 404, response.text
+    assert f"Day template with ID '{non_existent_id}' not found" == response.json()["detail"]
+
+
+async def test_delete_day_template_not_owner(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],  # For user one to create
+    user_one_time_window: TimeWindow,
+    auth_headers_user_two: dict[str, str],  # For user two to attempt delete
+    test_db,
+) -> None:
+    """
+    Test deleting a day template owned by another user.
+    Should return 403.
+    """
+    # User one creates a template
+    template_data = DayTemplateCreateRequest(
+        name="DT User One - Delete Fail Test", time_windows=[user_one_time_window.id]
+    )
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201
+    template_id = create_response.json()["id"]
+
+    # User two attempts to delete it
+    response = await async_client.delete(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        headers=auth_headers_user_two,  # Authenticated as user two
+    )
+    assert response.status_code == 403, response.text
+    assert "Ownership check failed" == response.json()["detail"]
+
+
+async def test_delete_day_template_unauthenticated(
+    async_client: AsyncClient,
+    test_user_one: User,  # To create a template
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindow,
+    test_db,
+) -> None:
+    """
+    Test deleting a day template without authentication.
+    Should return 401.
+    """
+    # Create a template first
+    template_data = DayTemplateCreateRequest(name="DT for Unauth Delete Test", time_windows=[user_one_time_window.id])
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201
+    template_id = create_response.json()["id"]
+
+    # Attempt to delete without auth
+    response = await async_client.delete(
+        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        # No auth headers
+    )
+    assert response.status_code == 401, response.text
+    assert response.json()["detail"] == "Not authenticated"
 
     # Verify original time window is still in DB
     from app.db.models.time_window import TimeWindow as TimeWindowModel  # Ensure import

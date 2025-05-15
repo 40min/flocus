@@ -63,6 +63,16 @@ The following data models represent the key entities in the application and are 
 
     *Tasks can optionally be associated with a Category.*
 
+*   **TimeWindow:**
+    *   `_id` (ObjectId): Unique identifier for the time window.
+    *   `user_id` (ObjectId): Foreign key referencing the User collection. Indicates the owner of the time window.
+    *   `name` (String): Name of the time window (e.g., "Morning Focus", "Lunch Break").
+    *   `start_time` (Integer): Start time of the window, represented as minutes since midnight (0-1439).
+    *   `end_time` (Integer): End time of the window, represented as minutes since midnight (0-1439).
+    *   `category_id` (ObjectId): Foreign key referencing the Category collection.
+    *   `created_at` (Date): Timestamp of time window creation.
+    *   `updated_at` (Date): Timestamp of last update.
+
 ### 3. API Definitions (REST API)
 
 The backend exposes a REST API with the following endpoints:

@@ -3,7 +3,6 @@ from httpx import AsyncClient
 from odmantic import ObjectId  # Added import
 
 from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateResponse
-from app.api.schemas.time_window import hhmm_to_minutes
 from app.core.config import settings
 from app.db.models.category import Category
 from app.db.models.time_window import TimeWindow  # Ensure TimeWindow model is imported for type hints
@@ -380,8 +379,8 @@ async def test_get_all_day_templates_success(
     # Create a couple of templates for user_one
     tw_alt_data = {  # Data for an alternative TimeWindow
         "name": "Alt TW for Get All",
-        "start_time": hhmm_to_minutes("10:00"),
-        "end_time": hhmm_to_minutes("11:00"),
+        "start_time": 10 * 60,
+        "end_time": 11 * 60,
         "category": user_one_category.id,
         "user": test_user_one.id,
     }
@@ -443,8 +442,8 @@ async def test_update_day_template_full(
 
     new_tw_model = TimeWindowModel(
         name="Updated TW",
-        start_time=hhmm_to_minutes("14:00"),
-        end_time=hhmm_to_minutes("15:00"),
+        start_time=14 * 60,
+        end_time=15 * 60,
         category=new_category_model.id,
         user=test_user_one.id,
     )

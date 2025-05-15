@@ -4,6 +4,7 @@ import pytest
 
 from app.core.security import create_access_token
 from app.db.models.category import Category
+from app.db.models.day_template import DayTemplate  # Added import
 from app.db.models.time_window import TimeWindow
 from app.db.models.user import User  # Added import
 from app.services.user_service import UserService
@@ -77,13 +78,22 @@ async def user_one_category(test_db, test_user_one):
 @pytest.fixture
 async def user_one_time_window(test_db, test_user_one, user_one_category):
     """Create a time window for test user one."""
+    # Create a DayTemplate for this user
+    day_template = DayTemplate(
+        name=f"DT_UserOne_{uuid.uuid4()}",
+        user=test_user_one.id,
+        description="Test Day Template for User One",
+    )
+    await test_db.save(day_template)
+
     # Ensure all data is in the correct type for the Model
     time_window_data = {
         "name": f"TW_UserOne_{uuid.uuid4()}",
         "start_time": 9 * 60,  # int
         "end_time": 17 * 60,  # int
-        "category": user_one_category.id,  # Changed to ObjectId
-        "user": test_user_one.id,  # Changed to ObjectId
+        "category": user_one_category.id,
+        "user": test_user_one.id,
+        "day_template_id": day_template.id,  # Associate with the DayTemplate
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)
@@ -106,13 +116,22 @@ async def user_two_category(test_db, test_user_two):
 @pytest.fixture
 async def user_two_time_window(test_db, test_user_two, user_two_category):
     """Create a time window for test user two."""
+    # Create a DayTemplate for this user
+    day_template = DayTemplate(
+        name=f"DT_UserTwo_{uuid.uuid4()}",
+        user=test_user_two.id,
+        description="Test Day Template for User Two",
+    )
+    await test_db.save(day_template)
+
     # Ensure all data is in the correct type for the Model
     time_window_data = {
         "name": f"TW_UserTwo_{uuid.uuid4()}",
         "start_time": 10 * 60,  # int
         "end_time": 18 * 60,  # int
-        "category": user_two_category.id,  # Changed to ObjectId
-        "user": test_user_two.id,  # Changed to ObjectId
+        "category": user_two_category.id,
+        "user": test_user_two.id,
+        "day_template_id": day_template.id,  # Associate with the DayTemplate
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)

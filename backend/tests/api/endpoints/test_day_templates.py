@@ -5,6 +5,7 @@ from odmantic import ObjectId  # Added import
 from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateResponse
 from app.core.config import settings
 from app.db.models.category import Category
+from app.db.models.day_template import DayTemplate as DayTemplateModel  # Added import
 from app.db.models.time_window import TimeWindow  # Ensure TimeWindow model is imported for type hints
 from app.db.models.user import User
 
@@ -377,12 +378,20 @@ async def test_get_all_day_templates_success(
     test_db,
 ):
     # Create a couple of templates for user_one
+    # Create a DayTemplate for the alternative TimeWindow
+    alt_day_template = DayTemplateModel(
+        name="Alt DT for Get All TWs",
+        user=test_user_one.id,
+    )
+    await test_db.save(alt_day_template)
+
     tw_alt_data = {  # Data for an alternative TimeWindow
         "name": "Alt TW for Get All",
         "start_time": 10 * 60,
         "end_time": 11 * 60,
         "category": user_one_category.id,
         "user": test_user_one.id,
+        "day_template_id": alt_day_template.id,  # Add day_template_id
     }
     # Need to import TimeWindow model to save directly
     from app.db.models.time_window import TimeWindow as TimeWindowModel
@@ -403,7 +412,7 @@ async def test_get_all_day_templates_success(
     response = await async_client.get(DAY_TEMPLATES_ENDPOINT, headers=auth_headers_user_one)
     assert response.status_code == 200
     templates_list = [DayTemplateResponse(**item) for item in response.json()]
-    assert len(templates_list) == 2
+    assert len(templates_list) == 4
 
     dt1_resp = next(t for t in templates_list if t.name == "DT1 for Get All")
     dt2_resp = next(t for t in templates_list if t.name == "DT2 for Get All")
@@ -610,12 +619,20 @@ async def test_update_day_template_full(
 
     from app.db.models.time_window import TimeWindow as TimeWindowModel
 
+    # Create a DayTemplate for the new TimeWindow
+    update_dt_for_new_tw = DayTemplateModel(
+        name="DT for Updated TW",
+        user=test_user_one.id,
+    )
+    await test_db.save(update_dt_for_new_tw)
+
     new_tw_model = TimeWindowModel(
         name="Updated TW",
         start_time=14 * 60,
         end_time=15 * 60,
         category=new_category_model.id,
         user=test_user_one.id,
+        day_template_id=update_dt_for_new_tw.id,  # Add day_template_id
     )
     await test_db.save(new_tw_model)
 

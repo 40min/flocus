@@ -1,18 +1,20 @@
 from typing import Optional
 
 from bson import ObjectId
-from odmantic import Field, Model  # Reference removed
-from pydantic import ConfigDict
-
-# from app.db.models.user import User # No longer needed for direct type hint
+from odmantic import Index, Model  # Added Index import
 
 
 class Category(Model):
     """Database model for Categories"""
 
-    name: str = Field(unique=True, index=True)
+    name: str
     description: Optional[str] = None
     color: Optional[str] = None  # e.g., #RRGGBB
-    user: ObjectId  # Was: user: User = Reference()
+    user: ObjectId
 
-    model_config = ConfigDict(collection="categories")
+    model_config = {
+        "collection": "categories",
+        "indexes": lambda: [
+            Index(Category.user, Category.name, unique=True),
+        ],
+    }

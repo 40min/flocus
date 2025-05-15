@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .category import CategoryResponse
 
@@ -32,6 +32,12 @@ class TimeWindowRequestSchema(TimeWindowBaseModel):
             raise ValueError("Time must be between 0 and 1439 minutes (inclusive).")
         return value
 
+    @model_validator(mode="after")
+    def check_end_time_greater_than_start_time(cls, data: "TimeWindowRequestSchema") -> "TimeWindowRequestSchema":
+        if data.start_time is not None and data.end_time is not None and data.end_time <= data.start_time:
+            raise ValueError("end_time must be greater than start_time")
+        return data
+
 
 class TimeWindowCreateRequest(TimeWindowRequestSchema):
     pass
@@ -52,6 +58,18 @@ class TimeWindowUpdateRequest(BaseModel):  # Not inheriting to make all fields o
         if not (0 <= value < 24 * 60):
             raise ValueError("Time must be between 0 and 1439 minutes (inclusive).")
         return value
+
+    @model_validator(mode="after")
+    def check_end_time_greater_than_start_time_optional(
+        cls, data: "TimeWindowUpdateRequest"
+    ) -> "TimeWindowUpdateRequest":
+        if data.start_time is not None and data.end_time is not None:
+            if data.end_time <= data.start_time:
+                raise ValueError("end_time must be greater than start_time")
+        # If one is None and the other is not, this implies a partial update.
+        # If both are None, no time validation is needed.
+        # If both are present, the above check applies.
+        return data
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 

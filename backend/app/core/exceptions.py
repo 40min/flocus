@@ -129,3 +129,19 @@ class NotOwnerException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=detail_to_use,  # Use the determined detail
         )
+
+
+# --- Category Service Exceptions ---
+
+
+class CategoryServiceException(HTTPException):
+    """Base exception for category service related errors"""
+
+    pass
+
+
+class CategoryNameExistsException(CategoryServiceException):
+    def __init__(self, name: str):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Category with name '{name}' already exists for this user"
+        )

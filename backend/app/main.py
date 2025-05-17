@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from odmantic import AIOEngine
 
-from app.api.endpoints import day_templates, users  # Add day_templates import
+from app.api.endpoints import categories, day_templates, users
 from app.core.config import settings  # Import settings
 from app.core.logging_config import setup_logging
 from app.core.middleware import error_handling_middleware
@@ -41,3 +41,6 @@ app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["u
 
 # Include day templates router with API version prefix
 app.include_router(day_templates.router, prefix=f"{settings.API_V1_STR}/day-templates", tags=["day-templates"])
+
+# Include categories router with API version prefix
+app.include_router(categories.router, prefix=f"{settings.API_V1_STR}/categories", tags=["categories"])

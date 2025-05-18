@@ -22,7 +22,7 @@ def test_time_window_create_request_valid(user_id: ObjectId, category_id: Object
         "start_time": 540,  # 9:00 AM
         "end_time": 720,  # 12:00 PM
         "category": category_id,
-        "user": user_id,
+        "day_template_id": ObjectId(),
     }
     assert TimeWindowCreateRequest(**data)
 
@@ -33,7 +33,7 @@ def test_time_window_create_request_end_time_less_than_start_time(user_id: Objec
         "start_time": 720,  # 12:00 PM
         "end_time": 540,  # 9:00 AM
         "category": category_id,
-        "user": user_id,
+        "day_template_id": ObjectId(),
     }
     with pytest.raises(ValidationError) as exc_info:
         TimeWindowCreateRequest(**data)
@@ -46,7 +46,7 @@ def test_time_window_create_request_end_time_equal_to_start_time(user_id: Object
         "start_time": 600,  # 10:00 AM
         "end_time": 600,  # 10:00 AM
         "category": category_id,
-        "user": user_id,
+        "day_template_id": ObjectId(),
     }
     with pytest.raises(ValidationError) as exc_info:
         TimeWindowCreateRequest(**data)

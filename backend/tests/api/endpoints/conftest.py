@@ -136,3 +136,27 @@ async def user_two_time_window(test_db, test_user_two, user_two_category):
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)
     return instance_to_save
+
+
+@pytest.fixture
+async def user_one_day_template_model(test_db, test_user_one: User):
+    """Create a DayTemplate model instance for test user one."""
+    day_template = DayTemplate(
+        name=f"DT_For_TW_Tests_{uuid.uuid4()}",
+        user=test_user_one.id,
+        description="Day Template for Time Window tests",
+    )
+    await test_db.save(day_template)
+    return day_template
+
+
+@pytest.fixture
+async def user_two_day_template_model(test_db, test_user_two: User):
+    """Create a DayTemplate model instance for test user two."""
+    day_template = DayTemplate(
+        name=f"DT_UserTwo_For_TW_Tests_{uuid.uuid4()}",
+        user=test_user_two.id,
+        description="Day Template for Time Window tests (User Two)",
+    )
+    await test_db.save(day_template)
+    return day_template

@@ -38,7 +38,7 @@ def app_test():
 
 
 @pytest.fixture
-async def async_client(app_test):
+async def async_client(app_test, test_db):  # Add test_db dependency
     """Get async test client"""
     async with AsyncClient(transport=ASGITransport(app=app_test), base_url="http://test") as client:
         yield client

@@ -11,6 +11,7 @@ from app.db.models.user import User as UserModel
 
 API_V1_STR = settings.API_V1_STR
 TIME_WINDOWS_ENDPOINT = f"{API_V1_STR}/time-windows/"
+CATEGORIES_ENDPOINT = f"{API_V1_STR}/categories/"  # Added for soft-deleting categories
 
 pytestmark = pytest.mark.asyncio
 
@@ -57,7 +58,7 @@ async def test_create_time_window_invalid_category(
         TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_data.model_dump(mode="json")
     )
     assert response.status_code == 404
-    assert f"Category with ID '{non_existent_category_id}' not found" in response.json()["detail"]
+    assert "Active category not found." in response.json()["detail"]
 
 
 async def test_create_time_window_category_not_owned(
@@ -78,6 +79,45 @@ async def test_create_time_window_category_not_owned(
     )
     assert response.status_code == 403  # NotOwnerException
     assert "Category not owned by user" in response.json()["detail"]
+
+
+async def test_create_time_window_with_soft_deleted_category(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_day_template_model: DayTemplateModel,
+    test_user_one: UserModel,  # Added to create a category for this user
+):
+    # 1. Create a category for user_one
+    category_name = "CategoryToSoftDeleteForTW"
+    category_create_data = {"name": category_name, "user_id": str(test_user_one.id)}  # Simplified for creation
+    create_cat_response = await async_client.post(
+        CATEGORIES_ENDPOINT, headers=auth_headers_user_one, json=category_create_data
+    )
+    assert create_cat_response.status_code == 201
+    soft_deleted_category_id = create_cat_response.json()["id"]
+
+    # 2. Soft-delete this category
+    delete_cat_response = await async_client.delete(
+        f"{CATEGORIES_ENDPOINT}{soft_deleted_category_id}", headers=auth_headers_user_one
+    )
+    assert delete_cat_response.status_code == 204
+
+    # 3. Attempt to create a time window using the ID of the soft-deleted category
+    tw_data = TimeWindowCreateRequest(
+        name="TW With Soft Deleted Cat",
+        category=ObjectId(soft_deleted_category_id),
+        day_template_id=user_one_day_template_model.id,
+        start_time=800,  # 13:20
+        end_time=900,  # 15:00
+    )
+    response = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_data.model_dump(mode="json")
+    )
+
+    # 4. Assert a 404 status code and the specific error message
+    assert response.status_code == 404
+    error_detail = response.json()["detail"]
+    assert "Active category not found." in error_detail
 
 
 async def test_create_time_window_invalid_day_template(
@@ -242,6 +282,43 @@ async def test_update_time_window_not_owner(
         json=update_data.model_dump(mode="json", exclude_none=True),
     )
     assert response.status_code == 403
+
+
+async def test_update_time_window_to_soft_deleted_category(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindowModel,  # Existing TW with an active category
+    user_one_category: CategoryModel,  # This is the active category of user_one_time_window
+    test_user_one: UserModel,  # Added for creating another category
+):
+    # 1. Create another category for user_one that will be soft-deleted
+    category_to_soft_delete_name = "AnotherCatToSoftDeleteForTWUpdate"
+    cat_create_data = {"name": category_to_soft_delete_name, "user_id": str(test_user_one.id)}
+    create_cat_resp = await async_client.post(CATEGORIES_ENDPOINT, headers=auth_headers_user_one, json=cat_create_data)
+    assert create_cat_resp.status_code == 201
+    soft_deleted_category_id = ObjectId(create_cat_resp.json()["id"])
+
+    # 2. Soft-delete this newly created category
+    delete_cat_resp = await async_client.delete(
+        f"{CATEGORIES_ENDPOINT}{soft_deleted_category_id}", headers=auth_headers_user_one
+    )
+    assert delete_cat_resp.status_code == 204
+
+    # Ensure the original time window's category is not the one we just soft-deleted
+    assert user_one_time_window.category != soft_deleted_category_id
+
+    # 3. Attempt to update the existing time window to use the soft-deleted category
+    update_data = TimeWindowUpdateRequest(category=soft_deleted_category_id)
+    response = await async_client.patch(
+        f"{TIME_WINDOWS_ENDPOINT}{user_one_time_window.id}",
+        headers=auth_headers_user_one,
+        json=update_data.model_dump(mode="json", exclude_none=True),
+    )
+
+    # 4. Assert a 404 status code and the specific error message
+    assert response.status_code == 404
+    error_detail = response.json()["detail"]
+    assert "Active category for update not found." in error_detail
 
 
 async def test_delete_time_window_success(

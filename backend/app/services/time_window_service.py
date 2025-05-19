@@ -40,7 +40,7 @@ class TimeWindowService:
         category = await self.engine.find_one(
             Category,
             Category.id == time_window_data.category,
-            Category.is_deleted is False,
+            Category.is_deleted == False,  # noqa: E712
         )
         if not category:
             raise CategoryNotFoundException(
@@ -92,7 +92,7 @@ class TimeWindowService:
         if "category" in update_data:
             new_category_id = update_data["category"]
             category = await self.engine.find_one(
-                Category, Category.id == new_category_id, Category.is_deleted is False
+                Category, Category.id == new_category_id, Category.is_deleted == False  # noqa: E712
             )
             if not category:
                 raise CategoryNotFoundException(

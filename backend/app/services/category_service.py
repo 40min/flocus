@@ -20,7 +20,7 @@ class CategoryService:
             Category,
             Category.name == category_data.name,
             Category.user == current_user_id,
-            Category.is_deleted is False,
+            Category.is_deleted == False,  # noqa: E712
         )
         if existing_category:
             raise CategoryNameExistsException(name=category_data.name)
@@ -40,13 +40,21 @@ class CategoryService:
         return CategoryResponse.model_validate(category)
 
     async def get_all_categories(self, current_user_id: ObjectId) -> List[CategoryResponse]:
-        categories = await self.engine.find(Category, Category.user == current_user_id, Category.is_deleted is False)
+        categories = await self.engine.find(
+            Category,
+            Category.user == current_user_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
         return [CategoryResponse.model_validate(category) for category in categories]
 
     async def update_category(
         self, category_id: ObjectId, category_data: CategoryUpdateRequest, current_user_id: ObjectId
     ) -> CategoryResponse:
-        category = await self.engine.find_one(Category, Category.id == category_id, Category.is_deleted is False)
+        category = await self.engine.find_one(
+            Category,
+            Category.id == category_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
         if not category:
             raise CategoryNotFoundException(category_id=str(category_id))
 
@@ -61,7 +69,7 @@ class CategoryService:
                 Category.name == update_data["name"],
                 Category.user == current_user_id,
                 Category.id != category_id,
-                Category.is_deleted is False,
+                Category.is_deleted == False,  # noqa: E712
             )
             if name_conflict_check:
                 raise CategoryNameExistsException(name=update_data["name"])

@@ -42,9 +42,9 @@ async def get_all_time_windows(
     summary="Get a specific Time Window by ID",
 )
 async def get_time_window_by_id(
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
     time_window_id: ObjectId = Path(..., description="The ID of the time window to retrieve"),
     service: TimeWindowService = Depends(TimeWindowService),
-    current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     return await service.get_time_window_by_id(time_window_id=time_window_id, current_user_id=current_user_id)
 
@@ -56,9 +56,9 @@ async def get_time_window_by_id(
 )
 async def update_time_window(
     time_window_data: TimeWindowUpdateRequest,
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
     time_window_id: ObjectId = Path(..., description="The ID of the time window to update"),
     service: TimeWindowService = Depends(TimeWindowService),
-    current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     return await service.update_time_window(
         time_window_id=time_window_id, time_window_data=time_window_data, current_user_id=current_user_id
@@ -71,9 +71,9 @@ async def update_time_window(
     summary="Delete a Time Window",
 )
 async def delete_time_window(
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
     time_window_id: ObjectId = Path(..., description="The ID of the time window to delete"),
     service: TimeWindowService = Depends(TimeWindowService),
-    current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     await service.delete_time_window(time_window_id=time_window_id, current_user_id=current_user_id)
     return None

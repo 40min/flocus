@@ -278,9 +278,9 @@ async def test_delete_time_window_not_owner(
     [
         ("POST", ""),
         ("GET", ""),
-        ("GET", f"/{ObjectId()}"),
-        ("PATCH", f"/{ObjectId()}"),
-        ("DELETE", f"/{ObjectId()}"),
+        ("GET", f"{ObjectId()}"),
+        ("PATCH", f"{ObjectId()}"),
+        ("DELETE", f"{ObjectId()}"),
     ],
 )
 async def test_time_window_endpoints_unauthenticated(async_client: AsyncClient, endpoint_method: str, url_suffix: str):

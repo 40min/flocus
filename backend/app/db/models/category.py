@@ -11,10 +11,11 @@ class Category(Model):
     description: Optional[str] = None
     color: Optional[str] = None  # e.g., #RRGGBB
     user: ObjectId
+    is_deleted: bool = False
 
     model_config = {
         "collection": "categories",
         "indexes": lambda: [
-            Index(Category.user, Category.name, unique=True),
+            Index(Category.user, Category.name, Category.is_deleted, unique=True),
         ],
     }

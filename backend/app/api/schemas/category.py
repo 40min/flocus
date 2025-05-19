@@ -26,5 +26,6 @@ class CategoryUpdateRequest(BaseModel):  # Allow partial updates for all fields
 class CategoryResponse(CategoryBase):
     id: ObjectId  # Use ObjectId for the ID
     user_id: ObjectId = Field(..., alias="user")
+    is_deleted: bool = False
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

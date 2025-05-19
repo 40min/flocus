@@ -37,9 +37,15 @@ class TimeWindowService:
         self, time_window_data: TimeWindowCreateRequest, current_user_id: ObjectId
     ) -> TimeWindowResponse:
         # Validate category
-        category = await self.engine.find_one(Category, Category.id == time_window_data.category)
+        category = await self.engine.find_one(
+            Category,
+            Category.id == time_window_data.category,
+            Category.is_deleted is False,
+        )
         if not category:
-            raise CategoryNotFoundException(category_id=str(time_window_data.category))
+            raise CategoryNotFoundException(
+                category_id=str(time_window_data.category), detail="Active category not found."
+            )
         if category.user != current_user_id:
             raise NotOwnerException(resource="category", detail_override="Category not owned by user.")
 
@@ -85,9 +91,13 @@ class TimeWindowService:
 
         if "category" in update_data:
             new_category_id = update_data["category"]
-            category = await self.engine.find_one(Category, Category.id == new_category_id)
+            category = await self.engine.find_one(
+                Category, Category.id == new_category_id, Category.is_deleted is False
+            )
             if not category:
-                raise CategoryNotFoundException(category_id=str(new_category_id))
+                raise CategoryNotFoundException(
+                    category_id=str(new_category_id), detail="Active category for update not found."
+                )
             if category.user != current_user_id:
                 raise NotOwnerException(resource="category", detail_override="New category not owned by user.")
 

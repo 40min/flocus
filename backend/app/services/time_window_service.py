@@ -9,6 +9,7 @@ from app.core.exceptions import (
     CategoryNotFoundException,
     DayTemplateNotFoundException,
     NotOwnerException,
+    TimeWindowNameExistsException,
     TimeWindowNotFoundException,
 )
 from app.db.connection import get_database
@@ -56,12 +57,25 @@ class TimeWindowService:
         if day_template.user != current_user_id:
             raise NotOwnerException(resource="day template", detail_override="Day template not owned by user.")
 
-        time_window = TimeWindow(**time_window_data.model_dump(), user=current_user_id)
+        # Check for existing active time window with the same name for this user
+        # Name is usually UUID-based by default, but user can provide it.
+        existing_tw_with_name = await self.engine.find_one(
+            TimeWindow,
+            TimeWindow.name == time_window_data.name,
+            TimeWindow.user == current_user_id,
+            TimeWindow.is_deleted == False,  # noqa: E712
+        )
+        if existing_tw_with_name:
+            raise TimeWindowNameExistsException(name=time_window_data.name)
+
+        time_window = TimeWindow(**time_window_data.model_dump(), user=current_user_id, is_deleted=False)
         await self.engine.save(time_window)
         return await self._build_time_window_response(time_window)
 
     async def get_time_window_by_id(self, time_window_id: ObjectId, current_user_id: ObjectId) -> TimeWindowResponse:
-        time_window = await self.engine.find_one(TimeWindow, TimeWindow.id == time_window_id)
+        time_window = await self.engine.find_one(
+            TimeWindow, TimeWindow.id == time_window_id
+        )  # Fetches regardless of is_deleted status
         if not time_window:
             raise TimeWindowNotFoundException(time_window_id=str(time_window_id))
 
@@ -71,7 +85,11 @@ class TimeWindowService:
         return await self._build_time_window_response(time_window)
 
     async def get_all_time_windows_for_user(self, current_user_id: ObjectId) -> List[TimeWindowResponse]:
-        time_windows_models = await self.engine.find(TimeWindow, TimeWindow.user == current_user_id)
+        time_windows_models = await self.engine.find(
+            TimeWindow,
+            TimeWindow.user == current_user_id,
+            TimeWindow.is_deleted == False,  # noqa: E712
+        )
         return [await self._build_time_window_response(tw) for tw in time_windows_models]
 
     async def update_time_window(
@@ -80,7 +98,11 @@ class TimeWindowService:
         time_window_data: TimeWindowUpdateRequest,
         current_user_id: ObjectId,
     ) -> TimeWindowResponse:
-        time_window = await self.engine.find_one(TimeWindow, TimeWindow.id == time_window_id)
+        time_window = await self.engine.find_one(
+            TimeWindow,
+            TimeWindow.id == time_window_id,
+            TimeWindow.is_deleted == False,  # noqa: E712
+        )
         if not time_window:
             raise TimeWindowNotFoundException(time_window_id=str(time_window_id))
 
@@ -88,6 +110,17 @@ class TimeWindowService:
             raise NotOwnerException(resource="time window", detail_override="Not authorized to update this time window")
 
         update_data = time_window_data.model_dump(exclude_unset=True)
+
+        if "name" in update_data and update_data["name"] != time_window.name:
+            name_conflict_check = await self.engine.find_one(
+                TimeWindow,
+                TimeWindow.name == update_data["name"],
+                TimeWindow.user == current_user_id,
+                TimeWindow.id != time_window_id,
+                TimeWindow.is_deleted == False,  # noqa: E712
+            )
+            if name_conflict_check:
+                raise TimeWindowNameExistsException(name=update_data["name"])
 
         if "category" in update_data:
             new_category_id = update_data["category"]
@@ -124,15 +157,19 @@ class TimeWindowService:
         await self.engine.save(time_window)
         return await self._build_time_window_response(time_window)
 
-    async def delete_time_window(self, time_window_id: ObjectId, current_user_id: ObjectId) -> None:
-        time_window = await self.engine.find_one(TimeWindow, TimeWindow.id == time_window_id)
+    async def delete_time_window(self, time_window_id: ObjectId, current_user_id: ObjectId) -> bool:
+        time_window = await self.engine.find_one(
+            TimeWindow, TimeWindow.id == time_window_id
+        )  # Fetches regardless of is_deleted status
         if not time_window:
             raise TimeWindowNotFoundException(time_window_id=str(time_window_id))
 
         if time_window.user != current_user_id:
             raise NotOwnerException(resource="time window", detail_override="Not authorized to delete this time window")
 
-        await self.engine.delete(time_window)
+        if not time_window.is_deleted:
+            time_window.is_deleted = True
+            await self.engine.save(time_window)
         # Note: This does not remove the time_window_id from any DayTemplate.time_windows list.
         # This could lead to dangling references if not handled elsewhere or by design.
-        return None
+        return True

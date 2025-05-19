@@ -81,5 +81,6 @@ class TimeWindowResponse(TimeWindowBaseModel):
     category: CategoryResponse
     day_template_id: ObjectId  # Explicitly add day_template_id here as it's not aliased
     user_id: ObjectId = Field(..., alias="user")  # Populate from 'user' attribute of the model/dict
+    is_deleted: bool = False
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

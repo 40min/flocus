@@ -41,6 +41,7 @@ async def test_create_time_window_success(
     assert created_tw.start_time == tw_data.start_time
     assert created_tw.end_time == tw_data.end_time
     assert created_tw.user_id == test_user_one.id
+    assert created_tw.is_deleted is False
 
 
 async def test_create_time_window_invalid_category(
@@ -192,6 +193,7 @@ async def test_get_time_window_by_id_success(
     fetched_tw = TimeWindowResponse(**response.json())
     assert fetched_tw.id == user_one_time_window.id
     assert fetched_tw.name == user_one_time_window.name
+    assert fetched_tw.is_deleted is False  # Assuming fixture creates non-deleted
 
 
 async def test_get_time_window_by_id_not_found(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
@@ -245,6 +247,7 @@ async def test_update_time_window_success(
     assert updated_tw.category.id == new_category_data.id
     assert updated_tw.category.name == new_category_data.name
     assert updated_tw.day_template_id == new_dt_data.id
+    assert updated_tw.is_deleted is False
     assert updated_tw.user_id == test_user_one.id
 
 
@@ -322,17 +325,32 @@ async def test_update_time_window_to_soft_deleted_category(
 
 
 async def test_delete_time_window_success(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_time_window: TimeWindowModel
-):
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_time_window: TimeWindowModel, test_db
+):  # Added test_db for direct verification
     delete_response = await async_client.delete(
         f"{TIME_WINDOWS_ENDPOINT}{user_one_time_window.id}", headers=auth_headers_user_one
     )
     assert delete_response.status_code == 204
 
+    # Verify directly in DB it's marked as deleted
+    db_tw = await test_db.find_one(TimeWindowModel, TimeWindowModel.id == user_one_time_window.id)
+    assert db_tw is not None
+    assert db_tw.is_deleted is True
+
+    # Verify get by ID still returns it, but marked as deleted
+
     get_response = await async_client.get(
         f"{TIME_WINDOWS_ENDPOINT}{user_one_time_window.id}", headers=auth_headers_user_one
     )
-    assert get_response.status_code == 404
+    assert get_response.status_code == 200  # Should be found as it's soft-deleted
+    fetched_tw = TimeWindowResponse(**get_response.json())
+    assert fetched_tw.is_deleted is True
+
+
+# The above get_response assertion needs to be re-evaluated.
+# If get_time_window_by_id is supposed to return soft-deleted items (like categories),
+# then it should be 200 and response should show is_deleted=True.
+# This part of the test will be refined after implementing get_by_id behavior for soft-deleted.
 
 
 async def test_delete_time_window_not_found(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
@@ -381,3 +399,236 @@ async def test_time_window_endpoints_unauthenticated(async_client: AsyncClient, 
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Not authenticated"
+
+
+async def test_delete_time_window_marks_as_deleted_and_excluded_from_list(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+    test_db,  # For direct DB verification
+):
+    # Create a time window
+    tw_data = TimeWindowCreateRequest(
+        name="TWToDeleteAndVerify",
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=100,
+        end_time=200,
+    )
+    create_resp = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    tw_id = ObjectId(create_resp.json()["id"])
+
+    # Delete the time window
+    delete_resp = await async_client.delete(f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one)
+    assert delete_resp.status_code == 204
+
+    # Verify it's marked as deleted when fetched by ID
+    get_resp = await async_client.get(f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one)
+    assert get_resp.status_code == 200  # Should still be found
+    fetched_tw = TimeWindowResponse(**get_resp.json())
+    assert fetched_tw.id == tw_id
+    assert fetched_tw.is_deleted is True
+
+    # Verify it's excluded from the "get all" list
+    get_all_resp = await async_client.get(TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one)
+    assert get_all_resp.status_code == 200
+    all_tws = [TimeWindowResponse(**item) for item in get_all_resp.json()]
+    assert tw_id not in [tw.id for tw in all_tws]
+
+
+async def test_update_soft_deleted_time_window_fails_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+):
+    tw_data = TimeWindowCreateRequest(
+        name="TWSoftDeleteUpdateFail",
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=200,
+        end_time=300,
+    )
+    create_resp = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    tw_id = ObjectId(create_resp.json()["id"])
+
+    await async_client.delete(f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one)  # Soft delete
+
+    update_payload = TimeWindowUpdateRequest(name="NewNameForSoftDeletedTW")
+    update_resp = await async_client.patch(
+        f"{TIME_WINDOWS_ENDPOINT}{tw_id}",
+        headers=auth_headers_user_one,
+        json=update_payload.model_dump(mode="json", exclude_none=True),
+    )
+    assert update_resp.status_code == 404  # Service tries to find active TW for update
+
+
+async def test_delete_already_soft_deleted_time_window_succeeds(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+):
+    tw_data = TimeWindowCreateRequest(
+        name="TWDeleteMultipleTimes",
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=300,
+        end_time=400,
+    )
+    create_resp = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_data.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    tw_id = ObjectId(create_resp.json()["id"])
+
+    await async_client.delete(f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one)  # First delete
+    delete_resp2 = await async_client.delete(
+        f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one
+    )  # Second delete
+    assert delete_resp2.status_code == 204
+
+    get_resp = await async_client.get(f"{TIME_WINDOWS_ENDPOINT}{tw_id}", headers=auth_headers_user_one)
+    assert get_resp.status_code == 200
+    assert TimeWindowResponse(**get_resp.json()).is_deleted is True
+
+
+async def test_create_time_window_with_same_name_as_soft_deleted_succeeds(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+):
+    shared_name = "SharedTWNameForSoftDelete"
+    tw1_data = TimeWindowCreateRequest(
+        name=shared_name,
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=400,
+        end_time=500,
+    )
+    create_resp1 = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw1_data.model_dump(mode="json")
+    )
+    assert create_resp1.status_code == 201
+    tw1_id = ObjectId(create_resp1.json()["id"])
+
+    await async_client.delete(f"{TIME_WINDOWS_ENDPOINT}{tw1_id}", headers=auth_headers_user_one)  # Soft delete TW1
+
+    tw2_data = TimeWindowCreateRequest(
+        name=shared_name,
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=410,
+        end_time=510,
+    )  # Slightly different times
+    create_resp2 = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw2_data.model_dump(mode="json")
+    )
+    assert create_resp2.status_code == 201
+    tw2_resp = TimeWindowResponse(**create_resp2.json())
+    assert tw2_resp.name == shared_name
+    assert tw2_resp.is_deleted is False
+    assert tw2_resp.id != tw1_id
+
+
+async def test_update_time_window_name_to_match_soft_deleted_succeeds(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+):
+    soft_deleted_name = "OldTWNameSoftDeleted"
+    # Create and soft-delete a TW
+    tw_to_delete_data = TimeWindowCreateRequest(
+        name=soft_deleted_name,
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=500,
+        end_time=600,
+    )
+    create_del_resp = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw_to_delete_data.model_dump(mode="json")
+    )
+    assert create_del_resp.status_code == 201
+    soft_deleted_tw_id = ObjectId(create_del_resp.json()["id"])
+    await async_client.delete(f"{TIME_WINDOWS_ENDPOINT}{soft_deleted_tw_id}", headers=auth_headers_user_one)
+
+    # Create an active TW to update
+    active_tw_data = TimeWindowCreateRequest(
+        name="ActiveTWToUpdateName",
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=600,
+        end_time=700,
+    )
+    create_active_resp = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=active_tw_data.model_dump(mode="json")
+    )
+    assert create_active_resp.status_code == 201
+    active_tw_id = ObjectId(create_active_resp.json()["id"])
+
+    # Update active TW's name to the soft-deleted name
+    update_payload = TimeWindowUpdateRequest(name=soft_deleted_name)
+    update_resp = await async_client.patch(
+        f"{TIME_WINDOWS_ENDPOINT}{active_tw_id}",
+        headers=auth_headers_user_one,
+        json=update_payload.model_dump(mode="json", exclude_none=True),
+    )
+    assert update_resp.status_code == 200
+    updated_tw = TimeWindowResponse(**update_resp.json())
+    assert updated_tw.name == soft_deleted_name
+    assert updated_tw.is_deleted is False
+
+
+async def test_update_time_window_name_conflict_with_active(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_day_template_model: DayTemplateModel,
+):
+    active_name1 = "ActiveTWName1"
+    tw1_data = TimeWindowCreateRequest(
+        name=active_name1,
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=700,
+        end_time=800,
+    )
+    await async_client.post(TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw1_data.model_dump(mode="json"))
+
+    tw2_data = TimeWindowCreateRequest(
+        name="ActiveTWName2Initial",
+        category=user_one_category.id,
+        day_template_id=user_one_day_template_model.id,
+        start_time=800,
+        end_time=900,
+    )
+    create_resp2 = await async_client.post(
+        TIME_WINDOWS_ENDPOINT, headers=auth_headers_user_one, json=tw2_data.model_dump(mode="json")
+    )
+    tw2_id = ObjectId(create_resp2.json()["id"])
+
+    update_payload = TimeWindowUpdateRequest(name=active_name1)
+    update_resp = await async_client.patch(
+        f"{TIME_WINDOWS_ENDPOINT}{tw2_id}",
+        headers=auth_headers_user_one,
+        json=update_payload.model_dump(mode="json", exclude_none=True),
+    )
+    assert update_resp.status_code == 400
+    assert (
+        f"Active time window with name '{active_name1}' already exists for this user." in update_resp.json()["detail"]
+    )

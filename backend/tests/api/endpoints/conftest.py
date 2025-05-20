@@ -1,10 +1,12 @@
+import datetime
 import uuid
 
 import pytest
 
 from app.core.security import create_access_token
 from app.db.models.category import Category
-from app.db.models.day_template import DayTemplate  # Added import
+from app.db.models.day_template import DayTemplate
+from app.db.models.task import Task as TaskModel
 from app.db.models.time_window import TimeWindow
 from app.db.models.user import User  # Added import
 from app.services.user_service import UserService
@@ -148,6 +150,36 @@ async def user_one_day_template_model(test_db, test_user_one: User):
     )
     await test_db.save(day_template)
     return day_template
+
+
+@pytest.fixture
+async def user_one_task_model(test_db, test_user_one: User, user_one_category: Category) -> TaskModel:
+    """Create a Task model instance for test user one, associated with their category."""
+    task = TaskModel(
+        title=f"UserOne_Task_{uuid.uuid4()}",
+        description="Test task for user one",
+        user_id=test_user_one.id,
+        category_id=user_one_category.id,
+        due_date=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1),
+        priority="medium",
+        status="todo",
+    )
+    await test_db.save(task)
+    return task
+
+
+@pytest.fixture
+async def user_two_task_model(test_db, test_user_two: User, user_two_category: Category) -> TaskModel:
+    """Create a Task model instance for test user two, associated with their category."""
+    task = TaskModel(
+        title=f"UserTwo_Task_{uuid.uuid4()}",
+        description="Test task for user two",
+        user_id=test_user_two.id,
+        category_id=user_two_category.id,
+        due_date=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=2),
+    )
+    await test_db.save(task)
+    return task
 
 
 @pytest.fixture

@@ -153,3 +153,28 @@ class CategoryNameExistsException(CategoryServiceException):
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Category with name '{name}' already exists for this user"
         )
+
+
+# --- Task Service Exceptions ---
+
+
+class TaskServiceException(HTTPException):
+    """Base exception for task service related errors"""
+
+    pass
+
+
+class TaskNotFoundException(TaskServiceException):
+    def __init__(self, task_id: ObjectId | str):
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task with ID '{task_id}' not found",
+        )
+
+
+class TaskTitleExistsException(TaskServiceException):
+    def __init__(self, title: str):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"An active task with title '{title}' already exists for this user",
+        )

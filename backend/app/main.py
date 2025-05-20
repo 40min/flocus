@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from odmantic import AIOEngine
 
-from app.api.endpoints import categories, day_templates, time_windows, users
+from app.api.endpoints import categories, day_templates, tasks, time_windows, users
 from app.core.config import settings  # Import settings
 from app.core.logging_config import setup_logging
 from app.core.middleware import error_handling_middleware
@@ -47,3 +47,6 @@ app.include_router(categories.router, prefix=f"{settings.API_V1_STR}/categories"
 
 # Include time windows router with API version prefix
 app.include_router(time_windows.router, prefix=f"{settings.API_V1_STR}/time-windows", tags=["time-windows"])
+
+# Include tasks router with API version prefix
+app.include_router(tasks.router, prefix=f"{settings.API_V1_STR}/tasks", tags=["tasks"])

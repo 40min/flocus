@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import date
+from typing import Optional  # Added date
 
 from fastapi import HTTPException, status
 from odmantic import ObjectId
@@ -177,4 +178,34 @@ class TaskTitleExistsException(TaskServiceException):
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"An active task with title '{title}' already exists for this user",
+        )
+
+
+# --- Daily Plan Service Exceptions ---
+
+
+class DailyPlanServiceException(HTTPException):
+    """Base exception for daily plan service related errors"""
+
+    pass
+
+
+class DailyPlanNotFoundException(DailyPlanServiceException):
+    def __init__(self, plan_date: Optional[date] = None, plan_id: Optional[ObjectId | str] = None):
+        detail = "Daily plan not found"
+        if plan_date:
+            detail = f"Daily plan for date '{plan_date.isoformat()}' not found"
+        elif plan_id:
+            detail = f"Daily plan with ID '{str(plan_id)}' not found"
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=detail,
+        )
+
+
+class DailyPlanExistsException(DailyPlanServiceException):
+    def __init__(self, date_value: date):  # Renamed date to date_value to avoid conflict
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Daily plan for date '{date_value.isoformat()}' already exists for this user",
         )

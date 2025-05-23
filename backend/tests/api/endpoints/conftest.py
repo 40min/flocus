@@ -78,16 +78,8 @@ async def user_one_category(test_db, test_user_one):
 
 
 @pytest.fixture
-async def user_one_time_window(test_db, test_user_one, user_one_category):
-    """Create a time window for test user one."""
-    # Create a DayTemplate for this user
-    day_template = DayTemplate(
-        name=f"DT_UserOne_{uuid.uuid4()}",
-        user=test_user_one.id,
-        description="Test Day Template for User One",
-    )
-    await test_db.save(day_template)
-
+async def user_one_time_window(test_db, test_user_one, user_one_category, user_one_day_template_model: DayTemplate):
+    """Create a time window for test user one, associated with a specific day template."""
     # Ensure all data is in the correct type for the Model
     time_window_data = {
         "name": f"TW_UserOne_{uuid.uuid4()}",
@@ -95,7 +87,7 @@ async def user_one_time_window(test_db, test_user_one, user_one_category):
         "end_time": 17 * 60,  # int
         "category": user_one_category.id,
         "user": test_user_one.id,
-        "day_template_id": day_template.id,  # Associate with the DayTemplate
+        "day_template_id": user_one_day_template_model.id,  # Associate with the provided DayTemplate
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)

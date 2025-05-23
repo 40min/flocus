@@ -25,7 +25,7 @@ class DailyPlanAllocationResponse(BaseModel):
 
 
 class DailyPlanBase(BaseModel):
-    date: date = Field(..., description="The specific date for this daily plan.")
+    plan_date: date = Field(..., description="The specific date for this daily plan.")
 
 
 class DailyPlanCreateRequest(DailyPlanBase):

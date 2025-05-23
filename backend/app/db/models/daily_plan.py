@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from typing import List
 
 from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
@@ -11,12 +11,12 @@ class DailyPlanAllocation(EmbeddedModel):
 
 class DailyPlan(Model):
     user_id: ObjectId
-    date: date
+    plan_date: datetime
     allocations: List[DailyPlanAllocation] = Field(default_factory=list)
 
     model_config = {
         "collection": "daily_plans",
         "indexes": lambda: [
-            Index(DailyPlan.user_id, DailyPlan.date, unique=True),
+            Index(DailyPlan.user_id, DailyPlan.plan_date, unique=True),
         ],
     }

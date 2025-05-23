@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Optional
 
 from odmantic import Field, Index, Model, ObjectId
@@ -15,8 +15,8 @@ class Task(Model):
     category_id: Optional[ObjectId] = None
     user_id: ObjectId
     is_deleted: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "collection": "tasks",

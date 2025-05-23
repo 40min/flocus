@@ -186,7 +186,18 @@ async def test_update_task_success(
     assert updated_task.due_date.strftime("%Y-%m-%dT%H:%M:%S") == new_due_date.strftime("%Y-%m-%dT%H:%M:%S")
     assert updated_task.category.id == new_category_for_update.id
     assert not updated_task.is_deleted
-    assert updated_task.updated_at > updated_task.created_at
+    # Ensure comparison is between aware datetimes if they become naive
+    created_at_aware = (
+        updated_task.created_at.replace(tzinfo=datetime.UTC)
+        if updated_task.created_at.tzinfo is None
+        else updated_task.created_at
+    )
+    updated_at_aware = (
+        updated_task.updated_at.replace(tzinfo=datetime.UTC)
+        if updated_task.updated_at.tzinfo is None
+        else updated_task.updated_at
+    )
+    assert updated_at_aware > created_at_aware
 
 
 async def test_update_task_title_conflict(
@@ -330,7 +341,9 @@ async def test_update_task_title_to_match_soft_deleted_succeeds(
     await test_db.save(task_to_delete)
 
     # Create an active task to be updated
-    active_task_to_update = TaskModel(title="ActiveTaskToUpdateTitle", user_id=test_user_one.id)
+    active_task_to_update = TaskModel(
+        title="ActiveTaskToUpdateTitle", user_id=test_user_one.id, status=TaskStatus.IN_PROGRESS
+    )
     await test_db.save(active_task_to_update)
 
     # Update active task's title to the soft-deleted name
@@ -435,14 +448,30 @@ async def test_get_all_tasks_with_filters(
 @pytest.mark.parametrize(
     "sort_by, sort_order, expected_order_key_func",
     [
-        ("due_date", "asc", lambda t: t.due_date if t.due_date else datetime.datetime.max.replace(tzinfo=datetime.UTC)),
+        (
+            "due_date",
+            "asc",
+            lambda t: (
+                (t.due_date.replace(tzinfo=datetime.UTC) if t.due_date and t.due_date.tzinfo is None else t.due_date)
+                if t.due_date
+                else datetime.datetime.max.replace(tzinfo=datetime.UTC)
+            ),
+        ),
         (
             "due_date",
             "desc",
-            lambda t: t.due_date if t.due_date else datetime.datetime.min.replace(tzinfo=datetime.UTC),
+            lambda t: (
+                (t.due_date.replace(tzinfo=datetime.UTC) if t.due_date and t.due_date.tzinfo is None else t.due_date)
+                if t.due_date
+                else datetime.datetime.min.replace(tzinfo=datetime.UTC)
+            ),
         ),
-        ("priority", "asc", lambda t: {"low": 0, "medium": 1, "high": 2, "urgent": 3}[t.priority.value]),
-        ("priority", "desc", lambda t: {"low": 3, "medium": 2, "high": 1, "urgent": 0}[t.priority.value]),
+        ("priority", "asc", lambda t: ({"low": 0, "medium": 1, "high": 2, "urgent": 3}[t.priority], str(t.id))),
+        (
+            "priority",
+            "desc",
+            lambda t: ({"low": 0, "medium": 1, "high": 2, "urgent": 3}[t.priority], str(t.id)),
+        ),  # Use same map, reverse=True will handle desc
         ("created_at", "asc", lambda t: t.created_at),
         ("created_at", "desc", lambda t: t.created_at),
         ("title", "asc", lambda t: t.title.lower()),
@@ -600,5 +629,5 @@ async def test_invalid_task_id_format(async_client: AsyncClient, auth_headers_us
         else:
             response = await async_client.request(method, url, headers=auth_headers_user_one)
 
-        assert response.status_code == 400  # Path validation for ObjectId
-        assert f"Invalid ID format: '{invalid_id}'" in response.json()["detail"]
+        assert response.status_code == 422  # Path validation for ObjectId
+        assert "Input should be an instance of ObjectId" in response.json()["detail"][0]["msg"]

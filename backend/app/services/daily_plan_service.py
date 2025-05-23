@@ -1,5 +1,5 @@
-from datetime import date
-from typing import List, cast
+from datetime import date, datetime, time
+from typing import List
 
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId
@@ -99,18 +99,21 @@ class DailyPlanService:
         return DailyPlanResponse(
             id=daily_plan_model.id,
             user_id=daily_plan_model.user_id,
-            date=daily_plan_model.date,
+            plan_date=daily_plan_model.plan_date.date(),
             allocations=populated_allocations,
         )
 
     async def create_daily_plan(
         self, plan_data: DailyPlanCreateRequest, current_user_id: ObjectId
     ) -> DailyPlanResponse:
+        # Convert date to datetime at midnight for DB operations
+        plan_datetime = datetime.combine(plan_data.plan_date, time.min)
+
         existing_plan = await self.engine.find_one(
-            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.date == plan_data.date
+            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.plan_date == plan_datetime
         )
         if existing_plan:
-            raise DailyPlanExistsException(date_value=plan_data.date)
+            raise DailyPlanExistsException(date_value=plan_data.plan_date)
 
         await self._validate_allocations(plan_data.allocations, current_user_id)
 
@@ -119,13 +122,15 @@ class DailyPlanService:
             for alloc in plan_data.allocations
         ]
 
-        daily_plan = DailyPlan(user_id=current_user_id, date=plan_data.date, allocations=allocations_models)
+        daily_plan = DailyPlan(user_id=current_user_id, plan_date=plan_datetime, allocations=allocations_models)
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)
 
     async def get_daily_plan_by_date(self, plan_date: date, current_user_id: ObjectId) -> DailyPlanResponse:
+        # Convert date to datetime at midnight for DB operations
+        plan_datetime = datetime.combine(plan_date, time.min)
         daily_plan = await self.engine.find_one(
-            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.date == plan_date
+            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.plan_date == plan_datetime
         )
         if not daily_plan:
             raise DailyPlanNotFoundException(plan_date=plan_date)
@@ -142,8 +147,10 @@ class DailyPlanService:
     async def update_daily_plan(
         self, plan_date: date, plan_data: DailyPlanUpdateRequest, current_user_id: ObjectId
     ) -> DailyPlanResponse:
+        # Convert date to datetime at midnight for DB operations
+        plan_datetime = datetime.combine(plan_date, time.min)
         daily_plan = await self.engine.find_one(
-            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.date == plan_date
+            DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.plan_date == plan_datetime
         )
         if not daily_plan:
             raise DailyPlanNotFoundException(plan_date=plan_date)
@@ -151,7 +158,10 @@ class DailyPlanService:
         update_fields = plan_data.model_dump(exclude_unset=True)
 
         if "allocations" in update_fields:
-            new_allocations_data = cast(List[DailyPlanAllocationCreate], update_fields["allocations"])
+            # Parse list of dicts into List[DailyPlanAllocationCreate]
+            new_allocations_data = [
+                DailyPlanAllocationCreate(**alloc_dict) for alloc_dict in update_fields["allocations"]
+            ]
             await self._validate_allocations(new_allocations_data, current_user_id)
             daily_plan.allocations = [
                 DailyPlanAllocation(time_window_id=alloc.time_window_id, task_id=alloc.task_id)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List, Optional
 
 from fastapi import Depends
@@ -69,7 +69,7 @@ class TaskService:
                 )
 
         task_dict = task_data.model_dump()
-        task = Task(**task_dict, user_id=current_user_id, created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+        task = Task(**task_dict, user_id=current_user_id, created_at=datetime.now(UTC), updated_at=datetime.now(UTC))
         await self.engine.save(task)
         return await self._build_task_response(task)
 
@@ -104,12 +104,46 @@ class TaskService:
             "created_at": Task.created_at,
             "title": Task.title,
         }
-        sort_field = sort_field_map.get(sort_by, Task.due_date)
+        sort_field = sort_field_map.get(sort_by, Task.due_date)  # Default to Task.due_date if sort_by is not in map
 
-        sort_expression = query.desc(sort_field) if sort_order == "desc" else query.asc(sort_field)
+        # Initial fetch from DB - for due_date and priority, we might re-sort in Python
+        # For other fields, DB sort is fine.
+        if sort_by not in ["due_date", "priority"]:
+            sort_expression = query.desc(sort_field) if sort_order == "desc" else query.asc(sort_field)
+            tasks_models = await self.engine.find(Task, *query_conditions, sort=sort_expression)
+        else:
+            # Fetch without DB sort if we're going to sort in Python
+            tasks_models = await self.engine.find(Task, *query_conditions)
 
-        tasks_models = await self.engine.find(Task, *query_conditions, sort=sort_expression)
-        return [await self._build_task_response(task) for task in tasks_models]
+        task_responses = [await self._build_task_response(task) for task in tasks_models]
+
+        if sort_by == "due_date":
+            is_desc = sort_order == "desc"
+
+            def due_date_key(t: TaskResponse):
+                if t.due_date is None:
+                    # For asc, None is max (last); for desc, None is min (last after reverse)
+                    return datetime.max.replace(tzinfo=UTC) if not is_desc else datetime.min.replace(tzinfo=UTC)
+                # Ensure dates are aware for comparison
+                return t.due_date.replace(tzinfo=UTC) if t.due_date.tzinfo is None else t.due_date
+
+            task_responses.sort(key=due_date_key, reverse=is_desc)
+        elif sort_by == "priority":
+            if sort_order == "desc":
+                # For descending: urgent (0) > high (1) > medium (2) > low (3)
+                # Unknowns (100) will be last
+                desc_priority_map = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
+                task_responses.sort(key=lambda t: (desc_priority_map.get(t.priority, 100), str(t.id)))
+            else:  # asc
+                # For ascending: low (0) < medium (1) < high (2) < urgent (3)
+                # Unknowns (-1) will be first
+                asc_priority_map = {"low": 0, "medium": 1, "high": 2, "urgent": 3}
+                task_responses.sort(key=lambda t: (asc_priority_map.get(t.priority, -1), str(t.id)))
+        # For other sort_by fields, if not sorted by DB, they remain in fetched order or need explicit sort here.
+        # Current test cases only cover due_date, priority, created_at, title.
+        # created_at and title are fine with DB sort.
+
+        return task_responses
 
     async def update_task(
         self, task_id: ObjectId, task_data: TaskUpdateRequest, current_user_id: ObjectId
@@ -143,9 +177,24 @@ class TaskService:
                     detail="Active category not found or not owned by user.",
                 )
 
-        for field, value in update_data.items():
-            setattr(task, field, value)
-        task.updated_at = datetime.utcnow()
+        # Explicitly update fields to avoid potential issues with setattr and Pydantic/Odmantic defaults
+        if "title" in update_data:
+            task.title = update_data["title"]
+        if "description" in update_data:  # Allows setting description to None if explicitly passed
+            task.description = update_data["description"]
+        if (
+            "status" in update_data and update_data["status"] is not None
+        ):  # Ensure not to set to None if None was in update_data
+            task.status = update_data["status"]
+        if "priority" in update_data and update_data["priority"] is not None:  # Ensure not to set to None
+            task.priority = update_data["priority"]
+        if "due_date" in update_data:  # Allows setting due_date to None
+            task.due_date = update_data["due_date"]
+        if "category_id" in update_data:  # Allows setting category_id to None
+            task.category_id = update_data["category_id"]
+        # is_deleted is handled by a separate delete endpoint
+
+        task.updated_at = datetime.now(UTC)
         await self.engine.save(task)
         return await self._build_task_response(task)
 
@@ -158,6 +207,6 @@ class TaskService:
 
         if not task.is_deleted:
             task.is_deleted = True
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(UTC)
             await self.engine.save(task)
         return True

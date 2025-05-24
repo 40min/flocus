@@ -21,10 +21,7 @@ async def create_daily_plan(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    try:
-        return await service.create_daily_plan(plan_data=plan_data, current_user_id=current_user_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return await service.create_daily_plan(plan_data=plan_data, current_user_id=current_user_id)
 
 
 @router.get(

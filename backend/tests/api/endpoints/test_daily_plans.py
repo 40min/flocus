@@ -119,7 +119,7 @@ async def test_create_daily_plan_duplicate_date_fails(
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )  # Second attempt
-    assert response.status_code == 400
+    assert response.status_code == 409
     assert f"Daily plan for date '{plan_date.isoformat()}' already exists" in response.json()["detail"]
 
 
@@ -620,7 +620,7 @@ async def test_plan_date_must_be_unique_per_user_not_globally(
     response_user_one_again = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload_user_one.model_dump(mode="json")
     )
-    assert response_user_one_again.status_code == 400
+    assert response_user_one_again.status_code == 409
     assert (
         f"Daily plan for date '{plan_date.isoformat()}' already exists for this user"
         in response_user_one_again.json()["detail"]

@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 from typing import List
 
-from fastapi import Depends
+from fastapi import Depends, status
 from odmantic import AIOEngine, ObjectId
 
 from app.api.schemas.category import CategoryResponse
@@ -18,6 +18,7 @@ from app.core.exceptions import (
     CategoryNotFoundException,
     DailyPlanExistsException,
     DailyPlanNotFoundException,
+    DailyPlanServiceException,
     NotOwnerException,
     TaskNotFoundException,
     TimeWindowNotFoundException,
@@ -36,7 +37,9 @@ class DailyPlanService:
     async def _validate_allocations(self, allocations_data: List[DailyPlanAllocationCreate], current_user_id: ObjectId):
         time_window_ids_in_request = [alloc.time_window_id for alloc in allocations_data]
         if len(time_window_ids_in_request) != len(set(time_window_ids_in_request)):
-            raise ValueError("Duplicate time_window_ids found in allocations.")
+            raise DailyPlanServiceException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Duplicate time_window_ids found in allocations."
+            )
 
         for alloc_data in allocations_data:
             time_window = await self.engine.find_one(

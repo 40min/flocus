@@ -3,9 +3,6 @@ from typing import List, Optional
 from bson import ObjectId
 from odmantic import Field, Index, Model  # Added Index import
 
-# from app.db.models.time_window import TimeWindow # No longer needed for direct type hint
-# from app.db.models.user import User # No longer needed for direct type hint
-
 
 class DayTemplate(Model):
     """Database model for Day Templates"""

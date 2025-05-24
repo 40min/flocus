@@ -21,10 +21,11 @@ class Task(Model):
     model_config = {
         "collection": "tasks",
         "indexes": lambda: [
-            Index(Task.user_id, Task.title, name="user_title_idx"),
-            Index(Task.user_id, Task.status, name="user_status_idx"),
-            Index(Task.user_id, Task.priority, name="user_priority_idx"),
-            Index(Task.user_id, Task.due_date, name="user_due_date_idx"),
-            Index(Task.user_id, Task.category_id, name="user_category_idx"),
+            Index(Task.user_id, Task.title, Task.is_deleted, name="user_title_deleted_idx", unique=True),
+            Index(Task.user_id, Task.status, Task.is_deleted, name="user_status_deleted_idx"),
+            Index(Task.user_id, Task.priority, Task.is_deleted, name="user_priority_deleted_idx"),
+            Index(Task.user_id, Task.due_date, Task.is_deleted, name="user_due_date_deleted_idx"),
+            Index(Task.user_id, Task.category_id, Task.is_deleted, name="user_category_deleted_idx"),
+            Index(Task.user_id, Task.is_deleted, name="user_deleted_idx"),
         ],
     }

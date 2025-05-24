@@ -21,5 +21,6 @@ class TimeWindow(Model):
         "indexes": lambda: [
             Index(TimeWindow.user, TimeWindow.name, TimeWindow.is_deleted, unique=True),
             Index(TimeWindow.day_template_id),
+            Index(TimeWindow.user, TimeWindow.is_deleted),
         ],
     }

@@ -17,5 +17,6 @@ class Category(Model):
         "collection": "categories",
         "indexes": lambda: [
             Index(Category.user, Category.name, Category.is_deleted, unique=True),
+            Index(Category.user, Category.is_deleted),
         ],
     }

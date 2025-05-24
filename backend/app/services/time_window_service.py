@@ -5,6 +5,7 @@ from odmantic import AIOEngine, ObjectId
 
 from app.api.schemas.category import CategoryResponse
 from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse, TimeWindowUpdateRequest
+from app.core.exceptions import InvalidTimeWindowTimesException  # Added
 from app.core.exceptions import (
     CategoryNotFoundException,
     DayTemplateNotFoundException,
@@ -149,7 +150,7 @@ class TimeWindowService:
         if merged_end_time <= merged_start_time:
             # This validation is also in Pydantic model, but good to have defense in depth
             # or if only one is updated, check against the existing value.
-            raise ValueError("end_time must be greater than start_time")
+            raise InvalidTimeWindowTimesException()
 
         for field, value in update_data.items():
             setattr(time_window, field, value)

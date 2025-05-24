@@ -140,6 +140,14 @@ class TimeWindowNameExistsException(DayTemplateServiceException):
         )
 
 
+class InvalidTimeWindowTimesException(DayTemplateServiceException):
+    def __init__(self, detail: str = "end_time must be greater than start_time"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+        )
+
+
 # --- Category Service Exceptions ---
 
 

@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId, query
@@ -21,13 +21,17 @@ class TaskService:
     def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
 
-    async def _build_task_response(self, task_model: Task) -> TaskResponse:
+    async def _build_task_response(
+        self, task_model: Task, categories_map: Optional[Dict[ObjectId, CategoryResponse]] = None
+    ) -> TaskResponse:
         category_response: Optional[CategoryResponse] = None
-        if task_model.category_id:
+        if task_model.category_id and categories_map:
+            category_response = categories_map.get(task_model.category_id)
+        elif task_model.category_id:  # Fallback for single task fetches like get_task_by_id
             category_model = await self.engine.find_one(
                 Category,
                 Category.id == task_model.category_id,
-                Category.user == task_model.user_id,
+                Category.user == task_model.user_id,  # Reverted: Category.user_id to Category.user
                 Category.is_deleted == False,  # noqa: E712
             )
             if category_model:
@@ -79,7 +83,30 @@ class TaskService:
             raise TaskNotFoundException(task_id=str(task_id))
         if task.user_id != current_user_id:
             raise NotOwnerException(resource="task", detail_override="Not authorized to access this task")
-        return await self._build_task_response(task)
+        # For single task fetch, we don't have a pre-fetched categories_map
+        return await self._build_task_response(task_model=task, categories_map=None)
+
+    def _sort_tasks_by_due_date(self, tasks: List[TaskResponse], sort_order: str) -> List[TaskResponse]:
+        is_desc = sort_order == "desc"
+
+        def due_date_key(t: TaskResponse):
+            if t.due_date is None:
+                return datetime.max.replace(tzinfo=UTC) if not is_desc else datetime.min.replace(tzinfo=UTC)
+            return t.due_date.replace(tzinfo=UTC) if t.due_date.tzinfo is None else t.due_date
+
+        tasks.sort(key=due_date_key, reverse=is_desc)
+        return tasks
+
+    def _sort_tasks_by_priority(self, tasks: List[TaskResponse], sort_order: str) -> List[TaskResponse]:
+        if sort_order == "desc":
+            priority_map = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
+            default_value = 100  # Unknowns last
+        else:  # asc
+            priority_map = {"low": 0, "medium": 1, "high": 2, "urgent": 3}
+            default_value = -1  # Unknowns first
+
+        tasks.sort(key=lambda t: (priority_map.get(t.priority, default_value), str(t.id)))
+        return tasks
 
     async def get_all_tasks(
         self,
@@ -104,44 +131,32 @@ class TaskService:
             "created_at": Task.created_at,
             "title": Task.title,
         }
-        sort_field = sort_field_map.get(sort_by, Task.due_date)  # Default to Task.due_date if sort_by is not in map
+        sort_field = sort_field_map.get(sort_by, Task.due_date)
 
-        # Initial fetch from DB - for due_date and priority, we might re-sort in Python
-        # For other fields, DB sort is fine.
         if sort_by not in ["due_date", "priority"]:
             sort_expression = query.desc(sort_field) if sort_order == "desc" else query.asc(sort_field)
             tasks_models = await self.engine.find(Task, *query_conditions, sort=sort_expression)
         else:
-            # Fetch without DB sort if we're going to sort in Python
             tasks_models = await self.engine.find(Task, *query_conditions)
 
-        task_responses = [await self._build_task_response(task) for task in tasks_models]
+        # Batch fetch categories
+        category_ids = {task.category_id for task in tasks_models if task.category_id}
+        categories_map: Dict[ObjectId, CategoryResponse] = {}
+        if category_ids:
+            category_models = await self.engine.find(
+                Category,
+                Category.id.in_(list(category_ids)),  # Corrected: query.In to Model.field.in_
+                Category.user == current_user_id,  # Reverted: Category.user_id to Category.user
+                Category.is_deleted == False,  # noqa: E712
+            )
+            categories_map = {cat.id: CategoryResponse.model_validate(cat) for cat in category_models}
+
+        task_responses = [await self._build_task_response(task, categories_map) for task in tasks_models]
 
         if sort_by == "due_date":
-            is_desc = sort_order == "desc"
-
-            def due_date_key(t: TaskResponse):
-                if t.due_date is None:
-                    # For asc, None is max (last); for desc, None is min (last after reverse)
-                    return datetime.max.replace(tzinfo=UTC) if not is_desc else datetime.min.replace(tzinfo=UTC)
-                # Ensure dates are aware for comparison
-                return t.due_date.replace(tzinfo=UTC) if t.due_date.tzinfo is None else t.due_date
-
-            task_responses.sort(key=due_date_key, reverse=is_desc)
+            task_responses = self._sort_tasks_by_due_date(task_responses, sort_order)
         elif sort_by == "priority":
-            if sort_order == "desc":
-                # For descending: urgent (0) > high (1) > medium (2) > low (3)
-                # Unknowns (100) will be last
-                desc_priority_map = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
-                task_responses.sort(key=lambda t: (desc_priority_map.get(t.priority, 100), str(t.id)))
-            else:  # asc
-                # For ascending: low (0) < medium (1) < high (2) < urgent (3)
-                # Unknowns (-1) will be first
-                asc_priority_map = {"low": 0, "medium": 1, "high": 2, "urgent": 3}
-                task_responses.sort(key=lambda t: (asc_priority_map.get(t.priority, -1), str(t.id)))
-        # For other sort_by fields, if not sorted by DB, they remain in fetched order or need explicit sort here.
-        # Current test cases only cover due_date, priority, created_at, title.
-        # created_at and title are fine with DB sort.
+            task_responses = self._sort_tasks_by_priority(task_responses, sort_order)
 
         return task_responses
 

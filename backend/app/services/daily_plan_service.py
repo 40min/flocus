@@ -62,23 +62,53 @@ class DailyPlanService:
 
     async def _build_daily_plan_response(self, daily_plan_model: DailyPlan) -> DailyPlanResponse:
         populated_allocations: List[DailyPlanAllocationResponse] = []
+
+        if not daily_plan_model.allocations:
+            return DailyPlanResponse(
+                id=daily_plan_model.id,
+                user_id=daily_plan_model.user_id,
+                plan_date=daily_plan_model.plan_date.date(),
+                allocations=[],
+            )
+
+        time_window_ids = list(set(alloc.time_window_id for alloc in daily_plan_model.allocations))
+        task_ids = list(set(alloc.task_id for alloc in daily_plan_model.allocations))
+
+        time_windows_db = await self.engine.find(
+            TimeWindow, TimeWindow.id.in_(time_window_ids), TimeWindow.is_deleted == False  # noqa: E712
+        )
+        tasks_db = await self.engine.find(Task, Task.id.in_(task_ids), Task.is_deleted == False)  # noqa: E712
+
+        time_windows_map = {tw.id: tw for tw in time_windows_db}
+        tasks_map = {task.id: task for task in tasks_db}
+
+        category_ids = set()
+        for tw_id in time_window_ids:
+            time_window = time_windows_map.get(tw_id)
+            if time_window and time_window.category:
+                category_ids.add(time_window.category)
+        for task_id in task_ids:
+            task = tasks_map.get(task_id)
+            if task and task.category_id:
+                category_ids.add(task.category_id)
+
+        categories_db = await self.engine.find(Category, Category.id.in_(list(category_ids)))
+        categories_map = {cat.id: cat for cat in categories_db}
+
         for allocation_model in daily_plan_model.allocations:
-            time_window_model = await self.engine.find_one(
-                TimeWindow,
-                TimeWindow.id == allocation_model.time_window_id,
-                TimeWindow.is_deleted == False,  # noqa: E712
-            )
-            task_model = await self.engine.find_one(
-                Task, Task.id == allocation_model.task_id, Task.is_deleted == False  # noqa: E712
-            )
+            time_window_model = time_windows_map.get(allocation_model.time_window_id)
+            task_model = tasks_map.get(allocation_model.task_id)
 
             if not time_window_model:
                 raise TimeWindowNotFoundException(time_window_id=allocation_model.time_window_id)
             if not task_model:
                 raise TaskNotFoundException(task_id=allocation_model.task_id)
 
-            tw_category_model = await self.engine.find_one(Category, Category.id == time_window_model.category)
+            tw_category_model = categories_map.get(time_window_model.category)
             if not tw_category_model:
+                # This case should ideally not happen if data integrity is maintained
+                # or if category is nullable and handled appropriately.
+                # For now, raising an exception similar to original logic.
                 raise CategoryNotFoundException(category_id=time_window_model.category)
 
             tw_response_data = time_window_model.model_dump()
@@ -87,9 +117,14 @@ class DailyPlanService:
 
             task_category_response = None
             if task_model.category_id:
-                task_category_model = await self.engine.find_one(Category, Category.id == task_model.category_id)
+                task_category_model = categories_map.get(task_model.category_id)
                 if task_category_model:
                     task_category_response = CategoryResponse.model_validate(task_category_model)
+                # else:
+                # If task_category_model is None here, it means a category_id was present
+                # but the category itself was not found or was soft-deleted.
+                # Depending on requirements, could raise an error or proceed with None.
+                # Current logic matches original: if category not found, response is None.
 
             task_response_data = task_model.model_dump()
             task_response_data["category"] = task_category_response

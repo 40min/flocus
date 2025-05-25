@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId, query
 
-from app.api.schemas.category import CategoryResponse
 from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
 from app.core.exceptions import (
     CategoryNotFoundException,
@@ -15,43 +14,12 @@ from app.core.exceptions import (
 from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.task import Task
+from app.mappers.task_mapper import TaskMapper
 
 
 class TaskService:
     def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
-
-    async def _build_task_response(
-        self, task_model: Task, categories_map: Optional[Dict[ObjectId, CategoryResponse]] = None
-    ) -> TaskResponse:
-        category_response: Optional[CategoryResponse] = None
-        if task_model.category_id and categories_map:
-            category_response = categories_map.get(task_model.category_id)
-        elif task_model.category_id:  # Fallback for single task fetches like get_task_by_id
-            category_model = await self.engine.find_one(
-                Category,
-                Category.id == task_model.category_id,
-                Category.user == task_model.user_id,  # Reverted: Category.user_id to Category.user
-                Category.is_deleted == False,  # noqa: E712
-            )
-            if category_model:
-                category_response = CategoryResponse.model_validate(category_model)
-
-        response_data = {
-            "id": task_model.id,
-            "title": task_model.title,
-            "description": task_model.description,
-            "status": task_model.status,
-            "priority": task_model.priority,
-            "due_date": task_model.due_date,
-            "category_id": task_model.category_id,
-            "user_id": task_model.user_id,
-            "category": category_response,
-            "is_deleted": task_model.is_deleted,
-            "created_at": task_model.created_at,
-            "updated_at": task_model.updated_at,
-        }
-        return TaskResponse.model_validate(response_data)
 
     async def create_task(self, task_data: TaskCreateRequest, current_user_id: ObjectId) -> TaskResponse:
         existing_task_title = await self.engine.find_one(
@@ -63,19 +31,20 @@ class TaskService:
         if existing_task_title:
             raise TaskTitleExistsException(title=task_data.title)
 
+        category_model: Optional[Category] = None
         if task_data.category_id:
-            category = await self.engine.find_one(
+            category_model = await self.engine.find_one(
                 Category, Category.id == task_data.category_id, Category.user == current_user_id
             )
-            if not category or category.is_deleted:
+            if not category_model or category_model.is_deleted:
                 raise CategoryNotFoundException(
                     category_id=str(task_data.category_id), detail="Active category not found or not owned by user."
                 )
 
-        task_dict = task_data.model_dump()
-        task = Task(**task_dict, user_id=current_user_id, created_at=datetime.now(UTC), updated_at=datetime.now(UTC))
+        task = TaskMapper.to_model_for_create(schema=task_data, user_id=current_user_id)
         await self.engine.save(task)
-        return await self._build_task_response(task)
+        # The category_model was fetched above if category_id was provided
+        return TaskMapper.to_response(task, category_model)
 
     async def get_task_by_id(self, task_id: ObjectId, current_user_id: ObjectId) -> TaskResponse:
         task = await self.engine.find_one(Task, Task.id == task_id)
@@ -83,8 +52,19 @@ class TaskService:
             raise TaskNotFoundException(task_id=str(task_id))
         if task.user_id != current_user_id:
             raise NotOwnerException(resource="task", detail_override="Not authorized to access this task")
-        # For single task fetch, we don't have a pre-fetched categories_map
-        return await self._build_task_response(task_model=task, categories_map=None)
+
+        category_model: Optional[Category] = None
+        if task.category_id:
+            category_model = await self.engine.find_one(
+                Category,
+                Category.id == task.category_id,
+                Category.user == task.user_id,
+                Category.is_deleted == False,  # noqa: E712
+            )
+            # If category_model is None here, it implies a data integrity issue or
+            # the category was deleted after task assignment. TaskMapper handles Optional[Category].
+
+        return TaskMapper.to_response(task, category_model)
 
     def _sort_tasks_by_due_date(self, tasks: List[TaskResponse], sort_order: str) -> List[TaskResponse]:
         is_desc = sort_order == "desc"
@@ -141,7 +121,7 @@ class TaskService:
 
         # Batch fetch categories
         category_ids = {task.category_id for task in tasks_models if task.category_id}
-        categories_map: Dict[ObjectId, CategoryResponse] = {}
+        categories_model_map: Dict[ObjectId, Category] = {}
         if category_ids:
             category_models = await self.engine.find(
                 Category,
@@ -149,12 +129,17 @@ class TaskService:
                 Category.user == current_user_id,  # Reverted: Category.user_id to Category.user
                 Category.is_deleted == False,  # noqa: E712
             )
-            categories_map = {cat.id: CategoryResponse.model_validate(cat) for cat in category_models}
+            categories_model_map = {cat.id: cat for cat in category_models}
 
-        task_responses = [await self._build_task_response(task, categories_map) for task in tasks_models]
+        task_responses = []
+        for task_model in tasks_models:
+            category_model_for_task = (
+                categories_model_map.get(task_model.category_id) if task_model.category_id else None
+            )
+            task_responses.append(TaskMapper.to_response(task_model, category_model_for_task))
 
         if sort_by == "due_date":
-            task_responses = self._sort_tasks_by_due_date(task_responses, sort_order)
+            task_responses = self._sort_tasks_by_due_date(task_responses, sort_order)  # type: ignore
         elif sort_by == "priority":
             task_responses = self._sort_tasks_by_priority(task_responses, sort_order)
 
@@ -182,15 +167,18 @@ class TaskService:
             if existing_task_title:
                 raise TaskTitleExistsException(title=update_data["title"])
 
+        category_model_for_response: Optional[Category] = None
         if "category_id" in update_data and update_data["category_id"] is not None:
-            category = await self.engine.find_one(
+            category_model_for_response = await self.engine.find_one(
                 Category, Category.id == update_data["category_id"], Category.user == current_user_id
             )
-            if not category or category.is_deleted:
+            if not category_model_for_response or category_model_for_response.is_deleted:
                 raise CategoryNotFoundException(
                     category_id=str(update_data["category_id"]),
                     detail="Active category not found or not owned by user.",
                 )
+        elif task.category_id and ("category_id" not in update_data or update_data["category_id"] is None):
+            category_model_for_response = None  # Category is being removed or was not there
 
         # Explicitly update fields to avoid potential issues with setattr and Pydantic/Odmantic defaults
         if "title" in update_data:
@@ -211,7 +199,17 @@ class TaskService:
 
         task.updated_at = datetime.now(UTC)
         await self.engine.save(task)
-        return await self._build_task_response(task)
+
+        # If category_id was not in update_data, but task had one, fetch it for response
+        if not category_model_for_response and task.category_id:
+            category_model_for_response = await self.engine.find_one(
+                Category,
+                Category.id == task.category_id,
+                Category.user == current_user_id,
+                Category.is_deleted == False,  # noqa: E712
+            )
+
+        return TaskMapper.to_response(task, category_model_for_response)
 
     async def delete_task(self, task_id: ObjectId, current_user_id: ObjectId) -> bool:
         task = await self.engine.find_one(Task, Task.id == task_id)

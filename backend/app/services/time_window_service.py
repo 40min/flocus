@@ -3,7 +3,6 @@ from typing import List
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId
 
-from app.api.schemas.category import CategoryResponse
 from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse, TimeWindowUpdateRequest
 from app.core.exceptions import InvalidTimeWindowTimesException  # Added
 from app.core.exceptions import (
@@ -17,6 +16,7 @@ from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.day_template import DayTemplate
 from app.db.models.time_window import TimeWindow
+from app.mappers.time_window_mapper import TimeWindowMapper
 
 
 class TimeWindowService:
@@ -30,10 +30,7 @@ class TimeWindowService:
                 detail=f"Category for TimeWindow {time_window_model.id} not found."
             )  # Should be caught earlier by validation
 
-        response_data = time_window_model.model_dump()
-        response_data["category"] = CategoryResponse.model_validate(category_model)
-        # The alias user_id=Field(..., alias="user") in TimeWindowResponse handles mapping model.user to schema.user_id
-        return TimeWindowResponse.model_validate(response_data)
+        return TimeWindowMapper.to_response(time_window_model, category_model)
 
     async def create_time_window(
         self, time_window_data: TimeWindowCreateRequest, current_user_id: ObjectId
@@ -69,7 +66,7 @@ class TimeWindowService:
         if existing_tw_with_name:
             raise TimeWindowNameExistsException(name=time_window_data.name)
 
-        time_window = TimeWindow(**time_window_data.model_dump(), user=current_user_id, is_deleted=False)
+        time_window = TimeWindowMapper.to_model_for_create(schema=time_window_data, user_id=current_user_id)
         await self.engine.save(time_window)
         return await self._build_time_window_response(time_window)
 

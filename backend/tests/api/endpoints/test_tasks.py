@@ -362,7 +362,7 @@ async def test_update_task_title_to_match_soft_deleted_succeeds(
 @pytest.mark.parametrize(
     "filters, expected_count_func",
     [
-        ({"status": "todo"}, lambda tasks: sum(1 for t in tasks if t.status == TaskStatus.TODO)),
+        ({"status": "pending"}, lambda tasks: sum(1 for t in tasks if t.status == TaskStatus.PENDING)),
         ({"priority": "high"}, lambda tasks: sum(1 for t in tasks if t.priority == TaskPriority.HIGH)),
         (
             {"categoryId": "placeholder_category_id"},
@@ -393,7 +393,7 @@ async def test_get_all_tasks_with_filters(
         TaskModel(
             title="Task 1",
             user_id=test_user_one.id,
-            status=TaskStatus.TODO,
+            status=TaskStatus.PENDING,
             priority=TaskPriority.LOW,
             category_id=user_one_category.id,
         ),
@@ -407,7 +407,7 @@ async def test_get_all_tasks_with_filters(
             priority=TaskPriority.HIGH,
             category_id=user_one_category.id,
         ),
-        TaskModel(title="Task 4", user_id=test_user_one.id, status=TaskStatus.TODO, priority=TaskPriority.HIGH),
+        TaskModel(title="Task 4", user_id=test_user_one.id, status=TaskStatus.PENDING, priority=TaskPriority.HIGH),
     ]
     created_tasks_models = []
     for task_model in task_data_list:
@@ -570,7 +570,7 @@ async def test_get_all_tasks_sorting(
         ("title", "", "String should have at least 1 character"),
         ("title", "a" * 101, "String should have at most 100 characters"),
         ("description", "a" * 501, "String should have at most 500 characters"),
-        ("status", "invalid_status", "Input should be 'todo', 'in_progress', 'done' or 'blocked'"),
+        ("status", "invalid_status", "Input should be 'pending', 'in_progress', 'done' or 'blocked'"),
         ("priority", "invalid_priority", "Input should be 'low', 'medium', 'high' or 'urgent'"),
         ("due_date", "not_a_date", "Input should be a valid datetime"),
         ("category_id", "not_an_object_id", "Input should be an instance of ObjectId"),

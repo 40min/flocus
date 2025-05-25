@@ -1,19 +1,16 @@
 from bson import ObjectId
-from odmantic import Field, Index, Model  # Added Index import, Field
-
-# from app.db.models.category import Category # No longer needed for direct type hint
-# from app.db.models.user import User # No longer needed for direct type hint
+from odmantic import Field, Index, Model
 
 
 class TimeWindow(Model):
     """Database model for Time Windows"""
 
     name: str
-    start_time: int  # Changed to integer (minutes from start of day)
-    end_time: int  # Changed to integer (minutes from start of day)
+    start_time: int
+    end_time: int
     category: ObjectId
     user: ObjectId
-    day_template_id: ObjectId  # Added field for the parent DayTemplate
+    day_template_id: ObjectId
     is_deleted: bool = Field(default=False)
 
     model_config = {

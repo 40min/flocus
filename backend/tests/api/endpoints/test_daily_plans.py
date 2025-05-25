@@ -51,7 +51,7 @@ async def user_one_task_alt(test_db, test_user_one: UserModel, user_one_category
         "user_id": test_user_one.id,
         "category_id": user_one_category.id,
         "priority": TaskPriority.LOW,
-        "status": TaskStatus.TODO,
+        "status": TaskStatus.PENDING,
     }
     instance = TaskModel(**task_data)
     await test_db.save(instance)

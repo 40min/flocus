@@ -22,8 +22,8 @@ class TimeWindowBaseModel(BaseModel):
 
 
 class TimeWindowRequestSchema(TimeWindowBaseModel):
-    start_time: int  # Expected as minutes since midnight (0-1439)
-    end_time: int  # Expected as minutes since midnight (0-1439)
+    start_time: int
+    end_time: int
 
     @field_validator("start_time", "end_time")
     @classmethod
@@ -43,10 +43,10 @@ class TimeWindowCreateRequest(TimeWindowRequestSchema):
     pass
 
 
-class TimeWindowUpdateRequest(BaseModel):  # Not inheriting to make all fields optional easily
+class TimeWindowUpdateRequest(BaseModel):
     name: Optional[str] = None
-    start_time: Optional[int] = None  # Expected as minutes since midnight (0-1439)
-    end_time: Optional[int] = None  # Expected as minutes since midnight (0-1439)
+    start_time: Optional[int] = None
+    end_time: Optional[int] = None
     category: Optional[ObjectId] = None
     day_template_id: Optional[ObjectId] = None
 
@@ -66,9 +66,6 @@ class TimeWindowUpdateRequest(BaseModel):  # Not inheriting to make all fields o
         if data.start_time is not None and data.end_time is not None:
             if data.end_time <= data.start_time:
                 raise ValueError("end_time must be greater than start_time")
-        # If one is None and the other is not, this implies a partial update.
-        # If both are None, no time validation is needed.
-        # If both are present, the above check applies.
         return data
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
@@ -76,11 +73,11 @@ class TimeWindowUpdateRequest(BaseModel):  # Not inheriting to make all fields o
 
 class TimeWindowResponse(TimeWindowBaseModel):
     id: ObjectId
-    start_time: int  # Internally stored as int (minutes)
-    end_time: int  # Internally stored as int (minutes)
+    start_time: int
+    end_time: int
     category: CategoryResponse
-    day_template_id: ObjectId  # Explicitly add day_template_id here as it's not aliased
-    user_id: ObjectId = Field(..., alias="user")  # Populate from 'user' attribute of the model/dict
+    day_template_id: ObjectId
+    user_id: ObjectId = Field(..., alias="user")
     is_deleted: bool = False
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

@@ -154,7 +154,7 @@ async def user_one_task_model(test_db, test_user_one: User, user_one_category: C
         category_id=user_one_category.id,
         due_date=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1),
         priority="medium",
-        status="todo",
+        status="pending",  # Changed from "todo"
     )
     await test_db.save(task)
     return task
@@ -169,6 +169,8 @@ async def user_two_task_model(test_db, test_user_two: User, user_two_category: C
         user_id=test_user_two.id,
         category_id=user_two_category.id,
         due_date=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=2),
+        status="pending",  # Added default status
+        priority="medium",  # Added default priority
     )
     await test_db.save(task)
     return task

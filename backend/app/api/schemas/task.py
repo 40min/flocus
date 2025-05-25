@@ -9,7 +9,7 @@ from app.api.schemas.category import CategoryResponse
 
 
 class TaskStatus(str, Enum):
-    TODO = "todo"
+    PENDING = "pending"  # Renamed from TODO
     IN_PROGRESS = "in_progress"
     DONE = "done"
     BLOCKED = "blocked"
@@ -25,7 +25,7 @@ class TaskPriority(str, Enum):
 class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    status: TaskStatus = Field(default=TaskStatus.TODO)
+    status: TaskStatus = Field(default=TaskStatus.PENDING)  # Updated default
     priority: TaskPriority = Field(default=TaskPriority.MEDIUM)
     due_date: Optional[datetime] = None
     category_id: Optional[ObjectId] = None

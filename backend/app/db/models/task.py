@@ -9,7 +9,7 @@ from app.api.schemas.task import TaskPriority, TaskStatus
 class Task(Model):
     title: str
     description: Optional[str] = None
-    status: TaskStatus = Field(default=TaskStatus.TODO)
+    status: TaskStatus = Field(default=TaskStatus.PENDING)
     priority: TaskPriority = Field(default=TaskPriority.MEDIUM)
     due_date: Optional[datetime] = None
     category_id: Optional[ObjectId] = None

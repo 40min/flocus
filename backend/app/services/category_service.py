@@ -7,6 +7,7 @@ from app.api.schemas.category import CategoryCreateRequest, CategoryResponse, Ca
 from app.core.exceptions import CategoryNameExistsException, CategoryNotFoundException, NotOwnerException
 from app.db.connection import get_database
 from app.db.models.category import Category
+from app.mappers.category_mapper import CategoryMapper
 
 
 class CategoryService:
@@ -25,9 +26,9 @@ class CategoryService:
         if existing_category:
             raise CategoryNameExistsException(name=category_data.name)
 
-        category = Category(**category_data.model_dump(), user=current_user_id, is_deleted=False)
+        category = CategoryMapper.to_model_for_create(schema=category_data, user_id=current_user_id)
         await self.engine.save(category)
-        return CategoryResponse.model_validate(category)
+        return CategoryMapper.to_response(category)
 
     async def get_category_by_id(self, category_id: ObjectId, current_user_id: ObjectId) -> CategoryResponse:
         category = await self.engine.find_one(Category, Category.id == category_id)
@@ -37,7 +38,7 @@ class CategoryService:
         if category.user != current_user_id:
             raise NotOwnerException(resource="category", detail_override="Not authorized to access this category")
 
-        return CategoryResponse.model_validate(category)
+        return CategoryMapper.to_response(category)
 
     async def get_all_categories(self, current_user_id: ObjectId) -> List[CategoryResponse]:
         categories = await self.engine.find(
@@ -45,7 +46,7 @@ class CategoryService:
             Category.user == current_user_id,
             Category.is_deleted == False,  # noqa: E712
         )
-        return [CategoryResponse.model_validate(category) for category in categories]
+        return [CategoryMapper.to_response(category) for category in categories]
 
     async def update_category(
         self, category_id: ObjectId, category_data: CategoryUpdateRequest, current_user_id: ObjectId
@@ -78,7 +79,7 @@ class CategoryService:
             setattr(category, field, value)
 
         await self.engine.save(category)
-        return CategoryResponse.model_validate(category)
+        return CategoryMapper.to_response(category)
 
     async def delete_category(self, category_id: ObjectId, current_user_id: ObjectId) -> bool:
         category = await self.engine.find_one(Category, Category.id == category_id)

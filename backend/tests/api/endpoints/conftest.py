@@ -12,7 +12,7 @@ from app.db.models.user import User  # Added import
 from app.services.user_service import UserService
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 async def test_user_one(test_db):
     """Create test user one."""
     user_service = UserService(test_db)
@@ -31,7 +31,7 @@ async def test_user_one(test_db):
     return user
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 async def test_user_two(test_db):
     """Create test user two."""
     user_service = UserService(test_db)
@@ -50,14 +50,14 @@ async def test_user_two(test_db):
     return user
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 async def auth_headers_user_one(test_user_one: User):  # Added User type hint
     """Get auth headers for test user one."""
     access_token = create_access_token(data={"sub": test_user_one.username})  # Use username for sub
     return {"Authorization": f"Bearer {access_token}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 async def auth_headers_user_two(test_user_two: User):  # Added User type hint
     """Get auth headers for test user two."""
     access_token = create_access_token(data={"sub": test_user_two.username})  # Use username for sub

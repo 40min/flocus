@@ -51,7 +51,9 @@ async def test_db(db_engine: AIOEngine):
 @pytest.fixture(scope="function")
 async def clean_db(db_engine: AIOEngine):
     """Function-scoped fixture to clear all relevant collections before each test."""
-    collections_to_clear = [User, Category, Task, TimeWindow, DayTemplate]
+    # User collection is now managed by the session-scoped test_db fixture
+    # to support module-scoped user fixtures.
+    collections_to_clear = [Category, Task, TimeWindow, DayTemplate]
     for model_cls in collections_to_clear:
         await db_engine.get_collection(model_cls).delete_many({})
     yield db_engine

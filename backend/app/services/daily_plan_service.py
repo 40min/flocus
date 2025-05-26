@@ -1,10 +1,9 @@
 from datetime import date, datetime, time
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends, status
 from odmantic import AIOEngine, ObjectId
 
-from app.api.schemas.category import CategoryResponse
 from app.api.schemas.daily_plan import (
     DailyPlanAllocationCreate,
     DailyPlanAllocationResponse,
@@ -12,8 +11,6 @@ from app.api.schemas.daily_plan import (
     DailyPlanResponse,
     DailyPlanUpdateRequest,
 )
-from app.api.schemas.task import TaskResponse as TaskResponseSchema
-from app.api.schemas.time_window import TimeWindowResponse as TimeWindowResponseSchema
 from app.core.exceptions import (
     CategoryNotFoundException,
     DailyPlanExistsException,
@@ -28,6 +25,9 @@ from app.db.models.category import Category
 from app.db.models.daily_plan import DailyPlan, DailyPlanAllocation
 from app.db.models.task import Task
 from app.db.models.time_window import TimeWindow
+from app.mappers.daily_plan_mapper import DailyPlanMapper
+from app.mappers.task_mapper import TaskMapper
+from app.mappers.time_window_mapper import TimeWindowMapper
 
 
 class DailyPlanService:
@@ -61,16 +61,12 @@ class DailyPlanService:
                 raise TaskNotFoundException(task_id=alloc_data.task_id)
 
     async def _build_daily_plan_response(self, daily_plan_model: DailyPlan) -> DailyPlanResponse:
-        populated_allocations: List[DailyPlanAllocationResponse] = []
+        populated_allocation_responses: List[DailyPlanAllocationResponse] = []
 
         if not daily_plan_model.allocations:
-            return DailyPlanResponse(
-                id=daily_plan_model.id,
-                user_id=daily_plan_model.user_id,
-                plan_date=daily_plan_model.plan_date.date(),
-                allocations=[],
-            )
+            return DailyPlanMapper.to_response(daily_plan_model, [])
 
+        # Batch fetch related models
         time_window_ids = list(set(alloc.time_window_id for alloc in daily_plan_model.allocations))
         task_ids = list(set(alloc.task_id for alloc in daily_plan_model.allocations))
 
@@ -82,17 +78,16 @@ class DailyPlanService:
         time_windows_map = {tw.id: tw for tw in time_windows_db}
         tasks_map = {task.id: task for task in tasks_db}
 
-        category_ids = set()
-        for tw_id in time_window_ids:
-            time_window = time_windows_map.get(tw_id)
-            if time_window and time_window.category:
-                category_ids.add(time_window.category)
-        for task_id in task_ids:
-            task = tasks_map.get(task_id)
-            if task and task.category_id:
-                category_ids.add(task.category_id)
+        # Collect category IDs needed for TimeWindows and Tasks
+        category_ids_for_tw = {
+            tw.category for tw_id in time_window_ids if (tw := time_windows_map.get(tw_id)) and tw.category
+        }
+        category_ids_for_tasks = {
+            task.category_id for task_id in task_ids if (task := tasks_map.get(task_id)) and task.category_id
+        }
+        all_category_ids = list(category_ids_for_tw.union(category_ids_for_tasks))
 
-        categories_db = await self.engine.find(Category, Category.id.in_(list(category_ids)))
+        categories_db = await self.engine.find(Category, Category.id.in_(all_category_ids))
         categories_map = {cat.id: cat for cat in categories_db}
 
         for allocation_model in daily_plan_model.allocations:
@@ -104,63 +99,42 @@ class DailyPlanService:
             if not task_model:
                 raise TaskNotFoundException(task_id=allocation_model.task_id)
 
+            # Create TimeWindowResponse using TimeWindowMapper
             tw_category_model = categories_map.get(time_window_model.category)
-            if not tw_category_model:
-                # This case should ideally not happen if data integrity is maintained
-                # or if category is nullable and handled appropriately.
-                # For now, raising an exception similar to original logic.
-                raise CategoryNotFoundException(category_id=time_window_model.category)
+            if not tw_category_model:  # Category for TimeWindow is mandatory
+                raise CategoryNotFoundException(
+                    category_id=time_window_model.category,
+                    detail=f"Category for TimeWindow {time_window_model.id} not found or not active.",
+                )
+            time_window_response = TimeWindowMapper.to_response(time_window_model, tw_category_model)
 
-            tw_response_data = time_window_model.model_dump()
-            tw_response_data["category"] = CategoryResponse.model_validate(tw_category_model)
-            time_window_response = TimeWindowResponseSchema.model_validate(tw_response_data)
-
-            task_category_response = None
+            # Create TaskResponse using TaskMapper
+            task_category_model: Optional[Category] = None
             if task_model.category_id:
                 task_category_model = categories_map.get(task_model.category_id)
-                if task_category_model:
-                    task_category_response = CategoryResponse.model_validate(task_category_model)
-                # else:
-                # If task_category_model is None here, it means a category_id was present
-                # but the category itself was not found or was soft-deleted.
-                # Depending on requirements, could raise an error or proceed with None.
-                # Current logic matches original: if category not found, response is None.
+            task_response = TaskMapper.to_response(task_model, task_category_model)
 
-            task_response_data = task_model.model_dump()
-            task_response_data["category"] = task_category_response
-            task_response = TaskResponseSchema.model_validate(task_response_data)
+            # Create DailyPlanAllocationResponse using DailyPlanMapper
+            allocation_resp = DailyPlanMapper.to_allocation_response(time_window_response, task_response)
+            populated_allocation_responses.append(allocation_resp)
 
-            populated_allocations.append(
-                DailyPlanAllocationResponse(time_window=time_window_response, task=task_response)
-            )
-
-        return DailyPlanResponse(
-            id=daily_plan_model.id,
-            user_id=daily_plan_model.user_id,
-            plan_date=daily_plan_model.plan_date.date(),
-            allocations=populated_allocations,
-        )
+        return DailyPlanMapper.to_response(daily_plan_model, populated_allocation_responses)
 
     async def create_daily_plan(
         self, plan_data: DailyPlanCreateRequest, current_user_id: ObjectId
     ) -> DailyPlanResponse:
         # Convert date to datetime at midnight for DB operations
         plan_datetime = datetime.combine(plan_data.plan_date, time.min)
-
         existing_plan = await self.engine.find_one(
             DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.plan_date == plan_datetime
         )
         if existing_plan:
             raise DailyPlanExistsException(date_value=plan_data.plan_date)
-
         await self._validate_allocations(plan_data.allocations, current_user_id)
 
-        allocations_models = [
-            DailyPlanAllocation(time_window_id=alloc.time_window_id, task_id=alloc.task_id)
-            for alloc in plan_data.allocations
-        ]
-
-        daily_plan = DailyPlan(user_id=current_user_id, plan_date=plan_datetime, allocations=allocations_models)
+        daily_plan = DailyPlanMapper.to_model_for_create(schema=plan_data, user_id=current_user_id)
+        # Ensure plan_datetime from mapper is used for the model, if not already handled by mapper
+        # DailyPlanMapper.to_model_for_create already sets plan_date to plan_datetime
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)
 
@@ -182,29 +156,34 @@ class DailyPlanService:
             raise NotOwnerException(resource="daily plan")
         return await self._build_daily_plan_response(daily_plan)
 
-    async def update_daily_plan(
-        self, plan_date: date, plan_data: DailyPlanUpdateRequest, current_user_id: ObjectId
-    ) -> DailyPlanResponse:
-        # Convert date to datetime at midnight for DB operations
+    async def get_daily_plan_by_date_internal(self, plan_date: date, current_user_id: ObjectId) -> DailyPlan:
+        """
+        Internal method to fetch a daily plan by date, returning the model instance.
+        Raises DailyPlanNotFoundException if not found.
+        """
         plan_datetime = datetime.combine(plan_date, time.min)
         daily_plan = await self.engine.find_one(
             DailyPlan, DailyPlan.user_id == current_user_id, DailyPlan.plan_date == plan_datetime
         )
         if not daily_plan:
             raise DailyPlanNotFoundException(plan_date=plan_date)
+        return daily_plan
 
-        update_fields = plan_data.model_dump(exclude_unset=True)
+    async def update_daily_plan(
+        self, plan_id: ObjectId, plan_data: DailyPlanUpdateRequest, current_user_id: ObjectId
+    ) -> DailyPlanResponse:
+        daily_plan = await self.engine.find_one(
+            DailyPlan, DailyPlan.id == plan_id, DailyPlan.user_id == current_user_id
+        )
+        if not daily_plan:
+            raise DailyPlanNotFoundException(plan_id=plan_id)
 
-        if "allocations" in update_fields:
-            # Parse list of dicts into List[DailyPlanAllocationCreate]
-            new_allocations_data = [
-                DailyPlanAllocationCreate(**alloc_dict) for alloc_dict in update_fields["allocations"]
-            ]
-            await self._validate_allocations(new_allocations_data, current_user_id)
+        # If plan_data.allocations is provided (it's Optional[List[DailyPlanAllocationCreate]])
+        if plan_data.allocations is not None:
+            await self._validate_allocations(plan_data.allocations, current_user_id)
             daily_plan.allocations = [
                 DailyPlanAllocation(time_window_id=alloc.time_window_id, task_id=alloc.task_id)
-                for alloc in new_allocations_data
+                for alloc in plan_data.allocations
             ]
-
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)

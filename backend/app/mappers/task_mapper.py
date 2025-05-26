@@ -4,12 +4,15 @@ from typing import Optional
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.task import TaskCreateRequest, TaskResponse
+from app.api.schemas.task import TaskCreateRequest, TaskResponse, TaskUpdateRequest
 from app.db.models.category import Category
 from app.db.models.task import Task
+from app.mappers.base_mapper import BaseMapper
 
 
-class TaskMapper:
+class TaskMapper(BaseMapper):
+    _model_class = Task
+
     @staticmethod
     def to_response(task: Task, category_model: Optional[Category]) -> TaskResponse:
         category_response: Optional[CategoryResponse] = None
@@ -36,3 +39,23 @@ class TaskMapper:
         now_utc = datetime.now(UTC)
         task_data = schema.model_dump()
         return Task(**task_data, user_id=user_id, is_deleted=False, created_at=now_utc, updated_at=now_utc)
+
+    @classmethod
+    def to_model_for_update(cls, task: Task, schema: TaskUpdateRequest) -> Task:
+        """Updates a Task model with data from an update request schema.
+
+        Args:
+            task: The existing Task model to update
+            schema: The update request containing new values
+
+        Returns:
+            The updated Task model
+        """
+        update_data = schema.model_dump(exclude_unset=True)
+
+        for field, value in update_data.items():
+            if field in cls._nullable_fields or (field in cls._non_nullable_fields and value is not None):
+                setattr(task, field, value)
+
+        task.updated_at = datetime.now(UTC)
+        return task

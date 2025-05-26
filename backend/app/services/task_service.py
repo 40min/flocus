@@ -154,8 +154,8 @@ class TaskService:
         if task.user_id != current_user_id:
             raise NotOwnerException(resource="task", detail_override="Not authorized to update this task")
 
+        # Check if title is being updated and verify it's unique
         update_data = task_data.model_dump(exclude_unset=True)
-
         if "title" in update_data and update_data["title"] != task.title:
             existing_task_title = await self.engine.find_one(
                 Task,
@@ -167,6 +167,7 @@ class TaskService:
             if existing_task_title:
                 raise TaskTitleExistsException(title=update_data["title"])
 
+        # Validate category if it's being updated
         category_model_for_response: Optional[Category] = None
         if "category_id" in update_data and update_data["category_id"] is not None:
             category_model_for_response = await self.engine.find_one(
@@ -177,30 +178,12 @@ class TaskService:
                     category_id=str(update_data["category_id"]),
                     detail="Active category not found or not owned by user.",
                 )
-        elif task.category_id and ("category_id" not in update_data or update_data["category_id"] is None):
-            category_model_for_response = None  # Category is being removed or was not there
 
-        # Explicitly update fields to avoid potential issues with setattr and Pydantic/Odmantic defaults
-        if "title" in update_data:
-            task.title = update_data["title"]
-        if "description" in update_data:  # Allows setting description to None if explicitly passed
-            task.description = update_data["description"]
-        if (
-            "status" in update_data and update_data["status"] is not None
-        ):  # Ensure not to set to None if None was in update_data
-            task.status = update_data["status"]
-        if "priority" in update_data and update_data["priority"] is not None:  # Ensure not to set to None
-            task.priority = update_data["priority"]
-        if "due_date" in update_data:  # Allows setting due_date to None
-            task.due_date = update_data["due_date"]
-        if "category_id" in update_data:  # Allows setting category_id to None
-            task.category_id = update_data["category_id"]
-        # is_deleted is handled by a separate delete endpoint
-
-        task.updated_at = datetime.now(UTC)
+        # Update task using mapper
+        task = TaskMapper.to_model_for_update(task, task_data)
         await self.engine.save(task)
 
-        # If category_id was not in update_data, but task had one, fetch it for response
+        # If category wasn't updated but task has one, fetch it for response
         if not category_model_for_response and task.category_id:
             category_model_for_response = await self.engine.find_one(
                 Category,

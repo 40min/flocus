@@ -68,7 +68,8 @@ class TimeWindowService:
 
         time_window = TimeWindowMapper.to_model_for_create(schema=time_window_data, user_id=current_user_id)
         await self.engine.save(time_window)
-        return await self._build_time_window_response(time_window)
+        # The 'category' variable is already fetched and validated in this method.
+        return TimeWindowMapper.to_response(time_window, category)
 
     async def get_time_window_by_id(self, time_window_id: ObjectId, current_user_id: ObjectId) -> TimeWindowResponse:
         time_window = await self.engine.find_one(

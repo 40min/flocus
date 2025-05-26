@@ -472,6 +472,42 @@ async def test_update_daily_plan_unowned_task_fails(
     assert f"Task with ID '{str(user_two_task_model.id)}' not found" in response.json()["detail"]
 
 
+async def test_update_daily_plan_duplicate_time_window_in_allocations_fails(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_time_window: TimeWindowModel,
+    user_one_task_model: TaskModel,
+    unique_date: date,
+):
+    plan_date = unique_date
+    # 1. Create an initial daily plan for this date
+    create_payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=[])
+    create_response = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_response.status_code == 201, "Failed to create initial plan for update test"
+
+    # 2. Prepare update payload with duplicate time_window_ids
+    allocations_with_duplicates = [
+        DailyPlanAllocationCreate(time_window_id=user_one_time_window.id, task_id=user_one_task_model.id),
+        DailyPlanAllocationCreate(
+            time_window_id=user_one_time_window.id, task_id=user_one_task_model.id
+        ),  # Duplicate TW
+    ]
+    update_payload = DailyPlanUpdateRequest(allocations=allocations_with_duplicates)
+
+    # 3. Make the PATCH request
+    response = await async_client.patch(
+        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",
+        headers=auth_headers_user_one,
+        json=update_payload.model_dump(mode="json"),
+    )
+
+    # 4. Assert the response
+    assert response.status_code == 400
+    assert "Duplicate time_window_ids found in allocations." in response.json()["detail"]
+
+
 async def test_get_daily_plan_with_soft_deleted_time_window_fails_retrieval(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId
@@ -16,49 +16,62 @@ from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.day_template import DayTemplate
 from app.db.models.time_window import TimeWindow
-
-# User model import removed as it's not directly used for DayTemplateResponse construction here
-# from app.db.models.user import User
+from app.mappers.day_template_mapper import DayTemplateMapper
+from app.mappers.time_window_mapper import TimeWindowMapper
 
 
 class DayTemplateService:
     def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
 
-    async def _build_day_template_response(self, template_model: DayTemplate) -> DayTemplateResponse:
+    async def _fetch_and_build_time_window_response_map(
+        self, time_window_object_ids: List[ObjectId], current_user_id: ObjectId
+    ) -> Dict[ObjectId, TimeWindowResponse]:
         """
-        Constructs a DayTemplateResponse from a DayTemplate model instance,
-        populating nested TimeWindowResponse objects with their related Category data.
+        Fetches TimeWindow models and their related Category models for the given ObjectIds,
+        validates ownership and existence, and returns a map of TimeWindow ObjectId to TimeWindowResponse.
         """
-        populated_tw_responses: List[TimeWindowResponse] = []
-        if template_model.time_windows:  # This is List[ObjectId] from DayTemplate model
-            for tw_object_id in template_model.time_windows:
-                tw_model = await self.engine.find_one(TimeWindow, TimeWindow.id == tw_object_id)
-                if not tw_model:
-                    raise TimeWindowNotFoundException(time_window_id=str(tw_object_id))
+        if not time_window_object_ids:
+            return {}
 
-                category_model = await self.engine.find_one(Category, Category.id == tw_model.category)
-                if not category_model:
-                    raise CategoryNotFoundException(detail=f"Category for TimeWindow {tw_model.id} not found.")
+        unique_tw_ids = list(set(time_window_object_ids))
 
-                # Prepare data for TimeWindowResponse.model_validate()
-                # It needs 'category' to be a Category model instance (or dict)
-                # and other fields from tw_model.
-                tw_data_for_response = tw_model.model_dump()
-                tw_data_for_response["category"] = category_model
-                # tw_model.user is ObjectId, TimeWindowResponse.user_id is ObjectId. This is fine.
-                # If TimeWindowResponse expected a UserResponse for a 'user' field,
-                # we'd need to fetch User model here too.
-
-                populated_tw_responses.append(TimeWindowResponse.model_validate(tw_data_for_response))
-
-        return DayTemplateResponse(
-            id=template_model.id,
-            name=template_model.name,
-            description=template_model.description,
-            user_id=template_model.user,
-            time_windows=populated_tw_responses,
+        time_window_models_db = await self.engine.find(
+            TimeWindow,
+            TimeWindow.id.in_(unique_tw_ids),
+            TimeWindow.user == current_user_id,
+            TimeWindow.is_deleted == False,  # noqa: E712
         )
+
+        found_tw_ids_set = {tw.id for tw in time_window_models_db}
+        for tw_id_to_check in unique_tw_ids:
+            if tw_id_to_check not in found_tw_ids_set:
+                raise TimeWindowNotFoundException(time_window_id=str(tw_id_to_check))
+
+        time_windows_map_models = {tw.id: tw for tw in time_window_models_db}
+
+        category_ids_for_tws = list(set(tw.category for tw in time_window_models_db))
+        categories_db = []
+        if category_ids_for_tws:
+            categories_db = await self.engine.find(
+                Category,
+                Category.id.in_(category_ids_for_tws),
+                Category.user == current_user_id,
+                Category.is_deleted == False,  # noqa: E712
+            )
+        categories_map_models = {cat.id: cat for cat in categories_db}
+
+        time_window_response_map: Dict[ObjectId, TimeWindowResponse] = {}
+        for tw_id in unique_tw_ids:
+            tw_model = time_windows_map_models[tw_id]
+            category_model = categories_map_models.get(tw_model.category)
+            if not category_model:
+                raise CategoryNotFoundException(
+                    detail=f"Category for TimeWindow {tw_model.id} not found or not accessible."
+                )
+            tw_response = TimeWindowMapper.to_response(tw_model, category_model)
+            time_window_response_map[tw_id] = tw_response
+        return time_window_response_map
 
     async def create_day_template(
         self, template_data: DayTemplateCreateRequest, current_user_id: ObjectId
@@ -84,14 +97,18 @@ class DayTemplateService:
                 raise TimeWindowNotFoundException(time_window_id=missing_ids[0])
             time_window_ids_for_template = [tw.id for tw in fetched_windows]
 
-        day_template_model = DayTemplate(
-            name=template_data.name,
-            description=template_data.description,
-            time_windows=time_window_ids_for_template,
-            user=current_user_id,
+        day_template_model = DayTemplateMapper.to_model_for_create(
+            schema=template_data, user_id=current_user_id, validated_time_window_ids=time_window_ids_for_template
         )
         await self.engine.save(day_template_model)
-        return await self._build_day_template_response(day_template_model)
+
+        tw_response_map = await self._fetch_and_build_time_window_response_map(
+            day_template_model.time_windows, current_user_id
+        )
+        ordered_tw_responses = [
+            tw_response_map[tw_id] for tw_id in day_template_model.time_windows if tw_id in tw_response_map
+        ]
+        return DayTemplateMapper.to_response(day_template_model, ordered_tw_responses)
 
     async def get_day_template_by_id(self, template_id: ObjectId, current_user_id: ObjectId) -> DayTemplateResponse:
         day_template_model = await self.engine.find_one(DayTemplate, DayTemplate.id == template_id)
@@ -103,13 +120,32 @@ class DayTemplateService:
                 resource="day template",
                 detail_override="Ownership check failed",
             )
-        return await self._build_day_template_response(day_template_model)
+        tw_response_map = await self._fetch_and_build_time_window_response_map(
+            day_template_model.time_windows, current_user_id
+        )
+        ordered_tw_responses = [
+            tw_response_map[tw_id] for tw_id in day_template_model.time_windows if tw_id in tw_response_map
+        ]
+        return DayTemplateMapper.to_response(day_template_model, ordered_tw_responses)
 
     async def get_all_day_templates(self, current_user_id: ObjectId) -> List[DayTemplateResponse]:
         user_templates_models = await self.engine.find(DayTemplate, DayTemplate.user == current_user_id)
+
+        all_tw_ids_nested = [tm.time_windows for tm in user_templates_models if tm.time_windows]
+        all_tw_ids_flat_unique = list(set(item for sublist in all_tw_ids_nested for item in sublist))
+
+        tw_response_map: Dict[ObjectId, TimeWindowResponse] = {}
+        if all_tw_ids_flat_unique:
+            tw_response_map = await self._fetch_and_build_time_window_response_map(
+                all_tw_ids_flat_unique, current_user_id
+            )
+
         response_list: List[DayTemplateResponse] = []
         for template_model in user_templates_models:
-            response_list.append(await self._build_day_template_response(template_model))
+            ordered_tw_responses = [
+                tw_response_map[tw_id] for tw_id in template_model.time_windows if tw_id in tw_response_map
+            ]
+            response_list.append(DayTemplateMapper.to_response(template_model, ordered_tw_responses))
         return response_list
 
     async def update_day_template(
@@ -161,7 +197,13 @@ class DayTemplateService:
                     day_template_raw_model.time_windows = []
 
         await self.engine.save(day_template_raw_model)
-        return await self._build_day_template_response(day_template_raw_model)
+        tw_response_map = await self._fetch_and_build_time_window_response_map(
+            day_template_raw_model.time_windows, current_user_id
+        )
+        ordered_tw_responses = [
+            tw_response_map[tw_id] for tw_id in day_template_raw_model.time_windows if tw_id in tw_response_map
+        ]
+        return DayTemplateMapper.to_response(day_template_raw_model, ordered_tw_responses)
 
     async def delete_day_template(self, template_id: ObjectId, current_user_id: ObjectId) -> bool:
         day_template_model = await self.engine.find_one(DayTemplate, DayTemplate.id == template_id)

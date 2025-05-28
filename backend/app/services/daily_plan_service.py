@@ -22,7 +22,7 @@ from app.core.exceptions import (
 )
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.daily_plan import DailyPlan, DailyPlanAllocation
+from app.db.models.daily_plan import DailyPlan
 from app.db.models.task import Task
 from app.db.models.time_window import TimeWindow
 from app.mappers.daily_plan_mapper import DailyPlanMapper
@@ -67,8 +67,8 @@ class DailyPlanService:
             return DailyPlanMapper.to_response(daily_plan_model, [])
 
         # Batch fetch related models
-        time_window_ids = list(set(alloc.time_window_id for alloc in daily_plan_model.allocations))
-        task_ids = list(set(alloc.task_id for alloc in daily_plan_model.allocations))
+        time_window_ids: List[ObjectId] = list(set(alloc.time_window_id for alloc in daily_plan_model.allocations))
+        task_ids: List[ObjectId] = list(set(alloc.task_id for alloc in daily_plan_model.allocations))
 
         time_windows_db = await self.engine.find(
             TimeWindow, TimeWindow.id.in_(time_window_ids), TimeWindow.is_deleted == False  # noqa: E712
@@ -181,9 +181,8 @@ class DailyPlanService:
         # If plan_data.allocations is provided (it's Optional[List[DailyPlanAllocationCreate]])
         if plan_data.allocations is not None:
             await self._validate_allocations(plan_data.allocations, current_user_id)
-            daily_plan.allocations = [
-                DailyPlanAllocation(time_window_id=alloc.time_window_id, task_id=alloc.task_id)
-                for alloc in plan_data.allocations
-            ]
+            daily_plan.allocations = DailyPlanMapper.allocations_request_to_models(
+                allocation_data=plan_data.allocations
+            )
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)

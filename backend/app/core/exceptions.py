@@ -78,6 +78,24 @@ class InvalidTokenException(UserServiceException):
         )
 
 
+# --- Resource Access Exceptions ---
+
+
+class ResourceAccessException(HTTPException):
+    """Base exception for resource access related errors"""
+
+    pass
+
+
+class NotOwnerException(ResourceAccessException):
+    def __init__(self, resource: str = "resource", detail_override: Optional[str] = None):
+        detail_to_use = detail_override if detail_override is not None else f"Not authorized to access this {resource}"
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail_to_use,
+        )
+
+
 # --- Day Template Service Exceptions ---
 
 
@@ -118,17 +136,6 @@ class CategoryNotFoundException(DayTemplateServiceException):
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=detail,
-        )
-
-
-class NotOwnerException(
-    DayTemplateServiceException
-):  # Or a more generic base? For now, under DayTemplateServiceException
-    def __init__(self, resource: str = "resource", detail_override: Optional[str] = None):  # Add detail_override
-        detail_to_use = detail_override if detail_override is not None else f"Not authorized to access this {resource}"
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=detail_to_use,  # Use the determined detail
         )
 
 

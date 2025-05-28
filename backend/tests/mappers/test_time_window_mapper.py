@@ -5,9 +5,10 @@ from odmantic import ObjectId
 from pydantic import ValidationError
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse
+from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse, TimeWindowUpdateRequest
 from app.db.models.category import Category
 from app.db.models.time_window import TimeWindow
+from app.mappers.base_mapper import BaseMapper
 from app.mappers.time_window_mapper import TimeWindowMapper
 
 
@@ -123,3 +124,63 @@ class TestTimeWindowMapper:
         # The service layer is responsible for ensuring a valid category model is passed.
         with pytest.raises((AttributeError, ValidationError)):  # Pydantic might raise ValidationError
             TimeWindowMapper.to_response(sample_time_window_model, None)  # type: ignore
+
+    def test_to_model_for_update_name(self, sample_time_window_model: TimeWindow):
+        schema = TimeWindowUpdateRequest(name="Updated Name")
+        # Create a copy to avoid modifying the fixture instance shared across tests
+        model_to_update = sample_time_window_model.model_copy(deep=True)
+        updated_model = TimeWindowMapper.to_model_for_update(model_to_update, schema)
+
+        assert updated_model.name == "Updated Name"
+        # Check other fields remain unchanged
+        assert updated_model.start_time == sample_time_window_model.start_time
+        assert updated_model.category == sample_time_window_model.category
+
+    def test_to_model_for_update_multiple_fields(self, sample_time_window_model: TimeWindow):
+        new_category_id = ObjectId()
+        new_day_template_id = ObjectId()
+        schema = TimeWindowUpdateRequest(
+            name="New Name",
+            start_time=100,
+            end_time=200,
+            category=new_category_id,
+            day_template_id=new_day_template_id,
+        )
+        model_to_update = sample_time_window_model.model_copy(deep=True)
+        updated_model = TimeWindowMapper.to_model_for_update(model_to_update, schema)
+
+        assert updated_model.name == "New Name"
+        assert updated_model.start_time == 100
+        assert updated_model.end_time == 200
+        assert updated_model.category == new_category_id
+        assert updated_model.day_template_id == new_day_template_id
+
+    def test_to_model_for_update_partial_fields_unset(self, sample_time_window_model: TimeWindow):
+        schema = TimeWindowUpdateRequest(name="Partially Updated Name")
+        original_model_copy = sample_time_window_model.model_copy(deep=True)
+        updated_model = TimeWindowMapper.to_model_for_update(original_model_copy, schema)
+
+        assert updated_model.name == "Partially Updated Name"
+        assert updated_model.start_time == original_model_copy.start_time
+        assert updated_model.end_time == original_model_copy.end_time
+        assert updated_model.category == original_model_copy.category
+        assert updated_model.day_template_id == original_model_copy.day_template_id
+
+    def test_to_model_for_update_setting_required_field_to_none_is_skipped(self, sample_time_window_model: TimeWindow):
+        original_name = sample_time_window_model.name
+        schema = TimeWindowUpdateRequest(name=None)  # Attempt to set name to None
+
+        assert issubclass(TimeWindowMapper, BaseMapper), "TimeWindowMapper must inherit BaseMapper for this test"
+
+        # Ensure _model_class is set for BaseMapper's __init_subclass__ to work
+        assert TimeWindowMapper._model_class is TimeWindow
+
+        # BaseMapper's __init_subclass__ populates these fields.
+        # If TimeWindowMapper._non_nullable_fields is empty, it means __init_subclass__ might not have run
+        # or the model has no required fields, which is not the case for TimeWindow.
+        assert "name" in TimeWindowMapper._non_nullable_fields
+
+        model_to_update = sample_time_window_model.model_copy(deep=True)
+        updated_model = TimeWindowMapper.to_model_for_update(model_to_update, schema)
+
+        assert updated_model.name == original_name

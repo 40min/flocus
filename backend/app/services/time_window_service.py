@@ -23,15 +23,6 @@ class TimeWindowService:
     def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
 
-    async def _build_time_window_response(self, time_window_model: TimeWindow) -> TimeWindowResponse:
-        category_model = await self.engine.find_one(Category, Category.id == time_window_model.category)
-        if not category_model:
-            raise CategoryNotFoundException(
-                detail=f"Category for TimeWindow {time_window_model.id} not found."
-            )  # Should be caught earlier by validation
-
-        return TimeWindowMapper.to_response(time_window_model, category_model)
-
     async def create_time_window(
         self, time_window_data: TimeWindowCreateRequest, current_user_id: ObjectId
     ) -> TimeWindowResponse:
@@ -81,15 +72,46 @@ class TimeWindowService:
         if time_window.user != current_user_id:
             raise NotOwnerException(resource="time window", detail_override="Not authorized to access this time window")
 
-        return await self._build_time_window_response(time_window)
+        category_model = await self.engine.find_one(
+            Category,
+            Category.id == time_window.category,
+            Category.user == current_user_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
+        if not category_model:
+            raise CategoryNotFoundException(
+                detail=f"Category for TimeWindow {time_window.id} not found or not accessible."
+            )
+
+        return TimeWindowMapper.to_response(time_window, category_model)
 
     async def get_all_time_windows_for_user(self, current_user_id: ObjectId) -> List[TimeWindowResponse]:
-        time_windows_models = await self.engine.find(
+        time_window_models = await self.engine.find(
             TimeWindow,
             TimeWindow.user == current_user_id,
             TimeWindow.is_deleted == False,  # noqa: E712
         )
-        return [await self._build_time_window_response(tw) for tw in time_windows_models]
+        if not time_window_models:
+            return []
+
+        category_ids = list(set(tw.category for tw in time_window_models))
+        categories_db = await self.engine.find(
+            Category,
+            Category.id.in_(category_ids),
+            Category.user == current_user_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
+        categories_map = {cat.id: cat for cat in categories_db}
+
+        response_list = []
+        for tw_model in time_window_models:
+            category_model = categories_map.get(tw_model.category)
+            if not category_model:
+                raise CategoryNotFoundException(
+                    detail=f"Category for TimeWindow {tw_model.id} not found or not accessible."
+                )
+            response_list.append(TimeWindowMapper.to_response(tw_model, category_model))
+        return response_list
 
     async def update_time_window(
         self,
@@ -110,6 +132,19 @@ class TimeWindowService:
 
         update_data = time_window_data.model_dump(exclude_unset=True)
 
+        # Determine the category to use for the response and for validation.
+        # Default to the current category of the time_window.
+        category_for_response_model = await self.engine.find_one(
+            Category,
+            Category.id == time_window.category,
+            Category.user == current_user_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
+        if not category_for_response_model:  # Should not happen if data is consistent
+            raise CategoryNotFoundException(
+                detail=f"Original category for TimeWindow {time_window.id} not found or not accessible."
+            )
+
         if "name" in update_data and update_data["name"] != time_window.name:
             name_conflict_check = await self.engine.find_one(
                 TimeWindow,
@@ -123,15 +158,16 @@ class TimeWindowService:
 
         if "category" in update_data:
             new_category_id = update_data["category"]
-            category = await self.engine.find_one(
+            validated_new_category = await self.engine.find_one(
                 Category, Category.id == new_category_id, Category.is_deleted == False  # noqa: E712
             )
-            if not category:
+            if not validated_new_category:
                 raise CategoryNotFoundException(
                     category_id=str(new_category_id), detail="Active category for update not found."
                 )
-            if category.user != current_user_id:
+            if validated_new_category.user != current_user_id:
                 raise NotOwnerException(resource="category", detail_override="New category not owned by user.")
+            category_for_response_model = validated_new_category  # Use the new category for response
 
         if "day_template_id" in update_data:
             new_day_template_id = update_data["day_template_id"]
@@ -150,11 +186,10 @@ class TimeWindowService:
             # or if only one is updated, check against the existing value.
             raise InvalidTimeWindowTimesException()
 
-        for field, value in update_data.items():
-            setattr(time_window, field, value)
+        time_window = TimeWindowMapper.to_model_for_update(time_window, time_window_data)
 
         await self.engine.save(time_window)
-        return await self._build_time_window_response(time_window)
+        return TimeWindowMapper.to_response(time_window, category_for_response_model)
 
     async def delete_time_window(self, time_window_id: ObjectId, current_user_id: ObjectId) -> bool:
         time_window = await self.engine.find_one(

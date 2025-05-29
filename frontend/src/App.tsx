@@ -16,6 +16,8 @@ import Home from './pages/Home';
 import About from './pages/About';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import TemplatesPage from './pages/TemplatesPage';
+import EditTemplatePage from './pages/EditTemplatePage';
 import { useAuth } from './context/AuthContext';
 import CategoriesPage from './pages/CategoriesPage';
 import UserSettingsPage from './pages/UserSettingsPage';
@@ -175,7 +177,9 @@ function App() {
         <Route path="about" element={<About />} /> {/* Kept for now, not in new nav */}
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="tasks" element={<div>Tasks Page Placeholder</div>} />
-        <Route path="templates" element={<div>Templates Page Placeholder</div>} />
+        <Route path="templates" element={<TemplatesPage />} />
+        <Route path="templates/new" element={<EditTemplatePage />} />
+        <Route path="templates/edit/:templateId" element={<EditTemplatePage />} />
         <Route path="settings" element={<UserSettingsPage />} />
         {/* Fallback for any other authenticated path under "/" */}
         <Route path="*" element={<Navigate to="/" replace />} />

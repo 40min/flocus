@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getCurrentUser } from '../services/userService';
@@ -22,8 +22,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('access_token');
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate('/login');
+  }, [navigate, setToken, setUser, setIsAuthenticated]);
+
   // Fetch user data using the token
-  const fetchUserData = async (authToken: string) => {
+  const fetchUserData = useCallback(async (authToken: string) => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
@@ -33,7 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // If we can't fetch user data, clear the authentication
       logout();
     }
-  };
+  }, [logout, setUser, setIsAuthenticated]); // Added getCurrentUser if it's not stable, but it's an import.
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -46,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initializeAuth();
-  }, []);
+  }, [fetchUserData, setToken]); // Added fetchUserData and setToken
 
 // Set or remove the Authorization header on the api instance when the token changes
   useEffect(() => {
@@ -97,13 +105,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('access_token');
-    setToken(null);
-    setUser(null);
-    setIsAuthenticated(false);
-    navigate('/login');
-  };
+  // const logout = () => { // This is now defined above with useCallback
+  //   localStorage.removeItem('access_token');
+  //   setToken(null);
+  //   setUser(null);
+  //   setIsAuthenticated(false);
+  //   navigate('/login');
+  // };
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, token, login, logout, isLoading }}>

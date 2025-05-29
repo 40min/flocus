@@ -18,6 +18,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import { useAuth } from './context/AuthContext';
 import CategoriesPage from './pages/CategoriesPage';
+import UserSettingsPage from './pages/UserSettingsPage';
 
 
 // Simple component to protect routes
@@ -175,7 +176,7 @@ function App() {
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="tasks" element={<div>Tasks Page Placeholder</div>} />
         <Route path="templates" element={<div>Templates Page Placeholder</div>} />
-        <Route path="settings" element={<div>Settings Page Placeholder</div>} />
+        <Route path="settings" element={<UserSettingsPage />} />
         {/* Fallback for any other authenticated path under "/" */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

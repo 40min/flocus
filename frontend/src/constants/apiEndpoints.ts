@@ -4,4 +4,6 @@ export const API_ENDPOINTS = {
   USERS_BASE: '/users', // Used for GET /users/
   USERS_ME: '/users/me',
   USER_BY_ID: (id: string) => `/users/${id}`,
+  CATEGORIES_BASE: '/categories',
+  CATEGORY_BY_ID: (id: string) => `/categories/${id}`,
 };

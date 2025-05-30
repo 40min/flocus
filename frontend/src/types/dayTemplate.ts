@@ -1,4 +1,4 @@
-import { TimeWindow } from './timeWindow';
+import { TimeWindow, TimeWindowCreateRequest } from './timeWindow';
 
 export interface DayTemplateBase {
   name: string;
@@ -6,13 +6,16 @@ export interface DayTemplateBase {
 }
 
 export interface DayTemplateCreateRequest extends DayTemplateBase {
-  time_windows: string[]; // List of TimeWindow IDs
+  time_windows: string[]; // List of existing TimeWindow IDs
+  new_time_windows?: Omit<TimeWindowCreateRequest, 'day_template_id'>[]; // List of new time windows to create
 }
 
 export interface DayTemplateUpdateRequest {
   name?: string;
   description?: string;
-  time_windows?: string[]; // List of TimeWindow IDs
+  time_windows?: string[]; // List of existing TimeWindow IDs to keep/associate
+  new_time_windows?: Omit<TimeWindowCreateRequest, 'day_template_id'>[]; // List of new time windows to create and associate
+  // Potentially also a list of time window IDs to disassociate/delete, if the backend supports that directly
 }
 
 export interface DayTemplateResponse extends DayTemplateBase {

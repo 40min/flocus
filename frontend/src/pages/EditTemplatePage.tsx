@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DayTemplateCreateRequest, DayTemplateResponse, DayTemplateUpdateRequest } from '../types/dayTemplate';
-import { TimeWindow } from '../types/timeWindow';
+import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
+import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
-import { getAllTimeWindows } from '../services/timeWindowService';
-import { formatMinutesToHHMM } from '../lib/utils';
+import { getAllTimeWindows, createTimeWindow as createTimeWindowService } from '../services/timeWindowService';
+import * as categoryService from '../services/categoryService';
+import { formatMinutesToHHMM, hhMMToMinutes } from '../lib/utils';
 
 const EditTemplatePage: React.FC = () => {
-  const { templateId } = useParams<{ templateId?: string }>();
   const navigate = useNavigate();
-  const isCreatingNew = templateId === undefined;
+  // Store templateId in state to allow updating it after creation
+  const { templateId: routeTemplateId } = useParams<{ templateId?: string }>();
+  const [templateId, setTemplateId] = useState<string | undefined>(routeTemplateId);
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(routeTemplateId === undefined);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -18,6 +22,15 @@ const EditTemplatePage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
+  const [newTimeWindowForm, setNewTimeWindowForm] = useState({
+    name: '',
+    startTime: '',
+    endTime: '',
+    categoryId: '',
+  });
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
   const fetchTemplateDetails = useCallback(async (id: string) => {
     setIsLoading(true);
@@ -49,10 +62,27 @@ const EditTemplatePage: React.FC = () => {
 
   useEffect(() => {
     fetchAllTimeWindows();
-    if (!isCreatingNew && templateId) {
+    if (templateId && !isCreatingNew) { // Check isCreatingNew state
       fetchTemplateDetails(templateId);
     }
-  }, [isCreatingNew, templateId, fetchTemplateDetails, fetchAllTimeWindows]);
+
+    const loadCategories = async () => {
+      try {
+        const cats = await categoryService.getAllCategories();
+        setAvailableCategories(cats);
+        if (cats.length > 0 && !newTimeWindowForm.categoryId) {
+          setNewTimeWindowForm(prev => ({ ...prev, categoryId: cats[0].id }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories for modal", err);
+        setError(prevError => (prevError ? prevError + " " : "") + "Failed to load categories for new time window.");
+      }
+    };
+    // Load categories if editing, or if creating and modal might open
+    if ((templateId && !isCreatingNew) || isTimeWindowModalOpen) {
+      loadCategories();
+    }
+  }, [isCreatingNew, templateId, fetchTemplateDetails, fetchAllTimeWindows, isTimeWindowModalOpen]);
 
   const handleTimeWindowSelection = (timeWindowId: string) => {
     setSelectedTimeWindowIds(prev =>
@@ -62,16 +92,67 @@ const EditTemplatePage: React.FC = () => {
     );
   };
 
+  const handleCreateTimeWindow = async () => {
+    if (!templateId) {
+      setError("Cannot create time window: template ID is missing. Please save the template first.");
+      return;
+    }
+    if (!newTimeWindowForm.categoryId) {
+        setError("Please select a category for the new time window.");
+        return;
+    }
+
+    const startTimeMinutes = hhMMToMinutes(newTimeWindowForm.startTime);
+    const endTimeMinutes = hhMMToMinutes(newTimeWindowForm.endTime);
+
+    if (startTimeMinutes === null) {
+      setError("Invalid start time format or value. Please use HH:MM and ensure time is valid.");
+      return;
+    }
+    if (endTimeMinutes === null) {
+      setError("Invalid end time format or value. Please use HH:MM and ensure time is valid.");
+      return;
+    }
+
+    if (endTimeMinutes <= startTimeMinutes) {
+      setError("End time must be after start time.");
+      return;
+    }
+
+    const timeWindowData: TimeWindowCreateRequest = {
+      name: newTimeWindowForm.name || undefined,
+      start_time: startTimeMinutes,
+      end_time: endTimeMinutes,
+      category: newTimeWindowForm.categoryId,
+      day_template_id: templateId,
+    };
+
+    setIsLoading(true);
+    try {
+      const createdTimeWindow = await createTimeWindowService(timeWindowData);
+      setAllAvailableTimeWindows(prev => [...prev, createdTimeWindow]);
+      setSelectedTimeWindowIds(prev => [...prev, createdTimeWindow.id]);
+      setIsTimeWindowModalOpen(false);
+      setNewTimeWindowForm({ name: '', startTime: '', endTime: '', categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
+    } catch (err: any) {
+      setError(`Failed to create time window: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    if (selectedTimeWindowIds.length === 0) {
-        setError('At least one time window must be selected.');
-        setIsLoading(false);
-        return;
-    }
+    // Allow saving template without time windows initially
+    // if (selectedTimeWindowIds.length === 0 && isCreatingNew) { // Or always? For now, allow empty for new.
+    //     setError('At least one time window must be selected for a new template.');
+    //     setIsLoading(false);
+    //     return;
+    // }
 
     const payload: DayTemplateCreateRequest | DayTemplateUpdateRequest = {
       name,
@@ -81,14 +162,26 @@ const EditTemplatePage: React.FC = () => {
 
     try {
       if (isCreatingNew) {
-        await createDayTemplate(payload as DayTemplateCreateRequest);
+        const newTemplate = await createDayTemplate(payload as DayTemplateCreateRequest);
+        // Instead of navigating away, update state to "editing" mode for the new template
+        setTemplateId(newTemplate.id);
+        setIsCreatingNew(false);
+        navigate(`/templates/edit/${newTemplate.id}`, { replace: true });
+        // Optionally, display a success message that template was created and they can now add time windows
       } else if (templateId) {
         await updateDayTemplate(templateId, payload as DayTemplateUpdateRequest);
+        navigate('/templates'); // Navigate away only after updating an existing template
       }
-      navigate('/templates');
-    } catch (err) {
-      setError(isCreatingNew ? 'Failed to create template.' : 'Failed to update template.');
-      console.error(err);
+    } catch (err: any) {
+      let displayError = isCreatingNew ? 'Failed to create template.' : 'Failed to update template.';
+      if (err.response?.data?.detail && typeof err.response.data.detail === 'string') {
+        displayError = err.response.data.detail;
+      } else if (err.response?.data?.detail) {
+        // Log the detailed object error but don't try to render it directly
+        console.error("Detailed error object from API:", err.response.data.detail);
+      }
+      setError(displayError);
+      console.error("Error during template submission:", err.response?.data || err.message || err);
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +248,7 @@ const EditTemplatePage: React.FC = () => {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h2 className="text-gray-800 text-lg font-semibold mb-4">Select Time Windows</h2>
-          <p className="text-sm text-gray-500 mb-4">Choose the time windows to include in this template. You must select at least one.</p>
+          <p className="text-sm text-gray-500 mb-4">Choose time windows for this template. You can add more after saving.</p>
           {isLoading && <p>Loading time windows...</p>}
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {allAvailableTimeWindows.length > 0 ? allAvailableTimeWindows.map(tw => (
@@ -178,10 +271,57 @@ const EditTemplatePage: React.FC = () => {
             )) : <p className="text-sm text-gray-500">No time windows available. Please create some first.</p>}
           </div>
            {/* Placeholder for "Add Time Window" button if full CRUD for TimeWindows is desired on this page later */}
-           {/* <button type="button" className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors">
-              <span className="material-symbols-outlined text-sm">add</span> Add New Time Window
-            </button> */}
+            <button
+              type="button"
+              onClick={() => setIsTimeWindowModalOpen(true)}
+              className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors duration-150 disabled:bg-gray-300"
+              disabled={!templateId} // Enable if templateId exists (i.e., template is saved or being edited)
+              title={!templateId ? "Save template first to enable adding new time windows" : "Add new time window"}
+            >
+              <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'wght' 500"}}>add</span>
+              Add new time window
+            </button>
         </div>
+
+        {isTimeWindowModalOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">Create New Time Window</h3>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="twName" className="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                  <input type="text" id="twName" value={newTimeWindowForm.name} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, name: e.target.value})} className="form-input mt-1 block w-full"/>
+                </div>
+                <div>
+                  <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <input type="time" id="twStartTime" value={newTimeWindowForm.startTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, startTime: e.target.value})} required className="form-input mt-1 block w-full"/>
+                </div>
+                <div>
+                  <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
+                  <input type="time" id="twEndTime" value={newTimeWindowForm.endTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, endTime: e.target.value})} required className="form-input mt-1 block w-full"/>
+                </div>
+                <div>
+                  <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
+                  <select id="twCategory" value={newTimeWindowForm.categoryId} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, categoryId: e.target.value})} required className="form-input mt-1 block w-full">
+                    {availableCategories.length === 0 && <option value="" disabled>Loading categories...</option>}
+                    {availableCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200" disabled={isLoading}>
+                    Cancel
+                  </button>
+                  <button type="button" onClick={handleCreateTimeWindow} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300" disabled={isLoading}>
+                    {isLoading ? 'Creating...' : 'Create & Add'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         <div className="flex justify-end gap-3 mt-8">
           <button
@@ -195,7 +335,7 @@ const EditTemplatePage: React.FC = () => {
           <button
             type="submit"
             className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
-            disabled={isLoading || (isCreatingNew && selectedTimeWindowIds.length === 0)}
+            disabled={isLoading} // Removed: (isCreatingNew && selectedTimeWindowIds.length === 0)
           >
             {isLoading ? (isCreatingNew ? 'Creating...' : 'Saving...') : (isCreatingNew ? 'Create Template' : 'Save Changes')}
           </button>

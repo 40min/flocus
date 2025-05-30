@@ -6,6 +6,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { getAllDayTemplates, deleteDayTemplate } from '../services/dayTemplateService';
 import { formatMinutesToHHMM } from '../lib/utils';
+import { TimeWindow } from '../types/timeWindow';
 
 const TemplatesPage: React.FC = () => {
   const [templates, setTemplates] = useState<DayTemplateResponse[]>([]);
@@ -47,13 +48,6 @@ const TemplatesPage: React.FC = () => {
     }
   };
 
-  const formatTimeWindows = (timeWindows: DayTemplateResponse['time_windows']): string => {
-    if (!timeWindows || timeWindows.length === 0) return 'No time windows';
-    return timeWindows
-      .map(tw => `${tw.name} (${formatMinutesToHHMM(tw.start_time)} - ${formatMinutesToHHMM(tw.end_time)})`)
-      .join(', ');
-  };
-
   return (
     <div className="p-8">
       <header className="mb-8">
@@ -88,9 +82,32 @@ const TemplatesPage: React.FC = () => {
             <tbody className="divide-y divide-slate-200">
               {templates.map((template) => (
                 <tr key={template.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{template.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{template.description || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{formatTimeWindows(template.time_windows)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 align-top">{template.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 align-top">{template.description || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600 align-top">
+                    {template.time_windows && template.time_windows.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {template.time_windows.map((tw: TimeWindow) => {
+                          const categoryColor = tw.category?.color;
+                          const chipStyle: React.CSSProperties = categoryColor
+                            ? { backgroundColor: `${categoryColor}33`, color: categoryColor, borderColor: categoryColor }
+                            : {};
+
+                          return (
+                            <span
+                              key={tw.id}
+                              className={`px-2 py-0.5 text-xs rounded-full font-medium border ${!categoryColor ? 'bg-slate-100 text-slate-700 border-slate-300' : ''}`}
+                              style={chipStyle}
+                            >
+                              {tw.name} ({formatMinutesToHHMM(tw.start_time)}-{formatMinutesToHHMM(tw.end_time)}) - {tw.category.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      'No time windows'
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button onClick={() => navigate(`/templates/edit/${template.id}`)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1">

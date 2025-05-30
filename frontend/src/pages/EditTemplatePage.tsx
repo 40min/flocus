@@ -7,6 +7,8 @@ import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../ser
 import { getAllTimeWindows, createTimeWindow as createTimeWindowService } from '../services/timeWindowService';
 import * as categoryService from '../services/categoryService';
 import { formatMinutesToHHMM, hhMMToMinutes } from '../lib/utils';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AddIcon from '@mui/icons-material/Add';
 
 const EditTemplatePage: React.FC = () => {
   const navigate = useNavigate();
@@ -196,7 +198,7 @@ const EditTemplatePage: React.FC = () => {
               <a href="/templates" className="hover:text-gray-700">Templates</a>
             </li>
             <li className="flex items-center">
-              <span className="material-symbols-outlined mx-1 text-sm">chevron_right</span>
+              <ChevronRightIcon sx={{ fontSize: '1.25rem', marginX: '0.25rem' }} />
               <span className="text-gray-700 font-semibold">
                 {isCreatingNew ? 'Create Template' : 'Edit Template'}
               </span>
@@ -278,7 +280,7 @@ const EditTemplatePage: React.FC = () => {
               disabled={!templateId} // Enable if templateId exists (i.e., template is saved or being edited)
               title={!templateId ? "Save template first to enable adding new time windows" : "Add new time window"}
             >
-              <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'wght' 500"}}>add</span>
+              <AddIcon sx={{ fontSize: '1.25rem' }} />
               Add new time window
             </button>
         </div>

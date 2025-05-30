@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { DayTemplateCreateRequest, DayTemplateResponse, DayTemplateUpdateRequest } from '../types/dayTemplate';
+import { DayTemplateCreateRequest, DayTemplateUpdateRequest } from '../types/dayTemplate';
 import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
 import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
@@ -14,7 +14,6 @@ import AddIcon from '@mui/icons-material/Add';
 
 const EditTemplatePage: React.FC = () => {
   const navigate = useNavigate();
-  // Store templateId in state to allow updating it after creation
   const { templateId: routeTemplateId } = useParams<{ templateId?: string }>();
   const [templateId, setTemplateId] = useState<string | undefined>(routeTemplateId);
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(routeTemplateId === undefined);
@@ -23,11 +22,12 @@ const EditTemplatePage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [selectedTimeWindowIds, setSelectedTimeWindowIds] = useState<string[]>([]);
   const [allAvailableTimeWindows, setAllAvailableTimeWindows] = useState<TimeWindow[]>([]);
-
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
+  const [isNameAutofilled, setIsNameAutofilled] = useState(false);
+
   const [newTimeWindowForm, setNewTimeWindowForm] = useState<{
     name: string;
     startTime: Date | null;
@@ -39,8 +39,22 @@ const EditTemplatePage: React.FC = () => {
     endTime: null,
     categoryId: '',
   });
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [isNameAutofilled, setIsNameAutofilled] = useState(false);
+
+  const generateTimeWindowName = useCallback((categoryName: string): string => {
+    return `${categoryName}`;
+  }, []);
+
+  const handleCategoryChange = useCallback((categoryId: string) => {
+    const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
+    const newName = selectedCategory ? generateTimeWindowName(selectedCategory.name) : '';
+
+    setNewTimeWindowForm(prev => ({
+      ...prev,
+      categoryId,
+      name: newName,
+    }));
+    setIsNameAutofilled(!!selectedCategory);
+  }, [availableCategories, generateTimeWindowName]);
 
   const fetchTemplateDetails = useCallback(async (id: string) => {
     setIsLoading(true);
@@ -70,29 +84,60 @@ const EditTemplatePage: React.FC = () => {
     }
   }, []);
 
+  // Effect for loading initial template data
   useEffect(() => {
     fetchAllTimeWindows();
-    if (templateId && !isCreatingNew) { // Check isCreatingNew state
+    if (templateId && !isCreatingNew) {
       fetchTemplateDetails(templateId);
     }
+  }, [isCreatingNew, templateId, fetchTemplateDetails, fetchAllTimeWindows]);
 
-    const loadCategories = async () => {
-      try {
-        const cats = await categoryService.getAllCategories();
-        setAvailableCategories(cats);
-        if (cats.length > 0 && !newTimeWindowForm.categoryId) {
-          setNewTimeWindowForm(prev => ({ ...prev, categoryId: cats[0].id }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch categories for modal", err);
-        setError(prevError => (prevError ? prevError + " " : "") + "Failed to load categories for new time window.");
+  // Load categories when modal opens
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await categoryService.getAllCategories();
+      setAvailableCategories(cats);
+      if (cats.length > 0 && !newTimeWindowForm.categoryId) {
+        const selectedCategory = cats[0];
+        setNewTimeWindowForm((prev: typeof newTimeWindowForm) => ({
+          ...prev,
+          categoryId: selectedCategory.id,
+          name: generateTimeWindowName(selectedCategory.name)
+        }));
+        setIsNameAutofilled(true);
       }
-    };
-    // Load categories if editing, or if creating and modal might open
-    if ((templateId && !isCreatingNew) || isTimeWindowModalOpen) {
+    } catch (err) {
+      console.error("Failed to fetch categories for modal", err);
+      setError((prevError: string | null) =>
+        (prevError ? prevError + " " : "") + "Failed to load categories for new time window."
+      );
+    }
+  }, [generateTimeWindowName, newTimeWindowForm.categoryId]);
+
+  // Only load categories when modal opens
+  useEffect(() => {
+    if (isTimeWindowModalOpen) {
       loadCategories();
     }
-  }, [isCreatingNew, templateId, fetchTemplateDetails, fetchAllTimeWindows, isTimeWindowModalOpen]);
+  }, [isTimeWindowModalOpen, loadCategories]);
+
+  // Handle initial category selection when modal opens
+  useEffect(() => {
+    if (isTimeWindowModalOpen && availableCategories.length > 0) {
+      // Only set initial category if form is in initial state
+      const isFormEmpty = !newTimeWindowForm.name && !newTimeWindowForm.startTime && !newTimeWindowForm.endTime;
+      if (isFormEmpty) {
+        handleCategoryChange(availableCategories[0].id);
+      }
+    }
+  }, [
+    isTimeWindowModalOpen,
+    availableCategories,
+    handleCategoryChange,
+    newTimeWindowForm.name,
+    newTimeWindowForm.startTime,
+    newTimeWindowForm.endTime
+  ]);
 
   const handleTimeWindowSelection = (timeWindowId: string) => {
     setSelectedTimeWindowIds(prev =>
@@ -319,16 +364,7 @@ const EditTemplatePage: React.FC = () => {
                   <select
                     id="twCategory"
                     value={newTimeWindowForm.categoryId}
-                    onChange={e => {
-                      const selectedCatId = e.target.value;
-                      const selectedCategory = availableCategories.find(cat => cat.id === selectedCatId);
-                      setNewTimeWindowForm({
-                        ...newTimeWindowForm,
-                        categoryId: selectedCatId,
-                        name: selectedCategory ? selectedCategory.name : '',
-                      });
-                      setIsNameAutofilled(!!selectedCategory);
-                    }}
+                    onChange={e => handleCategoryChange(e.target.value)}
                     required
                     className="form-input mt-1 block w-full py-1.5 px-3 text-sm"
                   >

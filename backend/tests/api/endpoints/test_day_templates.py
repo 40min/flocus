@@ -5,7 +5,7 @@ from odmantic import ObjectId  # Added import
 from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateResponse
 from app.core.config import settings
 from app.db.models.category import Category
-from app.db.models.day_template import DayTemplate as DayTemplateModel  # Added import
+from app.db.models.day_template import DayTemplate as DayTemplateModel
 from app.db.models.time_window import TimeWindow  # Ensure TimeWindow model is imported for type hints
 from app.db.models.user import User
 
@@ -13,30 +13,6 @@ API_V1_STR = settings.API_V1_STR
 DAY_TEMPLATES_ENDPOINT = f"{API_V1_STR}/day-templates/"
 
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture
-async def user_one_day_template(
-    async_client: AsyncClient,
-    auth_headers_user_one: dict[str, str],
-    user_one_time_window: TimeWindow,
-    test_user_one: User,  # Added test_user_one for consistency if needed later
-) -> DayTemplateResponse:
-    """
-    Fixture to create a day template for user_one and return its response.
-    """
-    day_template_data = DayTemplateCreateRequest(
-        name="Fixture Test Day Template",
-        description="A day template created by a fixture",
-        time_windows=[user_one_time_window.id],
-    )
-    response = await async_client.post(
-        DAY_TEMPLATES_ENDPOINT,
-        headers=auth_headers_user_one,
-        json=day_template_data.model_dump(mode="json"),
-    )
-    assert response.status_code == 201, f"Failed to create day template for fixture: {response.text}"
-    return DayTemplateResponse(**response.json())
 
 
 async def test_create_day_template_success(
@@ -382,22 +358,23 @@ async def test_get_day_template_by_id_success(
     auth_headers_user_one: dict[str, str],
     user_one_category: Category,  # Still needed for assertions on TimeWindow's category
     user_one_time_window: TimeWindow,  # Still needed for assertions on TimeWindow details
-    user_one_day_template: DayTemplateResponse,  # Use the new fixture
+    user_one_day_template_model: DayTemplateModel,
     test_db,  # Keep test_db if other operations in the test might need it
 ):
-    # Template is already created by the user_one_day_template fixture
+    # user_one_day_template_model is a DB model created by its fixture.
+    # user_one_time_window is linked to user_one_day_template_model.
 
     # Get the template by ID
     get_response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{user_one_day_template.id}",  # Use ID from fixture
+        f"{DAY_TEMPLATES_ENDPOINT}{user_one_day_template_model.id}",
         headers=auth_headers_user_one,
     )
     assert get_response.status_code == 200, get_response.text
     retrieved_template = DayTemplateResponse(**get_response.json())
 
-    assert retrieved_template.id == user_one_day_template.id
-    assert retrieved_template.name == user_one_day_template.name
-    assert retrieved_template.description == user_one_day_template.description
+    assert retrieved_template.id == user_one_day_template_model.id
+    assert retrieved_template.name == user_one_day_template_model.name
+    assert retrieved_template.description == user_one_day_template_model.description
     assert retrieved_template.user_id == test_user_one.id
     assert len(retrieved_template.time_windows) == 1
     tw_resp = retrieved_template.time_windows[0]
@@ -482,14 +459,13 @@ async def test_get_day_template_by_id_not_found(
 async def test_get_day_template_by_id_not_owner(
     async_client: AsyncClient,
     auth_headers_user_two: dict[str, str],  # For attempting to access as user two
-    user_one_day_template: DayTemplateResponse,  # User one's template from fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test getting a day template owned by another user.
     Should return 403.
     """
-    # User one's template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # User two tries to get it
     response = await async_client.get(
@@ -502,14 +478,13 @@ async def test_get_day_template_by_id_not_owner(
 
 async def test_get_day_template_by_id_unauthenticated(
     async_client: AsyncClient,
-    user_one_day_template: DayTemplateResponse,  # Template created by fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test getting a day template by ID without authentication.
     Should return 401.
     """
-    # Template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # Attempt to get without auth
     response = await async_client.get(
@@ -609,11 +584,10 @@ async def test_update_day_template_full(
     async_client: AsyncClient,
     test_user_one: User,
     auth_headers_user_one: dict[str, str],
-    user_one_day_template: DayTemplateResponse,  # Use the new fixture
+    user_one_day_template_model: DayTemplateModel,
     test_db,  # Still needed for creating new category/TW for update
 ):
-    # Initial template (user_one_day_template) is already created by the fixture
-    template_id_to_update = user_one_day_template.id
+    template_id_to_update = user_one_day_template_model.id
 
     # Create a new category and time window for update
     from app.db.models.category import Category as CategoryModel
@@ -669,11 +643,10 @@ async def test_update_day_template_full(
 async def test_update_day_template_clear_time_windows(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    user_one_day_template: DayTemplateResponse,  # Use the fixture
+    user_one_day_template_model: DayTemplateModel,
 ):
-    # Initial template (user_one_day_template) is already created by the fixture
-    template_id_to_update = user_one_day_template.id
-    original_name = user_one_day_template.name  # Store original name for assertion
+    template_id_to_update = user_one_day_template_model.id
+    original_name = user_one_day_template_model.name  # Store original name for assertion
 
     update_payload_dict = {"time_windows": []}  # Clear time windows
 
@@ -690,15 +663,14 @@ async def test_update_day_template_name_conflict_same_user(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     user_one_time_window: TimeWindow,  # Needed for the manually created second template
-    user_one_day_template: DayTemplateResponse,  # First template from fixture
+    user_one_day_template_model: DayTemplateModel,
     test_db,  # Keep if other DB operations are needed
 ) -> None:
     """
     Test updating a day template to a name that already exists for the same user (another template).
     Should return a 400 error.
     """
-    # First template (user_one_day_template) is already created by the fixture.
-    # Its name is "Fixture Test Day Template".
+    # First template is user_one_day_template_model
 
     # Create second template manually to control its name initially
     dt2_data = DayTemplateCreateRequest(name="DT2 To Be Updated For Conflict", time_windows=[user_one_time_window.id])
@@ -708,8 +680,8 @@ async def test_update_day_template_name_conflict_same_user(
     assert create_resp2.status_code == 201
     dt2_id = create_resp2.json()["id"]
 
-    # Attempt to update DT2 to have the same name as the fixture's template
-    update_payload = {"name": user_one_day_template.name}
+    # Attempt to update DT2 to have the same name as user_one_day_template_model
+    update_payload = {"name": user_one_day_template_model.name}
     response = await async_client.patch(
         f"{DAY_TEMPLATES_ENDPOINT}{dt2_id}",
         headers=auth_headers_user_one,
@@ -722,14 +694,13 @@ async def test_update_day_template_name_conflict_same_user(
 async def test_update_day_template_non_existent_time_window(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    user_one_day_template: DayTemplateResponse,  # Use the fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test updating a day template with a non-existent time_window_id.
     Should return a 404 error.
     """
-    # Template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     non_existent_tw_id = "605f585dd5a2a60d39f3b3c0"  # Example non-existent ObjectId string
     update_payload = {"time_windows": [non_existent_tw_id]}
@@ -746,14 +717,13 @@ async def test_update_day_template_time_window_unowned(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     user_two_time_window: TimeWindow,  # User two's TW for update attempt
-    user_one_day_template: DayTemplateResponse,  # User one's template from fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test updating a day template with a time_window_id owned by another user.
     Should return a 404 error.
     """
-    # Template for user one (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # Attempt to update with user two's time window
     update_payload = {"time_windows": [str(user_two_time_window.id)]}
@@ -788,14 +758,13 @@ async def test_update_day_template_not_found(
 async def test_update_day_template_not_owner(
     async_client: AsyncClient,
     auth_headers_user_two: dict[str, str],  # For user two to attempt update
-    user_one_day_template: DayTemplateResponse,  # User one's template from fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test updating a day template owned by another user.
     Should return 403.
     """
-    # User one's template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # User two attempts to update it
     update_payload = {"description": "User Two's update attempt on User One DT"}
@@ -810,14 +779,13 @@ async def test_update_day_template_not_owner(
 
 async def test_update_day_template_unauthenticated(
     async_client: AsyncClient,
-    user_one_day_template: DayTemplateResponse,  # Template created by fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test updating a day template without authentication.
     Should return 401.
     """
-    # Template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     update_payload = {"name": "Unauthenticated Update Attempt"}
     response = await async_client.patch(
@@ -840,7 +808,7 @@ async def test_update_day_template_unauthenticated(
 async def test_update_day_template_validation_errors(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    user_one_day_template: DayTemplateResponse,  # Use the fixture
+    user_one_day_template_model: DayTemplateModel,
     update_payload: dict,
     expected_status: int,
     expected_detail_part: str,
@@ -848,8 +816,7 @@ async def test_update_day_template_validation_errors(
     """
     Test updating a day template with various validation errors in the payload.
     """
-    # Template to update (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     response = await async_client.patch(
         f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
@@ -874,14 +841,13 @@ async def test_update_day_template_validation_errors(
 async def test_delete_day_template_success(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    user_one_day_template: DayTemplateResponse,  # Use the new fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test successful deletion of a day template.
     Should return 204 No Content and the template should be gone.
     """
-    # Template (user_one_day_template) is already created by the fixture
-    template_id_to_delete = user_one_day_template.id
+    template_id_to_delete = user_one_day_template_model.id
 
     # Delete the template
     delete_response = await async_client.delete(
@@ -919,14 +885,13 @@ async def test_delete_day_template_not_found(
 async def test_delete_day_template_not_owner(
     async_client: AsyncClient,
     auth_headers_user_two: dict[str, str],  # For user two to attempt delete
-    user_one_day_template: DayTemplateResponse,  # User one's template from fixture
+    user_one_day_template_model: DayTemplateModel,
 ) -> None:
     """
     Test deleting a day template owned by another user.
     Should return 403.
     """
-    # User one's template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # User two attempts to delete it
     response = await async_client.delete(
@@ -939,7 +904,7 @@ async def test_delete_day_template_not_owner(
 
 async def test_delete_day_template_unauthenticated(
     async_client: AsyncClient,
-    user_one_day_template: DayTemplateResponse,  # Template created by fixture
+    user_one_day_template_model: DayTemplateModel,
     test_db,  # Keep for the TimeWindow verification at the end
     user_one_time_window: TimeWindow,  # Keep for the TimeWindow verification at the end
 ) -> None:
@@ -947,8 +912,7 @@ async def test_delete_day_template_unauthenticated(
     Test deleting a day template without authentication.
     Should return 401.
     """
-    # Template (user_one_day_template) is already created by the fixture
-    template_id = user_one_day_template.id
+    template_id = user_one_day_template_model.id
 
     # Attempt to delete without auth
     response = await async_client.delete(

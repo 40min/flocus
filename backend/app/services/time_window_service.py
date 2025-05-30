@@ -90,6 +90,7 @@ class TimeWindowService:
             TimeWindow,
             TimeWindow.user == current_user_id,
             TimeWindow.is_deleted == False,  # noqa: E712
+            sort=TimeWindow.start_time,
         )
         if not time_window_models:
             return []

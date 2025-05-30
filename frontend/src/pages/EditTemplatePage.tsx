@@ -323,7 +323,7 @@ const EditTemplatePage: React.FC = () => {
             <h2 className="text-gray-800 text-lg font-semibold mb-4">Time Windows</h2>
             <p className="text-sm text-gray-500 mb-4">Manage time windows for this template. Add or remove as needed.</p>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {templateTimeWindows.length > 0 ? templateTimeWindows.map(tw => (
+              {templateTimeWindows.length > 0 ? templateTimeWindows.slice().sort((a, b) => a.start_time - b.start_time).map(tw => (
                 <div key={tw.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50">
                   <div className="flex-grow">
                     <span className="font-medium text-gray-800">{tw.name}</span>

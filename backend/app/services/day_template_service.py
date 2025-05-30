@@ -120,12 +120,21 @@ class DayTemplateService:
                 resource="day template",
                 detail_override="Ownership check failed",
             )
-        tw_response_map = await self._fetch_and_build_time_window_response_map(
-            day_template_model.time_windows, current_user_id
+
+        # Fetch TimeWindows associated with this DayTemplate by day_template_id
+        linked_time_windows_models = await self.engine.find(
+            TimeWindow,
+            TimeWindow.day_template_id == template_id,
+            TimeWindow.user == current_user_id,
+            TimeWindow.is_deleted == False,  # noqa: E712
         )
-        ordered_tw_responses = [
-            tw_response_map[tw_id] for tw_id in day_template_model.time_windows if tw_id in tw_response_map
-        ]
+        linked_time_window_ids = [tw.id for tw in linked_time_windows_models]
+
+        tw_response_map = await self._fetch_and_build_time_window_response_map(linked_time_window_ids, current_user_id)
+        # Ensure the order from linked_time_window_ids is preserved if needed,
+        # or use a specific order from day_template_model.time_windows if that's preferred.
+        # For now, using the order from the fetched linked_time_window_ids.
+        ordered_tw_responses = [tw_response_map[tw_id] for tw_id in linked_time_window_ids if tw_id in tw_response_map]
         return DayTemplateMapper.to_response(day_template_model, ordered_tw_responses)
 
     async def get_all_day_templates(self, current_user_id: ObjectId) -> List[DayTemplateResponse]:

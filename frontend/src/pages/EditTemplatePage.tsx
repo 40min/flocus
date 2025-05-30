@@ -330,7 +330,7 @@ const EditTemplatePage: React.FC = () => {
                       setIsNameAutofilled(!!selectedCategory);
                     }}
                     required
-                    className="form-input mt-1 block w-full"
+                    className="form-input mt-1 block w-full py-1.5 px-3 text-sm"
                   >
                     {availableCategories.length === 0 && <option value="" disabled>Loading categories...</option>}
                     {availableCategories.map(cat => (
@@ -339,7 +339,7 @@ const EditTemplatePage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="twName" className="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                  <label htmlFor="twName" className="block text-xs font-medium text-gray-500">Name (Optional)</label>
                   <input
                     type="text"
                     id="twName"
@@ -348,7 +348,7 @@ const EditTemplatePage: React.FC = () => {
                       setNewTimeWindowForm({...newTimeWindowForm, name: e.target.value});
                       setIsNameAutofilled(false); // User is typing, so it's not autofilled anymore
                     }}
-                    className={`form-input mt-1 block w-full ${isNameAutofilled ? 'text-gray-500' : ''}`}
+                    className={`form-input mt-1 block w-full py-1.5 px-3 text-sm ${isNameAutofilled ? 'text-gray-500' : ''}`}
                     placeholder="Autofills from category, or enter custom name"
                   />
                 </div>
@@ -363,7 +363,7 @@ const EditTemplatePage: React.FC = () => {
                       timeIntervals={5}
                       timeCaption="Time"
                       dateFormat="HH:mm"
-                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
+                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-1.5 px-3 text-sm"
                       wrapperClassName="w-full"
                       required
                     />
@@ -378,7 +378,7 @@ const EditTemplatePage: React.FC = () => {
                       timeIntervals={5}
                       timeCaption="Time"
                       dateFormat="HH:mm"
-                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
+                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-1.5 px-3 text-sm"
                       wrapperClassName="w-full"
                       required
                     />

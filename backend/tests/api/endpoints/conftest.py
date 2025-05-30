@@ -91,6 +91,14 @@ async def user_one_time_window(test_db, test_user_one, user_one_category, user_o
     }
     instance_to_save = TimeWindow(**time_window_data)
     await test_db.save(instance_to_save)
+
+    # Update the DayTemplate model to include this TimeWindow's ID
+    if user_one_day_template_model.time_windows is None:
+        user_one_day_template_model.time_windows = []
+    if instance_to_save.id not in user_one_day_template_model.time_windows:
+        user_one_day_template_model.time_windows.append(instance_to_save.id)
+        await test_db.save(user_one_day_template_model)
+
     return instance_to_save
 
 

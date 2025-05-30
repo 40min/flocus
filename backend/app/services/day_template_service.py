@@ -14,7 +14,7 @@ from app.core.exceptions import (
 )
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.day_template import DayTemplate
+from app.db.models.day_template import DayTemplate  # Assumed existing import
 from app.db.models.time_window import TimeWindow
 from app.mappers.day_template_mapper import DayTemplateMapper
 from app.mappers.time_window_mapper import TimeWindowMapper
@@ -205,12 +205,23 @@ class DayTemplateService:
         ]
         return DayTemplateMapper.to_response(day_template_raw_model, ordered_tw_responses)
 
-    async def delete_day_template(self, template_id: ObjectId, current_user_id: ObjectId) -> bool:
+    async def delete_day_template(self, template_id: ObjectId, current_user_id: ObjectId) -> None:
         day_template_model = await self.engine.find_one(DayTemplate, DayTemplate.id == template_id)
         if day_template_model is None:
             raise DayTemplateNotFoundException(template_id=template_id)
         if day_template_model.user != current_user_id:
             raise NotOwnerException(resource="day template", detail_override="Ownership check failed")
 
-        await self.engine.delete(day_template_model)  # engine.delete expects the model instance
-        return True
+        # Soft-delete associated time windows
+        time_windows_to_soft_delete = await self.engine.find(
+            TimeWindow,
+            (TimeWindow.day_template_id == template_id)
+            & (TimeWindow.user == current_user_id)
+            & (TimeWindow.is_deleted == False),  # noqa: E712
+        )
+        for tw in time_windows_to_soft_delete:
+            tw.is_deleted = True
+            await self.engine.save(tw)
+
+        await self.engine.delete(day_template_model)
+        # No return is needed as the endpoint expects a 204 No Content.

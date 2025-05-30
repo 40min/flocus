@@ -138,13 +138,13 @@ class TestTimeWindowMapper:
 
     def test_to_model_for_update_multiple_fields(self, sample_time_window_model: TimeWindow):
         new_category_id = ObjectId()
-        new_day_template_id = ObjectId()
+        # new_day_template_id = ObjectId() # day_template_id is not updatable
         schema = TimeWindowUpdateRequest(
             name="New Name",
             start_time=100,
             end_time=200,
             category=new_category_id,
-            day_template_id=new_day_template_id,
+            # day_template_id=new_day_template_id, # day_template_id is not in the update schema
         )
         model_to_update = sample_time_window_model.model_copy(deep=True)
         updated_model = TimeWindowMapper.to_model_for_update(model_to_update, schema)
@@ -153,7 +153,7 @@ class TestTimeWindowMapper:
         assert updated_model.start_time == 100
         assert updated_model.end_time == 200
         assert updated_model.category == new_category_id
-        assert updated_model.day_template_id == new_day_template_id
+        assert updated_model.day_template_id == sample_time_window_model.day_template_id  # Should remain original
 
     def test_to_model_for_update_partial_fields_unset(self, sample_time_window_model: TimeWindow):
         schema = TimeWindowUpdateRequest(name="Partially Updated Name")

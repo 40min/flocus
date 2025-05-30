@@ -1,7 +1,7 @@
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse
+from app.api.schemas.time_window import TimeWindowCreateRequest, TimeWindowResponse, TimeWindowUpdateRequest
 from app.db.models.category import Category
 from app.db.models.time_window import TimeWindow
 from app.mappers.base_mapper import BaseMapper
@@ -37,7 +37,7 @@ class TimeWindowMapper(BaseMapper):
     _model_class = TimeWindow
 
     @classmethod
-    def to_model_for_update(cls, time_window: TimeWindow, schema: TimeWindowCreateRequest) -> TimeWindow:
+    def to_model_for_update(cls, time_window: TimeWindow, schema: TimeWindowUpdateRequest) -> TimeWindow:
         """Updates a TimeWindow model with data from an update request schema."""
         update_data = schema.model_dump(exclude_unset=True)
 

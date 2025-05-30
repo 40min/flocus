@@ -169,14 +169,6 @@ class TimeWindowService:
                 raise NotOwnerException(resource="category", detail_override="New category not owned by user.")
             category_for_response_model = validated_new_category  # Use the new category for response
 
-        if "day_template_id" in update_data:
-            new_day_template_id = update_data["day_template_id"]
-            day_template = await self.engine.find_one(DayTemplate, DayTemplate.id == new_day_template_id)
-            if not day_template:
-                raise DayTemplateNotFoundException(template_id=str(new_day_template_id))
-            if day_template.user != current_user_id:
-                raise NotOwnerException(resource="day template", detail_override="New day template not owned by user.")
-
         # Check start_time and end_time consistency if both are provided or one is provided and other exists
         merged_start_time = update_data.get("start_time", time_window.start_time)
         merged_end_time = update_data.get("end_time", time_window.end_time)

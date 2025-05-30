@@ -224,15 +224,15 @@ async def test_update_time_window_success(
     # Create a new category and day template for update
     new_category_data = CategoryModel(name="Updated Category for TW", user=test_user_one.id, color="#112233")
     await test_db.save(new_category_data)
-    new_dt_data = DayTemplateModel(name="Updated DT for TW", user=test_user_one.id)
-    await test_db.save(new_dt_data)
+    # new_dt_data = DayTemplateModel(name="Updated DT for TW", user=test_user_one.id) # day_template_id is not updatable
+    # await test_db.save(new_dt_data)
 
     update_data = TimeWindowUpdateRequest(
         name="Updated TW Name",
         start_time=600,  # 10:00
         end_time=780,  # 13:00
         category=new_category_data.id,
-        day_template_id=new_dt_data.id,
+        # day_template_id=new_dt_data.id, # day_template_id is not updatable
     )
     response = await async_client.patch(
         f"{TIME_WINDOWS_ENDPOINT}{user_one_time_window.id}",
@@ -246,7 +246,7 @@ async def test_update_time_window_success(
     assert updated_tw.end_time == update_data.end_time
     assert updated_tw.category.id == new_category_data.id
     assert updated_tw.category.name == new_category_data.name
-    assert updated_tw.day_template_id == new_dt_data.id
+    assert updated_tw.day_template_id == user_one_time_window.day_template_id  # Should remain original
     assert updated_tw.is_deleted is False
     assert updated_tw.user_id == test_user_one.id
 

@@ -48,7 +48,6 @@ class TimeWindowUpdateRequest(BaseModel):
     start_time: Optional[int] = None
     end_time: Optional[int] = None
     category: Optional[ObjectId] = None
-    day_template_id: Optional[ObjectId] = None
 
     @field_validator("start_time", "end_time")
     @classmethod

@@ -40,13 +40,32 @@ const EditTemplatePage: React.FC = () => {
     categoryId: '',
   });
 
-  const generateTimeWindowName = useCallback((categoryName: string): string => {
-    return `${categoryName}`;
+  const generateTimeWindowName = useCallback((
+    categoryName: string,
+    currentTemplateId: string | undefined,
+    existingTimeWindows: TimeWindow[]
+  ): string => {
+    if (!categoryName) return '';
+
+    const relevantTimeWindows = existingTimeWindows.filter(
+      tw => tw.day_template_id === currentTemplateId
+    );
+
+    let newName = categoryName;
+    let count = 0;
+    // eslint-disable-next-line no-loop-func
+    while (relevantTimeWindows.some(tw => tw.name === newName)) {
+      count++;
+      newName = `${categoryName} (${count})`;
+    }
+    return newName;
   }, []);
 
   const handleCategoryChange = useCallback((categoryId: string) => {
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
-    const newName = selectedCategory ? generateTimeWindowName(selectedCategory.name) : '';
+    const newName = selectedCategory
+      ? generateTimeWindowName(selectedCategory.name, templateId, allAvailableTimeWindows)
+      : '';
 
     setNewTimeWindowForm(prev => ({
       ...prev,
@@ -54,7 +73,7 @@ const EditTemplatePage: React.FC = () => {
       name: newName,
     }));
     setIsNameAutofilled(!!selectedCategory);
-  }, [availableCategories, generateTimeWindowName]);
+  }, [availableCategories, generateTimeWindowName, templateId, allAvailableTimeWindows]);
 
   const fetchTemplateDetails = useCallback(async (id: string) => {
     setIsLoading(true);
@@ -102,7 +121,7 @@ const EditTemplatePage: React.FC = () => {
         setNewTimeWindowForm((prev: typeof newTimeWindowForm) => ({
           ...prev,
           categoryId: selectedCategory.id,
-          name: generateTimeWindowName(selectedCategory.name)
+          name: generateTimeWindowName(selectedCategory.name, templateId, allAvailableTimeWindows)
         }));
         setIsNameAutofilled(true);
       }
@@ -112,7 +131,7 @@ const EditTemplatePage: React.FC = () => {
         (prevError ? prevError + " " : "") + "Failed to load categories for new time window."
       );
     }
-  }, [generateTimeWindowName, newTimeWindowForm.categoryId]);
+  }, [generateTimeWindowName, newTimeWindowForm.categoryId, templateId, allAvailableTimeWindows]);
 
   // Only load categories when modal opens
   useEffect(() => {

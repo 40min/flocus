@@ -11,14 +11,13 @@ import * as categoryService from '../services/categoryService';
 import { formatMinutesToHHMM, hhMMToMinutes } from '../lib/utils';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import AddIcon from '@mui/icons-material/Add'; // Keep AddIcon if it's still used elsewhere or for future use
+import AddIcon from '@mui/icons-material/Add';
 
 const EditTemplatePage: React.FC = () => {
   const navigate = useNavigate();
-  // Use routeTemplateId directly for checking if creating new, and for initial fetch if an ID is present.
-  // The templateId state will be set when a new template is created.
   const { templateId: routeTemplateId } = useParams<{ templateId?: string }>();
-  const isCreatingNew = !routeTemplateId; // Simpler check for new template
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(!routeTemplateId);
+  const [actualTemplateId, setActualTemplateId] = useState<string | undefined>(routeTemplateId);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -45,19 +44,12 @@ const EditTemplatePage: React.FC = () => {
     categoryName: string,
     currentTemplateId: string | undefined, // Can be undefined if template is not saved yet
     existingTimeWindows: TimeWindow[]
-  ): string => {
+  ) => {
     if (!categoryName) return '';
 
-    // If templateId is not yet available (e.g., creating new template before first save),
-    // we might not be able to guarantee uniqueness against other templates.
-    // For now, we'll base uniqueness on the provided existingTimeWindows for the *current* template.
-    const relevantTimeWindows = currentTemplateId
-      ? existingTimeWindows.filter(tw => tw.day_template_id === currentTemplateId)
-      : existingTimeWindows; // If no templateId, assume existingTimeWindows are for the new template being built
-
+    const relevantTimeWindows = existingTimeWindows.filter(tw => tw.day_template_id === currentTemplateId);
     let newName = categoryName;
     let count = 0;
-    // eslint-disable-next-line no-loop-func
     while (relevantTimeWindows.some(tw => tw.name === newName)) {
       count++;
       newName = `${categoryName} (${count})`;
@@ -68,7 +60,7 @@ const EditTemplatePage: React.FC = () => {
   const handleCategoryChange = useCallback((categoryId: string) => {
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
     const newName = selectedCategory
-      ? generateTimeWindowName(selectedCategory.name, routeTemplateId || undefined, templateTimeWindows) // Use routeTemplateId if available
+      ? generateTimeWindowName(selectedCategory.name, actualTemplateId, templateTimeWindows)
       : '';
 
     setNewTimeWindowForm(prev => ({
@@ -77,10 +69,9 @@ const EditTemplatePage: React.FC = () => {
       name: newName,
     }));
     setIsNameAutofilled(!!selectedCategory);
-  }, [availableCategories, generateTimeWindowName, routeTemplateId, templateTimeWindows]);
+  }, [availableCategories, generateTimeWindowName, actualTemplateId, templateTimeWindows]);
 
 
-  // Effect for loading initial template data if editing an existing template
   useEffect(() => {
     const fetchTemplateDetails = async (id: string) => {
       setIsLoading(true);
@@ -90,6 +81,8 @@ const EditTemplatePage: React.FC = () => {
         setName(template.name);
         setDescription(template.description || '');
         setTemplateTimeWindows(template.time_windows || []); // Ensure it's an array
+        setIsCreatingNew(false); // Now we are editing
+        setActualTemplateId(id); // Ensure actualTemplateId is set when editing
       } catch (err) {
         setError('Failed to fetch template details.');
         console.error(err);
@@ -98,12 +91,11 @@ const EditTemplatePage: React.FC = () => {
       }
     };
 
-    if (routeTemplateId && !isCreatingNew) {
+    if (routeTemplateId) {
       fetchTemplateDetails(routeTemplateId);
     }
-  }, [routeTemplateId, isCreatingNew]); // Depend on routeTemplateId
+  }, [routeTemplateId]);
 
-  // Load categories when modal opens
   const loadCategories = useCallback(async () => {
     // No need to setIsLoading here as it's for the modal, not the whole page
     try {
@@ -111,10 +103,10 @@ const EditTemplatePage: React.FC = () => {
       setAvailableCategories(cats);
       if (cats.length > 0 && !newTimeWindowForm.categoryId) { // Only autofill if categoryId is not already set
         const selectedCategory = cats[0];
-        setNewTimeWindowForm((prev) => ({ // Removed type annotation for prev
+        setNewTimeWindowForm((prev) => ({
           ...prev,
           categoryId: selectedCategory.id,
-          name: generateTimeWindowName(selectedCategory.name, routeTemplateId || undefined, templateTimeWindows)
+          name: generateTimeWindowName(selectedCategory.name, actualTemplateId, templateTimeWindows)
         }));
         setIsNameAutofilled(true);
       }
@@ -124,16 +116,13 @@ const EditTemplatePage: React.FC = () => {
         (prevError) => (prevError ? prevError + " " : "") + "Failed to load categories for new time window."
       );
     }
-  }, [generateTimeWindowName, newTimeWindowForm.categoryId, routeTemplateId, templateTimeWindows]);
+  }, [generateTimeWindowName, newTimeWindowForm.categoryId, actualTemplateId, templateTimeWindows]);
 
-  // Only load categories when modal opens
   useEffect(() => {
     if (isTimeWindowModalOpen) {
       loadCategories();
     }
   }, [isTimeWindowModalOpen, loadCategories]);
-
-  // Handle initial category selection when modal opens
   useEffect(() => {
     if (isTimeWindowModalOpen && availableCategories.length > 0) {
       // Only set initial category if form is in initial state
@@ -151,15 +140,10 @@ const EditTemplatePage: React.FC = () => {
     newTimeWindowForm.endTime
   ]);
 
-  // Removed handleTimeWindowSelection as time windows are now directly part of the template's state.
 
   const handleCreateTimeWindow = async () => {
-    // Ensure a template context exists, even if it's a new one not yet saved.
-    // For new templates, the time window will be associated once the template is saved.
-    const currentTemplateId = routeTemplateId; // Use routeTemplateId for existing, or it will be undefined for new
-
-    if (!newTimeWindowForm.categoryId) {
-        setError("Please select a category for the new time window.");
+    if (!actualTemplateId || !newTimeWindowForm.categoryId) {
+        setError("A template must be saved and a category selected before adding a time window.");
         return;
     }
     if (!newTimeWindowForm.startTime || !newTimeWindowForm.endTime) {
@@ -184,39 +168,12 @@ const EditTemplatePage: React.FC = () => {
       return;
     }
 
-    // If it's a new template (no routeTemplateId), we can't create the time window in the backend yet.
-    // So, we add it to the local state. It will be created when the template is saved.
-    if (isCreatingNew || !currentTemplateId) {
-        const selectedCategoryForLocalTw = availableCategories.find(c => c.id === newTimeWindowForm.categoryId);
-        if (!selectedCategoryForLocalTw) {
-            setError("Selected category not found. Cannot create local time window.");
-            return;
-        }
-        const localNewTimeWindow: TimeWindow = {
-            id: `local-${Date.now()}`, // Temporary local ID
-            name: newTimeWindowForm.name || 'Unnamed Time Window',
-            start_time: startTimeMinutes,
-            end_time: endTimeMinutes,
-            category: selectedCategoryForLocalTw, // Assign the found category object
-            day_template_id: '', // Will be set upon template creation
-            user_id: '', // Placeholder, assuming it's not critical for local-only representation before save
-            is_deleted: false, // Placeholder
-        };
-        setTemplateTimeWindows(prev => [...prev, localNewTimeWindow]);
-        setIsTimeWindowModalOpen(false);
-        setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
-        setIsNameAutofilled(false);
-        return;
-    }
-
-
-    // If editing an existing template, create the time window via API
     const timeWindowData: TimeWindowCreateRequest = {
       name: newTimeWindowForm.name || undefined, // API might handle default naming
       start_time: startTimeMinutes,
       end_time: endTimeMinutes,
       category: newTimeWindowForm.categoryId, // Corrected from category_id
-      day_template_id: currentTemplateId, // This is crucial
+      day_template_id: actualTemplateId, // This is crucial
     };
 
     setIsLoading(true); // Loading for modal action
@@ -235,13 +192,6 @@ const EditTemplatePage: React.FC = () => {
   };
 
   const handleDeleteTimeWindow = async (timeWindowId: string) => {
-    // If the ID is a temporary local ID, just remove it from state
-    if (timeWindowId.startsWith('local-')) {
-        setTemplateTimeWindows(prev => prev.filter(tw => tw.id !== timeWindowId));
-        return;
-    }
-
-    // Otherwise, delete from backend
     setIsLoading(true); // Consider a more specific loading state if needed
     setError(null);
     try {
@@ -260,62 +210,34 @@ const EditTemplatePage: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    // Prepare time windows: existing ones by ID, new ones by their full data
-    const timeWindowIdsForPayload: string[] = [];
-    const newTimeWindowsForPayload: Omit<TimeWindowCreateRequest, 'day_template_id'>[] = [];
-
-    templateTimeWindows.forEach(tw => {
-        if (tw.id.startsWith('local-')) {
-            newTimeWindowsForPayload.push({
-                name: tw.name,
-                start_time: tw.start_time,
-                end_time: tw.end_time,
-                category: tw.category.id, // Pass the category ID string
-            });
-        } else {
-            timeWindowIdsForPayload.push(tw.id);
-        }
-    });
-
-    const payload: DayTemplateCreateRequest | DayTemplateUpdateRequest = {
-      name,
-      description,
-      time_windows: timeWindowIdsForPayload, // For updates, these are existing TW IDs
-      // For creates, the backend might need to handle new_time_windows separately or create them based on this structure
-    };
-
     try {
       let savedTemplate;
       if (isCreatingNew) {
-        // Adjust payload for creation to include new time windows directly
         const createPayload: DayTemplateCreateRequest = {
             name: name,
             description: description,
-            time_windows: timeWindowIdsForPayload, // Explicitly use string[]
-            new_time_windows: newTimeWindowsForPayload,
+            time_windows: [], // Time windows are added after template creation
         };
         savedTemplate = await createDayTemplate(createPayload);
-        navigate(`/templates/edit/${savedTemplate.id}`, { replace: true }); // Update URL to edit mode, no longer "isCreatingNew"
-        // Fetch the newly created template to get all IDs correctly, including for new TWs
-        const freshTemplate = await getDayTemplateById(savedTemplate.id);
-        setName(freshTemplate.name);
-        setDescription(freshTemplate.description || '');
-        setTemplateTimeWindows(freshTemplate.time_windows || []);
+        // Navigate to edit page, which will then fetch the template including its new ID.
+        navigate(`/templates/edit/${savedTemplate.id}`, { replace: true });
+        // No need to set state here, the navigation and subsequent useEffect will handle it.
+        //setIsCreatingNew(false); // This will be handled by route change
+        //setActualTemplateId(savedTemplate.id);
 
-      } else if (routeTemplateId) {
-        // For updates, if there are new_time_windows to be created and associated
+      } else if (actualTemplateId) {
         const updatePayload: DayTemplateUpdateRequest = {
-            ...payload,
-            new_time_windows: newTimeWindowsForPayload.length > 0 ? newTimeWindowsForPayload : undefined,
+            name,
+            description,
+            time_windows: templateTimeWindows.map(tw => tw.id),
         };
-        savedTemplate = await updateDayTemplate(routeTemplateId, updatePayload);
-         // After update, re-fetch to ensure UI reflects the true state from backend
-        const freshTemplate = await getDayTemplateById(routeTemplateId);
+        savedTemplate = await updateDayTemplate(actualTemplateId, updatePayload);
+        // After update, re-fetch to ensure UI reflects the true state from backend
+        const freshTemplate = await getDayTemplateById(actualTemplateId);
         setName(freshTemplate.name);
         setDescription(freshTemplate.description || '');
         setTemplateTimeWindows(freshTemplate.time_windows || []);
       }
-      // Optionally, show a success message
       console.log('Template saved:', savedTemplate);
 
     } catch (err: any) {
@@ -382,57 +304,68 @@ const EditTemplatePage: React.FC = () => {
                 placeholder="e.g., A template for deep work sessions in the morning."
               />
             </div>
+            {!isCreatingNew && actualTemplateId && (
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h2 className="text-gray-800 text-lg font-semibold mb-4">Time Windows</h2>
-          <p className="text-sm text-gray-500 mb-4">Manage time windows for this template. Add or remove as needed.</p>
-          {/* Removed general isLoading for time windows as they are part of templateTimeWindows state */}
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {templateTimeWindows.length > 0 ? templateTimeWindows.map(tw => (
-              <div key={tw.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50">
-                <div className="flex-grow">
-                  <span className="font-medium text-gray-800">{tw.name}</span>
-                  <span className="text-gray-500 ml-2 text-sm">
-                    ({formatMinutesToHHMM(tw.start_time)} - {formatMinutesToHHMM(tw.end_time)})
-                  </span>
-                  {tw.category && (
-                    <span
-                      className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full`}
-                      style={{
-                        backgroundColor: tw.category.color ? `${tw.category.color}20` : '#E5E7EB', // Light gray if no color
-                        color: tw.category.color || '#4B5563', // Dark gray if no color
-                      }}
-                    >
-                      {tw.category.name}
+        {!isCreatingNew && actualTemplateId && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 className="text-gray-800 text-lg font-semibold mb-4">Time Windows</h2>
+            <p className="text-sm text-gray-500 mb-4">Manage time windows for this template. Add or remove as needed.</p>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {templateTimeWindows.length > 0 ? templateTimeWindows.map(tw => (
+                <div key={tw.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50">
+                  <div className="flex-grow">
+                    <span className="font-medium text-gray-800">{tw.name}</span>
+                    <span className="text-gray-500 ml-2 text-sm">
+                      ({formatMinutesToHHMM(tw.start_time)} - {formatMinutesToHHMM(tw.end_time)})
                     </span>
-                  )}
+                    {tw.category && (
+                      <span
+                        className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full`}
+                        style={{
+                          backgroundColor: tw.category.color ? `${tw.category.color}20` : '#E5E7EB',
+                          color: tw.category.color || '#4B5563',
+                        }}
+                      >
+                        {tw.category.name}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTimeWindow(tw.id)}
+                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete time window"
+                    disabled={isLoading}
+                  >
+                    <DeleteOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteTimeWindow(tw.id)}
-                  className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  title="Delete time window"
-                  disabled={isLoading} // Disable while any loading operation is in progress
-                >
-                  <DeleteOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-                </button>
-              </div>
-            )) : <p className="text-sm text-gray-500">This template has no time windows yet. Add some below.</p>}
+              )) : <p className="text-sm text-gray-500">This template has no time windows yet. Add some below.</p>}
+            </div>
+              <button
+                type="button"
+                onClick={() => setIsTimeWindowModalOpen(true)}
+                className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors duration-150 disabled:opacity-50"
+                disabled={isLoading}
+                title={!actualTemplateId ? "Save template first to add time windows" : "Add new time window"}
+              >
+                <AddIcon sx={{ fontSize: '1.25rem' }} />
+                Add new time window
+              </button>
           </div>
-            <button
-              type="button"
-              onClick={() => setIsTimeWindowModalOpen(true)}
-              className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors duration-150 disabled:opacity-50"
-              // Enable button always, time windows are added locally for new templates until save.
-              // disabled={isLoading} // Disable if main form is submitting
-              title={"Add new time window"}
-            >
-              <AddIcon sx={{ fontSize: '1.25rem' }} />
-              Add new time window
-            </button>
-        </div>
+        )}
 
         {isTimeWindowModalOpen && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
@@ -523,13 +456,14 @@ const EditTemplatePage: React.FC = () => {
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
-            disabled={isLoading} // Removed: (isCreatingNew && selectedTimeWindowIds.length === 0)
-          >
-            {isLoading ? (isCreatingNew ? 'Creating...' : 'Saving...') : (isCreatingNew ? 'Create Template' : 'Save Changes')}
-          </button>
+          {isCreatingNew && (
+            <button
+              type="submit"
+              className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Template'}
+            </button>)}
         </div>
       </form>
     </div>

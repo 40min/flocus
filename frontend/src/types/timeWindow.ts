@@ -4,7 +4,7 @@ export interface TimeWindow {
   id: string;
   name: string;
   start_time: number; // minutes since midnight
-  end_time: number;   // minutes since midnight
+  end_time: number; // minutes since midnight
   category: Category; // Assuming Category type is defined elsewhere
   day_template_id: string;
   user_id: string;

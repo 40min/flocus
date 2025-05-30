@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { DayTemplateCreateRequest, DayTemplateResponse, DayTemplateUpdateRequest } from '../types/dayTemplate';
 import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
 import { Category } from '../types/category';
@@ -26,10 +28,15 @@ const EditTemplatePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
-  const [newTimeWindowForm, setNewTimeWindowForm] = useState({
+  const [newTimeWindowForm, setNewTimeWindowForm] = useState<{
+    name: string;
+    startTime: Date | null;
+    endTime: Date | null;
+    categoryId: string;
+  }>({
     name: '',
-    startTime: '',
-    endTime: '',
+    startTime: null,
+    endTime: null,
     categoryId: '',
   });
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
@@ -105,15 +112,30 @@ const EditTemplatePage: React.FC = () => {
         return;
     }
 
-    const startTimeMinutes = hhMMToMinutes(newTimeWindowForm.startTime);
-    const endTimeMinutes = hhMMToMinutes(newTimeWindowForm.endTime);
+    if (!newTimeWindowForm.startTime || !newTimeWindowForm.endTime) {
+      setError("Please select both start and end times.");
+      return;
+    }
+
+    const formatTime = (date: Date | null): string => {
+      if (!date) return '';
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    };
+
+    const startTimeStr = formatTime(newTimeWindowForm.startTime);
+    const endTimeStr = formatTime(newTimeWindowForm.endTime);
+
+    const startTimeMinutes = hhMMToMinutes(startTimeStr);
+    const endTimeMinutes = hhMMToMinutes(endTimeStr);
 
     if (startTimeMinutes === null) {
-      setError("Invalid start time format or value. Please use HH:MM and ensure time is valid.");
+      setError("Invalid start time. Please ensure the time is valid.");
       return;
     }
     if (endTimeMinutes === null) {
-      setError("Invalid end time format or value. Please use HH:MM and ensure time is valid.");
+      setError("Invalid end time. Please ensure the time is valid.");
       return;
     }
 
@@ -136,7 +158,7 @@ const EditTemplatePage: React.FC = () => {
       setAllAvailableTimeWindows(prev => [...prev, createdTimeWindow]);
       setSelectedTimeWindowIds(prev => [...prev, createdTimeWindow.id]);
       setIsTimeWindowModalOpen(false);
-      setNewTimeWindowForm({ name: '', startTime: '', endTime: '', categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
+      setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
       setIsNameAutofilled(false); // Reset autofill state
     } catch (err: any) {
       setError(`Failed to create time window: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
@@ -330,13 +352,37 @@ const EditTemplatePage: React.FC = () => {
                     placeholder="Autofills from category, or enter custom name"
                   />
                 </div>
-                <div>
-                  <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
-                  <input type="time" id="twStartTime" value={newTimeWindowForm.startTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, startTime: e.target.value})} required className="form-input mt-1 block w-full" step="300"/>
-                </div>
-                <div>
-                  <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
-                  <input type="time" id="twEndTime" value={newTimeWindowForm.endTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, endTime: e.target.value})} required className="form-input mt-1 block w-full" step="300"/>
+                <div className="flex space-x-4">
+                  <div className="w-1/2">
+                    <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                    <DatePicker
+                      selected={newTimeWindowForm.startTime}
+                      onChange={(date: Date | null) => setNewTimeWindowForm({ ...newTimeWindowForm, startTime: date })}
+                      showTimeSelect
+                      showTimeSelectOnly
+                      timeIntervals={5}
+                      timeCaption="Time"
+                      dateFormat="HH:mm"
+                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
+                      wrapperClassName="w-full"
+                      required
+                    />
+                  </div>
+                  <div className="w-1/2">
+                    <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
+                    <DatePicker
+                      selected={newTimeWindowForm.endTime}
+                      onChange={(date: Date | null) => setNewTimeWindowForm({ ...newTimeWindowForm, endTime: date })}
+                      showTimeSelect
+                      showTimeSelectOnly
+                      timeIntervals={5}
+                      timeCaption="Time"
+                      dateFormat="HH:mm"
+                      className="form-input mt-1 block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
+                      wrapperClassName="w-full"
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200" disabled={isLoading}>

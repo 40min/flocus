@@ -260,7 +260,6 @@ async def test_create_day_template_unauthenticated(
             422,
             "String should have at most 255 characters",
         ),  # description max_length=255
-        ("Valid Name", "Valid desc", [], 422, "List should have at least 1 item"),  # time_windows min_items=1
         (
             "Valid Name",
             "Valid desc",
@@ -346,6 +345,32 @@ async def test_create_day_template_validation_errors(
         assert (
             expected_detail_part.lower() in response_json["detail"].lower()
         ), f"Expected detail part '{expected_detail_part}' not found in {response_json['detail']}"
+
+
+async def test_create_day_template_with_empty_time_windows_success(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: User,
+) -> None:
+    """
+    Test successful creation of a day template with an empty time_windows list.
+    """
+    day_template_data = DayTemplateCreateRequest(
+        name="Test Day Template Empty TW",
+        description="A test day template with no time windows",
+        time_windows=[],
+    )
+    response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=day_template_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 201, response.text
+    created_day_template = DayTemplateResponse(**response.json())
+    assert created_day_template.name == day_template_data.name
+    assert created_day_template.description == day_template_data.description
+    assert created_day_template.user_id == test_user_one.id
+    assert len(created_day_template.time_windows) == 0
 
 
 # Need to add tests for GET, PATCH, DELETE endpoints that also parse DayTemplateResponse

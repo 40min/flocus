@@ -12,7 +12,7 @@ class DayTemplateBase(BaseModel):
 
 
 class DayTemplateCreateRequest(DayTemplateBase):
-    time_windows: List[ObjectId] = Field(..., min_length=1)  # Require at least one
+    time_windows: List[ObjectId] = Field(default_factory=list)
 
 
 class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates

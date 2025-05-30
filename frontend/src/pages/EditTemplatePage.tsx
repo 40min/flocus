@@ -33,6 +33,7 @@ const EditTemplatePage: React.FC = () => {
     categoryId: '',
   });
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [isNameAutofilled, setIsNameAutofilled] = useState(false);
 
   const fetchTemplateDetails = useCallback(async (id: string) => {
     setIsLoading(true);
@@ -136,6 +137,7 @@ const EditTemplatePage: React.FC = () => {
       setSelectedTimeWindowIds(prev => [...prev, createdTimeWindow.id]);
       setIsTimeWindowModalOpen(false);
       setNewTimeWindowForm({ name: '', startTime: '', endTime: '', categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
+      setIsNameAutofilled(false); // Reset autofill state
     } catch (err: any) {
       setError(`Failed to create time window: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
       console.error(err);
@@ -291,25 +293,50 @@ const EditTemplatePage: React.FC = () => {
               <h3 className="text-lg font-semibold mb-4">Create New Time Window</h3>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="twName" className="block text-sm font-medium text-gray-700">Name (Optional)</label>
-                  <input type="text" id="twName" value={newTimeWindowForm.name} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, name: e.target.value})} className="form-input mt-1 block w-full"/>
-                </div>
-                <div>
-                  <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
-                  <input type="time" id="twStartTime" value={newTimeWindowForm.startTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, startTime: e.target.value})} required className="form-input mt-1 block w-full"/>
-                </div>
-                <div>
-                  <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
-                  <input type="time" id="twEndTime" value={newTimeWindowForm.endTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, endTime: e.target.value})} required className="form-input mt-1 block w-full"/>
-                </div>
-                <div>
                   <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
-                  <select id="twCategory" value={newTimeWindowForm.categoryId} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, categoryId: e.target.value})} required className="form-input mt-1 block w-full">
+                  <select
+                    id="twCategory"
+                    value={newTimeWindowForm.categoryId}
+                    onChange={e => {
+                      const selectedCatId = e.target.value;
+                      const selectedCategory = availableCategories.find(cat => cat.id === selectedCatId);
+                      setNewTimeWindowForm({
+                        ...newTimeWindowForm,
+                        categoryId: selectedCatId,
+                        name: selectedCategory ? selectedCategory.name : '',
+                      });
+                      setIsNameAutofilled(!!selectedCategory);
+                    }}
+                    required
+                    className="form-input mt-1 block w-full"
+                  >
                     {availableCategories.length === 0 && <option value="" disabled>Loading categories...</option>}
                     {availableCategories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label htmlFor="twName" className="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                  <input
+                    type="text"
+                    id="twName"
+                    value={newTimeWindowForm.name}
+                    onChange={e => {
+                      setNewTimeWindowForm({...newTimeWindowForm, name: e.target.value});
+                      setIsNameAutofilled(false); // User is typing, so it's not autofilled anymore
+                    }}
+                    className={`form-input mt-1 block w-full ${isNameAutofilled ? 'text-gray-500' : ''}`}
+                    placeholder="Autofills from category, or enter custom name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <input type="time" id="twStartTime" value={newTimeWindowForm.startTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, startTime: e.target.value})} required className="form-input mt-1 block w-full" step="300"/>
+                </div>
+                <div>
+                  <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
+                  <input type="time" id="twEndTime" value={newTimeWindowForm.endTime} onChange={e => setNewTimeWindowForm({...newTimeWindowForm, endTime: e.target.value})} required className="form-input mt-1 block w-full" step="300"/>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200" disabled={isLoading}>

@@ -1,4 +1,4 @@
-import { TimeWindow } from './timeWindow';
+import { TimeWindow, TimeWindowInput } from './timeWindow';
 
 export interface DayTemplateBase {
   name: string;
@@ -7,7 +7,7 @@ export interface DayTemplateBase {
 
 // For creating a new template. Time windows are added after initial creation.
 export interface DayTemplateCreateRequest extends DayTemplateBase {
-  time_windows: string[]; // Should be empty initially
+  time_windows: TimeWindowInput[];
 }
 
 // For updating an existing template.
@@ -15,7 +15,7 @@ export interface DayTemplateCreateRequest extends DayTemplateBase {
 export interface DayTemplateUpdateRequest {
   name?: string;
   description?: string;
-  time_windows?: string[]; // List of TimeWindow IDs to be associated
+  time_windows?: TimeWindowInput[]; // List of TimeWindow input objects to be associated/replaced
 }
 
 export interface DayTemplateResponse extends DayTemplateBase {

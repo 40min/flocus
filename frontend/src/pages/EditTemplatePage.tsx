@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { DayTemplateCreateRequest, DayTemplateUpdateRequest } from '../types/dayTemplate';
-import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
+import { DayTemplateCreateRequest, DayTemplateUpdateRequest, DayTemplateResponse } from '../types/dayTemplate';
+import { TimeWindow, TimeWindowInput } from '../types/timeWindow'; // Removed TimeWindowCreateRequest
 import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
-import { createTimeWindow as createTimeWindowService, deleteTimeWindow as deleteTimeWindowService } from '../services/timeWindowService';
+// Removed timeWindowService imports
 import * as categoryService from '../services/categoryService';
 import { formatMinutesToHHMM, hhMMToMinutes } from '../lib/utils';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -168,41 +168,38 @@ const EditTemplatePage: React.FC = () => {
       return;
     }
 
-    const timeWindowData: TimeWindowCreateRequest = {
-      name: newTimeWindowForm.name || undefined, // API might handle default naming
+    const selectedCategory = availableCategories.find(cat => cat.id === newTimeWindowForm.categoryId);
+    if (!selectedCategory) {
+      setError("Selected category not found.");
+      return;
+    }
+
+    // Create a new TimeWindow object for local state
+    // It won't have a real backend ID or user_id until the template is saved and re-fetched.
+    // day_template_id will also be set by backend if it's a new template.
+    const newLocalTimeWindow: TimeWindow = {
+      id: `temp-${Date.now()}`, // Temporary client-side ID
+      name: newTimeWindowForm.name || selectedCategory.name, // Use category name if TW name is empty
       start_time: startTimeMinutes,
       end_time: endTimeMinutes,
-      category: newTimeWindowForm.categoryId, // Corrected from category_id
-      day_template_id: actualTemplateId, // This is crucial
+      category: selectedCategory, // Embed the full category object
+      day_template_id: actualTemplateId || '', // May be empty if template is new
+      user_id: '', // Will be set by backend; not crucial for local display before save
+      is_deleted: false,
     };
 
-    setIsLoading(true); // Loading for modal action
-    try {
-      const createdTimeWindow = await createTimeWindowService(timeWindowData);
-      setTemplateTimeWindows(prev => [...prev, createdTimeWindow]); // Add to the template's time windows
-      setIsTimeWindowModalOpen(false);
-      setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
-      setIsNameAutofilled(false);
-    } catch (err: any) {
-      setError(`Failed to create time window: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    setTemplateTimeWindows(prev => [...prev, newLocalTimeWindow]);
+    setIsTimeWindowModalOpen(false);
+    setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
+    setIsNameAutofilled(false);
+    setError(null); // Clear previous errors
   };
 
-  const handleDeleteTimeWindow = async (timeWindowId: string) => {
-    setIsLoading(true); // Consider a more specific loading state if needed
-    setError(null);
-    try {
-      await deleteTimeWindowService(timeWindowId);
-      setTemplateTimeWindows(prev => prev.filter(tw => tw.id !== timeWindowId));
-    } catch (err: any) {
-      setError(`Failed to delete time window: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDeleteTimeWindow = (timeWindowId: string) => {
+    // No API call, just update local state.
+    // The actual deletion will happen when the template is saved with the new list of time windows.
+    setTemplateTimeWindows(prev => prev.filter(tw => tw.id !== timeWindowId));
+    setError(null); // Clear any previous errors
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -216,7 +213,13 @@ const EditTemplatePage: React.FC = () => {
         const createPayload: DayTemplateCreateRequest = {
             name: name,
             description: description,
-            time_windows: [], // Time windows are added after template creation
+            // Map local TimeWindow state to TimeWindowInput for creation
+            time_windows: templateTimeWindows.map(tw => ({
+              name: tw.name,
+              start_time: tw.start_time,
+              end_time: tw.end_time,
+              category_id: tw.category.id, // Assumes tw.category is populated
+            })),
         };
         savedTemplate = await createDayTemplate(createPayload);
         // Navigate to edit page, which will then fetch the template including its new ID.
@@ -229,7 +232,12 @@ const EditTemplatePage: React.FC = () => {
         const updatePayload: DayTemplateUpdateRequest = {
             name,
             description,
-            time_windows: templateTimeWindows.map(tw => tw.id),
+            time_windows: templateTimeWindows.map(tw => ({
+              name: tw.name,
+              start_time: tw.start_time,
+              end_time: tw.end_time,
+              category_id: tw.category.id, // Assuming tw.category is populated and has an id
+            })),
         };
         savedTemplate = await updateDayTemplate(actualTemplateId, updatePayload);
         // After update, re-fetch to ensure UI reflects the true state from backend

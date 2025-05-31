@@ -3,7 +3,7 @@ from typing import List, Optional
 from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field
 
-from .time_window import TimeWindowResponse
+from .time_window import TimeWindowInputSchema, TimeWindowResponse
 
 
 class DayTemplateBase(BaseModel):
@@ -12,13 +12,13 @@ class DayTemplateBase(BaseModel):
 
 
 class DayTemplateCreateRequest(DayTemplateBase):
-    time_windows: List[ObjectId] = Field(default_factory=list)
+    time_windows: List[TimeWindowInputSchema] = Field(default_factory=list)
 
 
 class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
-    time_windows: Optional[List[ObjectId]] = None  # Allow updating associated time windows by ObjectId
+    time_windows: Optional[List[TimeWindowInputSchema]] = None  # Replace entire list of time windows
 
 
 class DayTemplateResponse(DayTemplateBase):

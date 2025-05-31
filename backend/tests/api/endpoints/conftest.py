@@ -6,9 +6,10 @@ import pytest
 from app.core.security import create_access_token
 from app.db.models.category import Category
 from app.db.models.day_template import DayTemplate
+
+# TimeWindow model is removed, its data is embedded in DayTemplate
 from app.db.models.task import Task as TaskModel
-from app.db.models.time_window import TimeWindow
-from app.db.models.user import User  # Added import
+from app.db.models.user import User
 from app.services.user_service import UserService
 
 
@@ -77,29 +78,9 @@ async def user_one_category(test_db, test_user_one):
     return category
 
 
-@pytest.fixture
-async def user_one_time_window(test_db, test_user_one, user_one_category, user_one_day_template_model: DayTemplate):
-    """Create a time window for test user one, associated with a specific day template."""
-    # Ensure all data is in the correct type for the Model
-    time_window_data = {
-        "name": f"TW_UserOne_{uuid.uuid4()}",
-        "start_time": 9 * 60,  # int
-        "end_time": 17 * 60,  # int
-        "category": user_one_category.id,
-        "user": test_user_one.id,
-        "day_template_id": user_one_day_template_model.id,  # Associate with the provided DayTemplate
-    }
-    instance_to_save = TimeWindow(**time_window_data)
-    await test_db.save(instance_to_save)
-
-    # Update the DayTemplate model to include this TimeWindow's ID
-    if user_one_day_template_model.time_windows is None:
-        user_one_day_template_model.time_windows = []
-    if instance_to_save.id not in user_one_day_template_model.time_windows:
-        user_one_day_template_model.time_windows.append(instance_to_save.id)
-        await test_db.save(user_one_day_template_model)
-
-    return instance_to_save
+# user_one_time_window fixture is removed as TimeWindow model is gone.
+# Time windows are now embedded in DayTemplate.
+# The user_one_day_template_model fixture will be updated to include embedded time windows.
 
 
 @pytest.fixture
@@ -115,38 +96,28 @@ async def user_two_category(test_db, test_user_two):
     return category
 
 
-@pytest.fixture
-async def user_two_time_window(test_db, test_user_two, user_two_category):
-    """Create a time window for test user two."""
-    # Create a DayTemplate for this user
-    day_template = DayTemplate(
-        name=f"DT_UserTwo_{uuid.uuid4()}",
-        user=test_user_two.id,
-        description="Test Day Template for User Two",
-    )
-    await test_db.save(day_template)
+# user_two_time_window fixture is removed.
 
-    # Ensure all data is in the correct type for the Model
-    time_window_data = {
-        "name": f"TW_UserTwo_{uuid.uuid4()}",
-        "start_time": 10 * 60,  # int
-        "end_time": 18 * 60,  # int
-        "category": user_two_category.id,
-        "user": test_user_two.id,
-        "day_template_id": day_template.id,  # Associate with the DayTemplate
+
+@pytest.fixture
+async def user_one_day_template_model(test_db, test_user_one: User, user_one_category: Category):
+    """
+    Create a DayTemplate model instance for test user one,
+    with one embedded time window.
+    """
+    embedded_tw_data = {
+        "id": uuid.uuid4(),  # Assuming subdocuments get UUIDs or use ObjectId() if your schema expects that
+        "name": "Fixture Morning Routine",
+        "start_time": 9 * 60,
+        "end_time": 10 * 60,
+        "category_id": user_one_category.id,
+        # user_id for embedded TW might be implicit from parent DayTemplate
     }
-    instance_to_save = TimeWindow(**time_window_data)
-    await test_db.save(instance_to_save)
-    return instance_to_save
-
-
-@pytest.fixture
-async def user_one_day_template_model(test_db, test_user_one: User):
-    """Create a DayTemplate model instance for test user one."""
     day_template = DayTemplate(
-        name=f"DT_For_TW_Tests_{uuid.uuid4()}",
-        user=test_user_one.id,
-        description="Day Template for Time Window tests",
+        name=f"DT_With_Embedded_TW_{uuid.uuid4()}",
+        user_id=test_user_one.id,  # Changed from 'user' to 'user_id'
+        description="Day Template with an embedded Time Window",
+        time_windows=[embedded_tw_data],  # Store as a list of dicts
     )
     await test_db.save(day_template)
     return day_template
@@ -185,12 +156,23 @@ async def user_two_task_model(test_db, test_user_two: User, user_two_category: C
 
 
 @pytest.fixture
-async def user_two_day_template_model(test_db, test_user_two: User):
-    """Create a DayTemplate model instance for test user two."""
+async def user_two_day_template_model(test_db, test_user_two: User, user_two_category: Category):
+    """
+    Create a DayTemplate model instance for test user two,
+    with one embedded time window.
+    """
+    embedded_tw_data = {
+        "id": uuid.uuid4(),
+        "name": "Fixture UserTwo TW",
+        "start_time": 14 * 60,
+        "end_time": 15 * 60,
+        "category_id": user_two_category.id,
+    }
     day_template = DayTemplate(
-        name=f"DT_UserTwo_For_TW_Tests_{uuid.uuid4()}",
-        user=test_user_two.id,
+        name=f"DT_UserTwo_With_Embedded_TW_{uuid.uuid4()}",
+        user_id=test_user_two.id,  # Changed from 'user' to 'user_id'
         description="Day Template for Time Window tests (User Two)",
+        time_windows=[embedded_tw_data],
     )
     await test_db.save(day_template)
     return day_template

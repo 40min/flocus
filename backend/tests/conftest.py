@@ -10,7 +10,6 @@ from app.db.connection import set_test_engine
 from app.db.models.category import Category
 from app.db.models.day_template import DayTemplate
 from app.db.models.task import Task
-from app.db.models.time_window import TimeWindow
 from app.db.models.user import User
 from app.main import app
 
@@ -53,7 +52,7 @@ async def clean_db(db_engine: AIOEngine):
     """Function-scoped fixture to clear all relevant collections before each test."""
     # User collection is now managed by the session-scoped test_db fixture
     # to support module-scoped user fixtures.
-    collections_to_clear = [Category, Task, TimeWindow, DayTemplate]
+    collections_to_clear = [Category, Task, DayTemplate]
     for model_cls in collections_to_clear:
         await db_engine.get_collection(model_cls).delete_many({})
     yield db_engine

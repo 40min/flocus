@@ -48,6 +48,33 @@ class CategoryService:
         )
         return [CategoryMapper.to_response(category) for category in categories]
 
+    async def get_categories_by_ids(
+        self, category_ids: List[ObjectId], current_user_id: ObjectId
+    ) -> List[CategoryResponse]:
+        """
+        Fetches multiple categories by their IDs for a given user.
+        Ensures all categories belong to the user and all requested IDs are found.
+        """
+        if not category_ids:
+            return []
+
+        categories = await self.engine.find(
+            Category,
+            Category.id.in_(category_ids),
+            Category.user == current_user_id,
+            Category.is_deleted == False,  # noqa: E712
+        )
+
+        # Ensure all fetched categories indeed belong to the current user (double check, already in query)
+        for category in categories:
+            if category.user != current_user_id:
+                # This case should ideally not be hit if the query is correct
+                raise NotOwnerException(
+                    resource="category", detail_override="Attempted to access categories not owned by user."
+                )
+
+        return [CategoryMapper.to_response(category) for category in categories]
+
     async def update_category(
         self, category_id: ObjectId, category_data: CategoryUpdateRequest, current_user_id: ObjectId
     ) -> CategoryResponse:

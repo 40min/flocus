@@ -5,7 +5,10 @@ from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 
 class DailyPlanAllocation(EmbeddedModel):
-    time_window_id: ObjectId
+    name: str
+    category_id: ObjectId
+    start_time: int
+    end_time: int
     task_id: ObjectId
 
 

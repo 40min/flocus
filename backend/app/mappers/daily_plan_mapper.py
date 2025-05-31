@@ -18,7 +18,14 @@ class DailyPlanMapper:
     @staticmethod
     def allocations_request_to_models(allocation_data: List[DailyPlanAllocationCreate]) -> List[DailyPlanAllocation]:
         return [
-            DailyPlanAllocation(time_window_id=alloc.time_window_id, task_id=alloc.task_id) for alloc in allocation_data
+            DailyPlanAllocation(
+                name=alloc.name,
+                category_id=alloc.category_id,
+                start_time=alloc.start_time,
+                end_time=alloc.end_time,
+                task_id=alloc.task_id,
+            )
+            for alloc in allocation_data
         ]
 
     @staticmethod

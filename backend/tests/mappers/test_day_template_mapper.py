@@ -88,13 +88,12 @@ def overlapping_time_window_input_list(sample_user_id: ObjectId) -> List[TimeWin
 
 @pytest.fixture
 def sample_day_template_model(sample_user_id: ObjectId, sample_time_window_input_list: List[TimeWindowInputSchema]):
-    # DayTemplate model stores embedded time_windows as a list of dicts.
-    # Each dict should have 'id', 'name', 'start_time', 'end_time', 'category_id'.
+    # DayTemplate model stores embedded time_windows as List[EmbeddedTimeWindowSchema].
+    # These are created from dictionaries with 'name', 'start_time', 'end_time', 'category_id'.
     time_windows_for_db_model = []
     for tw_input in sample_time_window_input_list:
         time_windows_for_db_model.append(
             {
-                "id": ObjectId(),  # DB assigns an ID to each embedded TW
                 "name": tw_input.name,
                 "start_time": tw_input.start_time,
                 "end_time": tw_input.end_time,

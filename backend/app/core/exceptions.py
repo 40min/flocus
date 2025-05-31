@@ -224,3 +224,21 @@ class DailyPlanExistsException(DailyPlanServiceException):
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Daily plan for date '{date_value.isoformat()}' already exists for this user",
         )
+
+
+# --- Mapper Exceptions ---
+
+
+class MapperException(Exception):
+    """Base exception for data mapping errors that indicate an internal inconsistency."""
+
+    pass
+
+
+class MissingCategoryInMappingError(MapperException):
+    def __init__(self, category_id: ObjectId, template_id: ObjectId):
+        super().__init__(
+            f"Category with ID '{category_id}' was not found in the provided categories map "
+            f"during mapping for DayTemplate ID '{template_id}'. "
+            "This indicates an internal inconsistency, as the service layer should pre-fetch all necessary categories."
+        )

@@ -5,6 +5,7 @@ from odmantic import ObjectId
 from app.api.schemas.category import CategoryResponse
 from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateResponse
 from app.api.schemas.time_window import TimeWindowResponse
+from app.core.exceptions import MissingCategoryInMappingError  # Added import
 from app.db.models.day_template import DayTemplate, EmbeddedTimeWindowSchema
 
 
@@ -16,20 +17,16 @@ class DayTemplateMapper:
         """
         Maps a DayTemplate model and a pre-fetched map of its relevant categories
         to a DayTemplateResponse schema.
+        Raises MissingCategoryInMappingError if a category_id from an embedded time window
+        is not found in the provided categories_map, as this indicates an internal inconsistency.
         """
         time_window_responses: List[TimeWindowResponse] = []
         for embedded_tw in template_model.time_windows:
             category_resp = categories_map.get(embedded_tw.category_id)
             if not category_resp:
                 # This case implies an issue upstream (service layer should ensure categories are provided)
-                # or data inconsistency. For robustness, create a placeholder or raise an error.
-                # Following the previous logic of creating a placeholder for now:
-                category_resp = CategoryResponse(
-                    id=embedded_tw.category_id,
-                    name="Unknown/Missing Category",
-                    user=template_model.user_id,  # Use alias 'user' to populate 'user_id'
-                    is_deleted=True,
-                )
+                # or data inconsistency. Raising an error as this should ideally not happen.
+                raise MissingCategoryInMappingError(category_id=embedded_tw.category_id, template_id=template_model.id)
 
             time_window_responses.append(
                 TimeWindowResponse(

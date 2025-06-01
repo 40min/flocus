@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
 import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined';
+import flocusLogo from './assets/flocus_logo.png';
 import HomeIcon from '@mui/icons-material/Home';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import ListAltIcon from '@mui/icons-material/ListAlt';
@@ -51,9 +52,7 @@ const AppLayout: React.FC = () => {
     <div className="flex h-screen bg-slate-50 text-slate-800">
       <aside className="flex flex-col w-64 bg-white border-r border-slate-200 p-4 space-y-4 sticky top-0 h-screen">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="bg-slate-700 rounded-full size-10 flex items-center justify-center text-white font-semibold text-lg">
-            {user ? user.username.substring(0, 1).toUpperCase() : <RocketLaunchOutlinedIcon />}
-          </div>
+          <img src={flocusLogo} alt="Flocus Logo" className="size-10" />
           <h1 className="text-slate-900 text-lg font-semibold">Flocus</h1>
         </div>
 

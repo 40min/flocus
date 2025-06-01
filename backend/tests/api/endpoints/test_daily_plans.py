@@ -21,7 +21,7 @@ from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
 
 API_V1_STR = settings.API_V1_STR
-DAILY_PLANS_ENDPOINT = f"{API_V1_STR}/daily-plans/"
+DAILY_PLANS_ENDPOINT = f"{API_V1_STR}/daily-plans"
 
 pytestmark = pytest.mark.asyncio
 
@@ -270,7 +270,7 @@ async def test_get_daily_plan_by_date_success(
     )
     assert create_response.status_code == 201
 
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}", headers=auth_headers_user_one)
     assert response.status_code == 200
     fetched_plan = DailyPlanResponse(**response.json())
     assert fetched_plan.plan_date == plan_date
@@ -286,7 +286,7 @@ async def test_get_daily_plan_by_date_not_found(
 ):
     non_existent_date = unique_date + timedelta(days=100)
     response = await async_client.get(
-        f"{DAILY_PLANS_ENDPOINT}{non_existent_date.isoformat()}", headers=auth_headers_user_one
+        f"{DAILY_PLANS_ENDPOINT}/{non_existent_date.isoformat()}", headers=auth_headers_user_one
     )
     assert response.status_code == 404
     assert f"Daily plan for date '{non_existent_date.isoformat()}' not found" in response.json()["detail"]
@@ -295,12 +295,12 @@ async def test_get_daily_plan_by_date_not_found(
 async def test_get_daily_plan_by_date_invalid_date_format(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str]
 ):
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}invalid-date", headers=auth_headers_user_one)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/invalid-date", headers=auth_headers_user_one)
     assert response.status_code == 422
 
 
 async def test_get_daily_plan_by_date_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}{unique_date.isoformat()}")
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/{unique_date.isoformat()}")
     assert response.status_code == 401
 
 
@@ -330,7 +330,7 @@ async def test_get_daily_plan_by_id_success(
     assert create_response.status_code == 201
     created_plan_id = create_response.json()["id"]
 
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}id/{created_plan_id}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/{created_plan_id}", headers=auth_headers_user_one)
     assert response.status_code == 200
     fetched_plan = DailyPlanResponse(**response.json())
     assert str(fetched_plan.id) == created_plan_id
@@ -339,12 +339,12 @@ async def test_get_daily_plan_by_id_success(
 
 async def test_get_daily_plan_by_id_not_found(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
     non_existent_id = ObjectId()
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}id/{non_existent_id}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/{non_existent_id}", headers=auth_headers_user_one)
     assert response.status_code == 404
 
 
 async def test_get_daily_plan_by_id_invalid_id_format(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}id/invalid-object-id", headers=auth_headers_user_one)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/invalid-object-id", headers=auth_headers_user_one)
     assert response.status_code == 422
     assert "Input should be an instance of ObjectId" in response.json()["detail"][0]["msg"]
 
@@ -362,12 +362,12 @@ async def test_get_daily_plan_by_id_not_owner_fails(
     assert create_response.status_code == 201
     plan_id_user_one = create_response.json()["id"]
 
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}id/{plan_id_user_one}", headers=auth_headers_user_two)
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/{plan_id_user_one}", headers=auth_headers_user_two)
     assert response.status_code == 403
 
 
 async def test_get_daily_plan_by_id_unauthenticated_fails(async_client: AsyncClient):
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}id/{ObjectId()}")
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/{ObjectId()}")
     assert response.status_code == 401
 
 
@@ -408,7 +408,7 @@ async def test_update_daily_plan_success(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",  # Use plan_date for PATCH URL
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",  # Use plan_date for PATCH URL
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -445,7 +445,7 @@ async def test_update_daily_plan_to_empty_allocations_success(
 
     update_payload = DailyPlanUpdateRequest(allocations=[])
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",  # Use plan_date
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",  # Use plan_date
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -460,7 +460,7 @@ async def test_update_daily_plan_date_not_found_fails(
     non_existent_date = unique_date + timedelta(days=200)
     update_payload = DailyPlanUpdateRequest(allocations=[])
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{non_existent_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{non_existent_date.isoformat()}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -480,7 +480,7 @@ async def test_update_daily_plan_with_extra_fields_fails(
 
     invalid_update_payload = {"allocations": [], "extra_field": "should_fail"}
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
         headers=auth_headers_user_one,
         json=invalid_update_payload,
     )
@@ -492,7 +492,7 @@ async def test_update_daily_plan_unauthenticated_fails(async_client: AsyncClient
     update_payload = DailyPlanUpdateRequest(allocations=[])
     some_date_string = unique_date.isoformat()
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{some_date_string}", json=update_payload.model_dump(mode="json")
+        f"{DAILY_PLANS_ENDPOINT}/{some_date_string}", json=update_payload.model_dump(mode="json")
     )
     assert response.status_code == 401
 
@@ -527,7 +527,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -565,7 +565,7 @@ async def test_update_daily_plan_unowned_task_fails(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -598,7 +598,7 @@ async def test_update_daily_plan_not_owner_fails(
         ]
     )
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
         headers=auth_headers_user_two,
         json=update_payload_by_two.model_dump(mode="json"),
     )

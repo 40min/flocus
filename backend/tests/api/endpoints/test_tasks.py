@@ -11,7 +11,7 @@ from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
 
 API_V1_STR = settings.API_V1_STR
-TASKS_ENDPOINT = f"{API_V1_STR}/tasks/"
+TASKS_ENDPOINT = f"{API_V1_STR}/tasks"
 CATEGORIES_ENDPOINT = f"{API_V1_STR}/categories/"
 
 pytestmark = pytest.mark.asyncio
@@ -93,7 +93,7 @@ async def test_get_all_tasks_success_and_filters_soft_deleted(
     assert create_resp.status_code == 201
     task_to_delete_id = create_resp.json()["id"]
 
-    delete_resp = await async_client.delete(f"{TASKS_ENDPOINT}{task_to_delete_id}", headers=auth_headers_user_one)
+    delete_resp = await async_client.delete(f"{TASKS_ENDPOINT}/{task_to_delete_id}", headers=auth_headers_user_one)
     assert delete_resp.status_code == 204
 
     response = await async_client.get(TASKS_ENDPOINT, headers=auth_headers_user_one)
@@ -118,7 +118,7 @@ async def test_get_all_tasks_empty(
 async def test_get_task_by_id_success(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel
 ):
-    response = await async_client.get(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one)
     assert response.status_code == 200
     fetched_task = TaskResponse(**response.json())
     assert fetched_task.id == user_one_task_model.id
@@ -133,7 +133,7 @@ async def test_get_soft_deleted_task_by_id_success(
     user_one_task_model.is_deleted = True
     await test_db.save(user_one_task_model)
 
-    response = await async_client.get(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one)
     assert response.status_code == 200
     fetched_task = TaskResponse(**response.json())
     assert fetched_task.id == user_one_task_model.id
@@ -142,14 +142,14 @@ async def test_get_soft_deleted_task_by_id_success(
 
 async def test_get_task_by_id_not_found(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
     non_existent_id = ObjectId()
-    response = await async_client.get(f"{TASKS_ENDPOINT}{non_existent_id}", headers=auth_headers_user_one)
+    response = await async_client.get(f"{TASKS_ENDPOINT}/{non_existent_id}", headers=auth_headers_user_one)
     assert response.status_code == 404
 
 
 async def test_get_task_by_id_not_owner(
     async_client: AsyncClient, auth_headers_user_two: dict[str, str], user_one_task_model: TaskModel
 ):
-    response = await async_client.get(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_two)
+    response = await async_client.get(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_two)
     assert response.status_code == 403  # NotOwnerException
 
 
@@ -173,7 +173,7 @@ async def test_update_task_success(
         category_id=new_category_for_update.id,
     )
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{user_one_task_model.id}",
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
         headers=auth_headers_user_one,
         json=update_data.model_dump(mode="json", exclude_none=True),
     )
@@ -214,7 +214,7 @@ async def test_update_task_title_conflict(
     # Try to update user_one_task_model to have the title of task2_model
     update_data = TaskUpdateRequest(title=task2_model.title)
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{user_one_task_model.id}",
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
         headers=auth_headers_user_one,
         json=update_data.model_dump(mode="json"),
     )
@@ -226,7 +226,7 @@ async def test_update_task_not_found(async_client: AsyncClient, auth_headers_use
     non_existent_id = ObjectId()
     update_data = TaskUpdateRequest(title="No Task")
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{non_existent_id}",
+        f"{TASKS_ENDPOINT}/{non_existent_id}",
         headers=auth_headers_user_one,
         json=update_data.model_dump(mode="json"),
     )
@@ -238,7 +238,7 @@ async def test_update_task_not_owner(
 ):
     update_data = TaskUpdateRequest(title="Attempted Update By UserTwo")
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{user_one_task_model.id}",
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
         headers=auth_headers_user_two,
         json=update_data.model_dump(mode="json"),
     )
@@ -253,7 +253,7 @@ async def test_update_soft_deleted_task_fails(
 
     update_data = TaskUpdateRequest(title="Update Soft Deleted")
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{user_one_task_model.id}",
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
         headers=auth_headers_user_one,
         json=update_data.model_dump(mode="json"),
     )
@@ -264,12 +264,12 @@ async def test_delete_task_success(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel, test_db
 ):
     delete_response = await async_client.delete(
-        f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one
     )
     assert delete_response.status_code == 204
 
     # Verify it's marked as deleted
-    get_response = await async_client.get(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    get_response = await async_client.get(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one)
     assert get_response.status_code == 200
     fetched_task = TaskResponse(**get_response.json())
     assert fetched_task.is_deleted is True
@@ -282,14 +282,14 @@ async def test_delete_task_success(
 
 async def test_delete_task_not_found(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
     non_existent_id = ObjectId()
-    response = await async_client.delete(f"{TASKS_ENDPOINT}{non_existent_id}", headers=auth_headers_user_one)
+    response = await async_client.delete(f"{TASKS_ENDPOINT}/{non_existent_id}", headers=auth_headers_user_one)
     assert response.status_code == 404
 
 
 async def test_delete_task_not_owner(
     async_client: AsyncClient, auth_headers_user_two: dict[str, str], user_one_task_model: TaskModel
 ):
-    response = await async_client.delete(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_two)
+    response = await async_client.delete(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_two)
     assert response.status_code == 403
 
 
@@ -297,13 +297,15 @@ async def test_delete_already_soft_deleted_task_succeeds(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel, test_db
 ):
     # First delete
-    await async_client.delete(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    await async_client.delete(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one)
 
     # Second delete
-    delete_resp2 = await async_client.delete(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    delete_resp2 = await async_client.delete(
+        f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one
+    )
     assert delete_resp2.status_code == 204
 
-    get_response = await async_client.get(f"{TASKS_ENDPOINT}{user_one_task_model.id}", headers=auth_headers_user_one)
+    get_response = await async_client.get(f"{TASKS_ENDPOINT}/{user_one_task_model.id}", headers=auth_headers_user_one)
     assert TaskResponse(**get_response.json()).is_deleted is True
 
 
@@ -349,7 +351,7 @@ async def test_update_task_title_to_match_soft_deleted_succeeds(
     # Update active task's title to the soft-deleted name
     update_data = TaskUpdateRequest(title=soft_deleted_title)
     response = await async_client.patch(
-        f"{TASKS_ENDPOINT}{active_task_to_update.id}",
+        f"{TASKS_ENDPOINT}/{active_task_to_update.id}",
         headers=auth_headers_user_one,
         json=update_data.model_dump(mode="json"),
     )
@@ -598,9 +600,9 @@ async def test_unauthenticated_access_to_task_endpoints(async_client: AsyncClien
     endpoints_to_test = [
         ("POST", TASKS_ENDPOINT, {"title": "Unauth Task"}),
         ("GET", TASKS_ENDPOINT, None),
-        ("GET", f"{TASKS_ENDPOINT}{ObjectId()}", None),
-        ("PATCH", f"{TASKS_ENDPOINT}{ObjectId()}", {"title": "Unauth Update"}),
-        ("DELETE", f"{TASKS_ENDPOINT}{ObjectId()}", None),
+        ("GET", f"{TASKS_ENDPOINT}/{ObjectId()}", None),
+        ("PATCH", f"{TASKS_ENDPOINT}/{ObjectId()}", {"title": "Unauth Update"}),
+        ("DELETE", f"{TASKS_ENDPOINT}/{ObjectId()}", None),
     ]
 
     for method, url, json_data in endpoints_to_test:
@@ -615,9 +617,9 @@ async def test_unauthenticated_access_to_task_endpoints(async_client: AsyncClien
 async def test_invalid_task_id_format(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
     invalid_id = "this-is-not-an-objectid"
     endpoints_to_test = [
-        ("GET", f"{TASKS_ENDPOINT}{invalid_id}"),
-        ("PATCH", f"{TASKS_ENDPOINT}{invalid_id}"),
-        ("DELETE", f"{TASKS_ENDPOINT}{invalid_id}"),
+        ("GET", f"{TASKS_ENDPOINT}/{invalid_id}"),
+        ("PATCH", f"{TASKS_ENDPOINT}/{invalid_id}"),
+        ("DELETE", f"{TASKS_ENDPOINT}/{invalid_id}"),
     ]
     json_payload_for_patch = {"title": "Update with invalid ID"}
 

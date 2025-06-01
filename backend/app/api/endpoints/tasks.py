@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=TaskResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new Task",
@@ -25,7 +25,7 @@ async def create_task(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[TaskResponse],
     summary="Get all Tasks for the current user",
 )

@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=CategoryResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new Category",
@@ -25,7 +25,7 @@ async def create_category(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[CategoryResponse],
     summary="Get all Categories for the current user",
 )

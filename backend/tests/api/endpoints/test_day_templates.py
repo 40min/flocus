@@ -11,7 +11,7 @@ from app.db.models.day_template import DayTemplate as DayTemplateModel
 from app.db.models.user import User
 
 API_V1_STR = settings.API_V1_STR
-DAY_TEMPLATES_ENDPOINT = f"{API_V1_STR}/day-templates/"
+DAY_TEMPLATES_ENDPOINT = f"{API_V1_STR}/day-templates"
 
 pytestmark = pytest.mark.asyncio
 
@@ -433,7 +433,7 @@ async def test_get_day_template_by_id_success(
     # and user_one_category.
 
     get_response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{user_one_day_template_model.id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{user_one_day_template_model.id}",
         headers=auth_headers_user_one,
     )
     assert get_response.status_code == 200, get_response.text
@@ -531,7 +531,7 @@ async def test_get_day_template_by_id_not_found(
     """
     non_existent_id = "605f585dd5a2a60d39f3b3c9"  # Example non-existent ObjectId
     response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{non_existent_id}",
         headers=auth_headers_user_one,
     )
     assert response.status_code == 404, response.text
@@ -551,7 +551,7 @@ async def test_get_day_template_by_id_not_owner(
 
     # User two tries to get it
     response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_two,  # Authenticated as user two
     )
     assert response.status_code == 404, response.text  # Changed from 403 to 404
@@ -570,7 +570,7 @@ async def test_get_day_template_by_id_unauthenticated(
 
     # Attempt to get without auth
     response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         # No auth headers
     )
     assert response.status_code == 401, response.text
@@ -708,7 +708,7 @@ async def test_update_day_template_full(
     }
 
     update_response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_update}", headers=auth_headers_user_one, json=update_payload_dict
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id_to_update}", headers=auth_headers_user_one, json=update_payload_dict
     )
     assert update_response.status_code == 200, update_response.text
     updated_template = DayTemplateResponse(**update_response.json())
@@ -737,7 +737,7 @@ async def test_update_day_template_clear_time_windows(
     update_payload_dict = {"time_windows": []}  # Clear time windows
 
     update_response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_update}", headers=auth_headers_user_one, json=update_payload_dict
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id_to_update}", headers=auth_headers_user_one, json=update_payload_dict
     )
     assert update_response.status_code == 200, update_response.text
     updated_template = DayTemplateResponse(**update_response.json())
@@ -775,7 +775,7 @@ async def test_update_day_template_name_conflict_same_user(
     # Attempt to update DT2 to have the same name as user_one_day_template_model
     update_payload = {"name": user_one_day_template_model.name}
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{dt2_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{dt2_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -807,7 +807,7 @@ async def test_update_day_template_non_existent_category_in_time_window(
     update_payload = {"time_windows": [updated_embedded_tw_invalid_cat]}
 
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -837,7 +837,7 @@ async def test_update_day_template_category_in_time_window_unowned(
     update_payload = {"time_windows": [updated_embedded_tw_unowned_cat]}
 
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -857,7 +857,7 @@ async def test_update_day_template_not_found(
     non_existent_id = "605f585dd5a2a60d39f3b3c1"
     update_payload = {"name": "New Name for Non Existent DT"}
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{non_existent_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -879,7 +879,7 @@ async def test_update_day_template_not_owner(
     # User two attempts to update it
     update_payload = {"description": "User Two's update attempt on User One DT"}
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_two,  # Authenticated as user two
         json=update_payload,
     )
@@ -899,7 +899,7 @@ async def test_update_day_template_unauthenticated(
 
     update_payload = {"name": "Unauthenticated Update Attempt"}
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         json=update_payload,  # No auth headers
     )
     assert response.status_code == 401, response.text
@@ -950,7 +950,7 @@ async def test_update_day_template_validation_errors(
                 tw["category_id"] = str(user_one_category.id)
 
     response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -982,7 +982,7 @@ async def test_delete_day_template_success(
 
     # Delete the template
     delete_response = await async_client.delete(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_delete}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id_to_delete}",
         headers=auth_headers_user_one,
     )
     assert delete_response.status_code == 204, delete_response.text
@@ -990,7 +990,7 @@ async def test_delete_day_template_success(
 
     # Verify it's gone
     get_response = await async_client.get(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id_to_delete}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id_to_delete}",
         headers=auth_headers_user_one,
     )
     assert get_response.status_code == 404
@@ -1006,7 +1006,7 @@ async def test_delete_day_template_not_found(
     """
     non_existent_id = "605f585dd5a2a60d39f3b3c2"  # Example non-existent ObjectId
     response = await async_client.delete(
-        f"{DAY_TEMPLATES_ENDPOINT}{non_existent_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{non_existent_id}",
         headers=auth_headers_user_one,
     )
     assert response.status_code == 404, response.text
@@ -1026,7 +1026,7 @@ async def test_delete_day_template_not_owner(
 
     # User two attempts to delete it
     response = await async_client.delete(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         headers=auth_headers_user_two,  # Authenticated as user two
     )
     assert response.status_code == 404, response.text  # Changed from 403
@@ -1046,7 +1046,7 @@ async def test_delete_day_template_unauthenticated(
 
     # Attempt to delete without auth
     response = await async_client.delete(
-        f"{DAY_TEMPLATES_ENDPOINT}{template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{template_id}",
         # No auth headers
     )
     assert response.status_code == 401, response.text
@@ -1089,7 +1089,7 @@ async def test_update_day_template_reorder_time_windows(
     update_payload_dict = {"time_windows": [embedded_tw2, embedded_tw1]}  # New order
 
     update_response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{created_template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{created_template_id}",
         headers=auth_headers_user_one,
         json=update_payload_dict,
     )
@@ -1152,7 +1152,7 @@ async def test_update_day_template_remove_time_window(
     update_payload = {"time_windows": [tw_to_keep]}  # Only include the one to keep
 
     update_response = await async_client.patch(
-        f"{DAY_TEMPLATES_ENDPOINT}{created_template_id}",
+        f"{DAY_TEMPLATES_ENDPOINT}/{created_template_id}",
         headers=auth_headers_user_one,
         json=update_payload,
     )
@@ -1203,7 +1203,7 @@ async def test_update_day_template_invalid_time_window(
         "end_time": 400,
         "category_id": str(user_two_category.id),  # This category is not owned by user_one
     }
-    update_url = f"{DAY_TEMPLATES_ENDPOINT}{created_template.id}"
+    update_url = f"{DAY_TEMPLATES_ENDPOINT}/{created_template.id}"
     update_data = {"time_windows": [invalid_embedded_tw_update]}
 
     update_response = await async_client.patch(

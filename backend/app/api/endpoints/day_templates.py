@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=DayTemplateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new Day Template",
@@ -30,7 +30,7 @@ async def create_day_template(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[DayTemplateResponse],
     summary="Get all Day Templates",
 )

@@ -50,17 +50,26 @@ const EditTemplatePage: React.FC = () => {
 
   const generateTimeWindowName = useCallback((
     categoryName: string,
-    currentTemplateId: string | undefined, // Can be undefined if template is not saved yet
-    existingTimeWindows: TimeWindow[]
+    // currentTemplateId: string | undefined, // Parameter removed
+    existingTimeWindows: TimeWindow[] // This is expected to be templateTimeWindows
   ) => {
     if (!categoryName) return '';
 
-    const relevantTimeWindows = existingTimeWindows.filter(tw => tw.day_template_id === currentTemplateId);
+    // No need to filter existingTimeWindows further, as it's already the context.
+    const relevantTimeWindows = existingTimeWindows;
+
     let newName = categoryName;
-    let count = 0;
+    // Check if the base name itself is unique
+    if (!relevantTimeWindows.some(tw => tw.name === newName)) {
+      return newName;
+    }
+
+    // If base name exists, start trying with suffix -1, -2, ...
+    let count = 1;
+    newName = `${categoryName}-${count}`;
     while (relevantTimeWindows.some(tw => tw.name === newName)) {
       count++;
-      newName = `${categoryName} (${count})`;
+      newName = `${categoryName}-${count}`;
     }
     return newName;
   }, []);
@@ -68,7 +77,7 @@ const EditTemplatePage: React.FC = () => {
   const handleCategoryChange = useCallback((categoryId: string) => {
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
     const newName = selectedCategory
-      ? generateTimeWindowName(selectedCategory.name, actualTemplateId, templateTimeWindows)
+      ? generateTimeWindowName(selectedCategory.name, templateTimeWindows) // actualTemplateId removed
       : '';
 
     setNewTimeWindowForm(prev => ({
@@ -77,7 +86,7 @@ const EditTemplatePage: React.FC = () => {
       name: newName,
     }));
     setIsNameAutofilled(!!selectedCategory);
-  }, [availableCategories, generateTimeWindowName, actualTemplateId, templateTimeWindows]);
+  }, [availableCategories, generateTimeWindowName, templateTimeWindows]); // actualTemplateId removed from dependencies
 
 
   useEffect(() => {
@@ -172,7 +181,7 @@ const EditTemplatePage: React.FC = () => {
         setNewTimeWindowForm((prev) => ({
           ...prev,
           categoryId: selectedCategory.id,
-          name: generateTimeWindowName(selectedCategory.name, actualTemplateId, templateTimeWindows)
+          name: generateTimeWindowName(selectedCategory.name, templateTimeWindows) // actualTemplateId removed
         }));
         setIsNameAutofilled(true);
       }
@@ -182,7 +191,7 @@ const EditTemplatePage: React.FC = () => {
         (prevError) => (prevError ? prevError + " " : "") + "Failed to load categories for new time window."
       );
     }
-  }, [generateTimeWindowName, newTimeWindowForm.categoryId, actualTemplateId, templateTimeWindows]);
+  }, [generateTimeWindowName, newTimeWindowForm.categoryId, templateTimeWindows]); // actualTemplateId removed from dependencies
 
   useEffect(() => {
     if (isTimeWindowModalOpen) {

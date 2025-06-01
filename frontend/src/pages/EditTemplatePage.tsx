@@ -34,6 +34,7 @@ const EditTemplatePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [isNameAutofilled, setIsNameAutofilled] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const [newTimeWindowForm, setNewTimeWindowForm] = useState<{
     name: string;
@@ -208,11 +209,11 @@ const EditTemplatePage: React.FC = () => {
 
   const handleCreateTimeWindow = async () => {
     if (!newTimeWindowForm.categoryId) { // Allow adding TW even if templateId is not yet set (for new templates)
-        setError("A category must be selected before adding a time window.");
+        setModalError("A category must be selected before adding a time window.");
         return;
     }
     if (!newTimeWindowForm.startTime || !newTimeWindowForm.endTime) {
-      setError("Please select both start and end times.");
+      setModalError("Please select both start and end times.");
       return;
     }
 
@@ -229,13 +230,27 @@ const EditTemplatePage: React.FC = () => {
     const endTimeMinutes = hhMMToMinutes(endTimeStr);
 
     if (startTimeMinutes === null || endTimeMinutes === null || endTimeMinutes <= startTimeMinutes) {
-      setError("Invalid time range. End time must be after start time.");
+      setModalError("Invalid time range. End time must be after start time.");
       return;
     }
+    // Check for overlaps with existing time windows
+    for (const existingTW of templateTimeWindows) {
+      // Check for overlap: (StartA < EndB) and (StartB < EndA)
+      if (
+        startTimeMinutes < existingTW.end_time &&
+        endTimeMinutes > existingTW.start_time
+      ) {
+        setModalError(
+          `New time window (${formatMinutesToHHMM(startTimeMinutes)} - ${formatMinutesToHHMM(endTimeMinutes)}) overlaps with an existing one: "${existingTW.name}" (${formatMinutesToHHMM(existingTW.start_time)} - ${formatMinutesToHHMM(existingTW.end_time)}).`
+        );
+        return;
+      }
+    }
+
 
     const selectedCategory = availableCategories.find(cat => cat.id === newTimeWindowForm.categoryId);
     if (!selectedCategory) {
-      setError("Selected category not found.");
+      setModalError("Selected category not found.");
       return;
     }
 
@@ -257,7 +272,8 @@ const EditTemplatePage: React.FC = () => {
     setIsTimeWindowModalOpen(false);
     setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
     setIsNameAutofilled(false);
-    setError(null); // Clear previous errors
+    setModalError(null); // Clear previous modal errors
+    setError(null); // Clear general page errors if any
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
@@ -432,7 +448,7 @@ const EditTemplatePage: React.FC = () => {
             </div>
               <button
                 type="button"
-                onClick={() => setIsTimeWindowModalOpen(true)}
+                onClick={() => { setIsTimeWindowModalOpen(true); setModalError(null); }}
                 className="btn-standard mt-4 text-xs"
                 disabled={isLoading}
                 title={"Add new time window"}
@@ -446,6 +462,7 @@ const EditTemplatePage: React.FC = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Add New Time Window</h3>
+              {modalError && <div className="my-3 p-3 bg-red-100 text-red-600 text-sm rounded-md">{modalError}</div>}
               <div className="space-y-4">
                 <div>
                   <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
@@ -509,7 +526,7 @@ const EditTemplatePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="btn-standard bg-gray-100 hover:bg-gray-200 text-gray-700" disabled={isLoading}>
+                  <button type="button" onClick={() => { setModalError(null); setIsTimeWindowModalOpen(false); }} className="btn-standard bg-gray-100 hover:bg-gray-200 text-gray-700" disabled={isLoading}>
                     Cancel
                   </button>
                   <button type="button" onClick={handleCreateTimeWindow} className="btn-standard" disabled={isLoading}>

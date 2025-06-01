@@ -5,6 +5,7 @@ from pydantic import field_validator, model_validator  # Removed PydanticBaseMod
 
 
 class EmbeddedTimeWindowSchema(EmbeddedModel):  # Changed base class
+    id: ObjectId = Field(default_factory=ObjectId)
     name: str = Field(..., min_length=1, max_length=100)
     start_time: int  # minutes since midnight
     end_time: int  # minutes since midnight

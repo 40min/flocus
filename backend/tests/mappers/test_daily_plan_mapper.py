@@ -41,6 +41,7 @@ def sample_category_response(sample_category_id: ObjectId, sample_user_id: Objec
 @pytest.fixture
 def sample_time_window_response_for_allocation(sample_category_response: CategoryResponse) -> TimeWindowResponse:
     return TimeWindowResponse(
+        id=ObjectId(),  # Added dummy ID for the response schema
         name="Morning Focus",
         start_time=540,  # 09:00
         end_time=720,  # 12:00

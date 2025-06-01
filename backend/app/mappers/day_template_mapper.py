@@ -30,6 +30,7 @@ class DayTemplateMapper:
 
             time_window_responses.append(
                 TimeWindowResponse(
+                    id=embedded_tw.id,  # Map the ID
                     name=embedded_tw.name,
                     start_time=embedded_tw.start_time,
                     end_time=embedded_tw.end_time,

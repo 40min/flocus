@@ -77,8 +77,8 @@ class DailyPlanService:
         categories_db = []
         if all_category_ids:
             categories_db = await self.engine.find(
-                Category, Category.id.in_(all_category_ids), Category.is_deleted is False
-            )  # noqa: E712
+                Category, Category.id.in_(all_category_ids), Category.is_deleted == False  # noqa: E712
+            )
         categories_map = {cat.id: cat for cat in categories_db}
 
         for allocation_model in daily_plan_model.allocations:
@@ -105,6 +105,7 @@ class DailyPlanService:
             )
 
             time_window_response = TimeWindowResponse(
+                id=allocation_model.id,  # Use the id from the allocation model
                 name=allocation_model.name,
                 start_time=allocation_model.start_time,
                 end_time=allocation_model.end_time,

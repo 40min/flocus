@@ -106,7 +106,7 @@ async def user_one_day_template_model(test_db, test_user_one: User, user_one_cat
     with one embedded time window.
     """
     embedded_tw_data = {
-        "id": uuid.uuid4(),  # Assuming subdocuments get UUIDs or use ObjectId() if your schema expects that
+        # "id": uuid.uuid4(), # Let default_factory in EmbeddedTimeWindowSchema handle this
         "name": "Fixture Morning Routine",
         "start_time": 9 * 60,
         "end_time": 10 * 60,
@@ -162,7 +162,7 @@ async def user_two_day_template_model(test_db, test_user_two: User, user_two_cat
     with one embedded time window.
     """
     embedded_tw_data = {
-        "id": uuid.uuid4(),
+        # "id": uuid.uuid4(), # Let default_factory in EmbeddedTimeWindowSchema handle this
         "name": "Fixture UserTwo TW",
         "start_time": 14 * 60,
         "end_time": 15 * 60,

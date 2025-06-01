@@ -53,12 +53,14 @@ def sample_time_window_response_list(common_category_response: CategoryResponse)
     # These do NOT have an 'id' field for the TW itself.
     return [
         TimeWindowResponse(
+            id=ObjectId(),  # Added dummy ID
             name="TW1",  # Harmonized name
             start_time=540,
             end_time=600,
             category=common_category_response,
         ),
         TimeWindowResponse(
+            id=ObjectId(),  # Added dummy ID
             name="TW2",  # Harmonized name
             start_time=660,
             end_time=720,

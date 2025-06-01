@@ -43,6 +43,7 @@ class TimeWindowResponse(BaseModel):
     Schema for representing a TimeWindow when included in a DayTemplateResponse.
     """
 
+    id: ObjectId  # Added for frontend identification
     name: str
     start_time: int
     end_time: int

@@ -5,6 +5,7 @@ from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 
 class DailyPlanAllocation(EmbeddedModel):
+    id: ObjectId = Field(default_factory=ObjectId)
     name: str
     category_id: ObjectId
     start_time: int

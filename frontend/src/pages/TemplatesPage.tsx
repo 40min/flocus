@@ -80,6 +80,13 @@ const TemplatesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
+              {!isLoading && templates.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
+                    No templates found. Create one to get started!
+                  </td>
+                </tr>
+              )}
               {templates.map((template) => (
                 <tr key={template.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 align-top">{template.name}</td>

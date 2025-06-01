@@ -180,6 +180,13 @@ const CategoriesPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
+            {!isLoading && categories.length === 0 && !showForm && (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
+                  No categories found. Add a category to organize your tasks!
+                </td>
+              </tr>
+            )}
             {categories.map((category) => {
               const colorDetail = getColorDetails(category.color);
               return (

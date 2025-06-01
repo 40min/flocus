@@ -90,8 +90,8 @@ const UserSettingsPage: React.FC = () => {
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight">Settings</h1>
       </header>
 
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
-      {successMessage && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">{successMessage}</div>}
+      {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md" aria-live="assertive">{error}</div>}
+      {successMessage && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md" aria-live="assertive">{successMessage}</div>}
 
       <section className="mb-12">
         <h2 className="text-2xl font-semibold text-gray-700 mb-6 pb-2 border-b border-gray-200">Account</h2>

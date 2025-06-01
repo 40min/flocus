@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -35,6 +35,10 @@ const EditTemplatePage: React.FC = () => {
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [isNameAutofilled, setIsNameAutofilled] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  const addTimeWindowButtonRef = useRef<HTMLButtonElement>(null);
+  const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
   const [newTimeWindowForm, setNewTimeWindowForm] = useState<{
     name: string;
@@ -198,6 +202,50 @@ const EditTemplatePage: React.FC = () => {
       loadCategories();
     }
   }, [isTimeWindowModalOpen, loadCategories]);
+
+  useEffect(() => {
+    if (isTimeWindowModalOpen) {
+      firstModalFocusableElementRef.current?.focus();
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setIsTimeWindowModalOpen(false);
+          addTimeWindowButtonRef.current?.focus();
+        } else if (event.key === 'Tab' && modalRef.current) {
+          const focusableElements = Array.from(
+            modalRef.current.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            )
+          ).filter(el => el.offsetParent !== null); // Check if element is visible
+
+          if (focusableElements.length === 0) return;
+
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+
+          if (event.shiftKey) {
+            // Shift + Tab
+            if (document.activeElement === firstElement) {
+              lastElement.focus();
+              event.preventDefault();
+            }
+          } else {
+            // Tab
+            if (document.activeElement === lastElement) {
+              firstElement.focus();
+              event.preventDefault();
+            }
+          }
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isTimeWindowModalOpen]);
+
   useEffect(() => {
     if (isTimeWindowModalOpen && availableCategories.length > 0) {
       // Only set initial category if form is in initial state
@@ -279,6 +327,7 @@ const EditTemplatePage: React.FC = () => {
 
     setTemplateTimeWindows(prev => [...prev, newLocalTimeWindow]);
     setIsTimeWindowModalOpen(false);
+    addTimeWindowButtonRef.current?.focus(); // Return focus
     setNewTimeWindowForm({ name: '', startTime: null, endTime: null, categoryId: availableCategories.length > 0 ? availableCategories[0].id : '' });
     setIsNameAutofilled(false);
     setModalError(null); // Clear previous modal errors
@@ -461,6 +510,7 @@ const EditTemplatePage: React.FC = () => {
                 className="btn-standard mt-4 text-xs"
                 disabled={isLoading}
                 title={"Add new time window"}
+                ref={addTimeWindowButtonRef}
               >
                 <AddIcon sx={{ fontSize: '1.25rem' }} />
                 Add new time window
@@ -468,10 +518,10 @@ const EditTemplatePage: React.FC = () => {
           </div>
 
         {isTimeWindowModalOpen && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+          <div ref={modalRef} className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Add New Time Window</h3>
-              {modalError && <div className="my-3 p-3 bg-red-100 text-red-600 text-sm rounded-md">{modalError}</div>}
+              {modalError && <div className="my-3 p-3 bg-red-100 text-red-600 text-sm rounded-md" aria-live="assertive" role="alert">{modalError}</div>}
               <div className="space-y-4">
                 <div>
                   <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
@@ -481,6 +531,7 @@ const EditTemplatePage: React.FC = () => {
                     onChange={e => handleCategoryChange(e.target.value)}
                     required
                     className="form-input mt-1 block w-full py-1.5 px-3 text-sm"
+                    ref={firstModalFocusableElementRef}
                   >
                     {availableCategories.length === 0 && <option value="" disabled>Loading categories...</option>}
                     {availableCategories.map(cat => (
@@ -535,7 +586,7 @@ const EditTemplatePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => { setModalError(null); setIsTimeWindowModalOpen(false); }} className="btn-standard bg-gray-100 hover:bg-gray-200 text-gray-700" disabled={isLoading}>
+                  <button type="button" onClick={() => { setModalError(null); setIsTimeWindowModalOpen(false); addTimeWindowButtonRef.current?.focus(); }} className="btn-standard bg-gray-100 hover:bg-gray-200 text-gray-700" disabled={isLoading}>
                     Cancel
                   </button>
                   <button type="button" onClick={handleCreateTimeWindow} className="btn-standard" disabled={isLoading}>

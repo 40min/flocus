@@ -163,7 +163,7 @@ const RegisterPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-md bg-red-50 p-4" aria-live="assertive">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -178,7 +178,7 @@ const RegisterPage: React.FC = () => {
           )}
 
           {successMessage && (
-            <div className="rounded-md bg-green-50 p-4">
+            <div className="rounded-md bg-green-50 p-4" aria-live="assertive">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

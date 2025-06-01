@@ -24,8 +24,7 @@ export const createTimeWindow = async (timeWindowData: TimeWindowCreateRequest):
 
    export const updateTimeWindow = async (id: string, timeWindowData: TimeWindowUpdateRequest): Promise<TimeWindow> => {
      try {
-       // Assuming TIME_WINDOW_BY_ID endpoint exists or create one
-       const response = await api.patch<TimeWindow>(`${API_ENDPOINTS.TIME_WINDOWS_BASE}/${id}`, timeWindowData);
+       const response = await api.patch<TimeWindow>(API_ENDPOINTS.TIME_WINDOW_BY_ID(id), timeWindowData);
        return response.data;
      } catch (error) {
        console.error(`Failed to update time window with id ${id}:`, error);
@@ -35,7 +34,7 @@ export const createTimeWindow = async (timeWindowData: TimeWindowCreateRequest):
 
   export const deleteTimeWindow = async (id: string): Promise<void> => {
     try {
-      await api.delete(`${API_ENDPOINTS.TIME_WINDOWS_BASE}/${id}`);
+      await api.delete(API_ENDPOINTS.TIME_WINDOW_BY_ID(id));
     } catch (error) {
       console.error(`Failed to delete time window with id ${id}:`, error);
       throw error;

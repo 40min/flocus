@@ -29,6 +29,7 @@ export interface TimeWindowUpdateRequest {
 // Corresponds to backend's TimeWindowInputSchema
 // Used when creating/updating DayTemplates with embedded time windows
 export interface TimeWindowInput {
+  id?: string; // Optional: Used for updates to identify existing time windows
   name: string;
   category_id: string;
   start_time: number; // minutes since midnight

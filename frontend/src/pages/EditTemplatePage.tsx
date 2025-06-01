@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { DayTemplateCreateRequest, DayTemplateUpdateRequest } from '../types/dayTemplate';
-import { TimeWindow } from '../types/timeWindow'; // Removed TimeWindowCreateRequest
+import { TimeWindow, TimeWindowInput } from '../types/timeWindow'; // Removed TimeWindowCreateRequest
 import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
 // Removed timeWindowService imports
@@ -232,12 +232,19 @@ const EditTemplatePage: React.FC = () => {
         const updatePayload: DayTemplateUpdateRequest = {
             name,
             description,
-            time_windows: templateTimeWindows.map(tw => ({
-              name: tw.name,
-              start_time: tw.start_time,
-              end_time: tw.end_time,
-              category_id: tw.category.id, // Assuming tw.category is populated and has an id
-            })),
+            time_windows: templateTimeWindows.map(tw => {
+              const timeWindowPayload: TimeWindowInput = {
+                name: tw.name,
+                start_time: tw.start_time,
+                end_time: tw.end_time,
+                category_id: tw.category.id,
+              };
+              // Only include the id if it's an existing time window (not a temporary client-side one)
+              if (tw.id && !tw.id.startsWith('temp-')) {
+                timeWindowPayload.id = tw.id;
+              }
+              return timeWindowPayload;
+            }),
         };
         savedTemplate = await updateDayTemplate(actualTemplateId, updatePayload);
         // After update, re-fetch to ensure UI reflects the true state from backend

@@ -4,7 +4,7 @@ import { UserUpdatePayload } from '../types/user';
 import { AxiosError } from 'axios';
 
 const UserSettingsPage: React.FC = () => {
-  const { user, login } = useAuth(); // Assuming login updates the user context after successful update
+  const { user, login, token } = useAuth(); // Assuming login updates the user context after successful update
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
@@ -60,9 +60,9 @@ const UserSettingsPage: React.FC = () => {
       // The backend should return the updated user object or a success response.
       // If the token needs to be refreshed upon email/password change, that logic should be handled.
       // For now, we'll optimistically update the local user state or re-fetch.
-      // A simple way is to call login again if it re-fetches user data.
-      if (user.token) { // Check if user object contains token, or useAuth provides it separately
-        await login(user.token); // This typically re-fetches user data
+      // A simple way is to call login again if it re-fetches user data, using the token from AuthContext.
+      if (token) {
+        await login(token); // This re-fetches user data using the current auth token
       }
       setSuccessMessage('Account updated successfully!');
       setFormData(prev => ({ ...prev, password: '' })); // Clear password field

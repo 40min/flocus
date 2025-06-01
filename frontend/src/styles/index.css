@@ -60,3 +60,20 @@
 .animate-grid {
   animation: grid 90s linear infinite;
 }
+
+.save-button-unsaved {
+  @apply shadow-lg; /* Start with a more prominent shadow */
+  animation: pulse-shadow 1.5s infinite;
+}
+
+@keyframes pulse-shadow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); /* Tailwind's green-500 with opacity */
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}

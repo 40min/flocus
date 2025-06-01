@@ -22,6 +22,13 @@ const EditTemplatePage: React.FC = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [templateTimeWindows, setTemplateTimeWindows] = useState<TimeWindow[]>([]); // Stores the actual TimeWindow objects for the current template
+
+  // State for tracking unsaved changes
+  const [initialName, setInitialName] = useState('');
+  const [initialDescription, setInitialDescription] = useState('');
+  const [initialTemplateTimeWindows, setInitialTemplateTimeWindows] = useState<TimeWindow[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +86,15 @@ const EditTemplatePage: React.FC = () => {
       try {
         const template = await getDayTemplateById(id);
         setName(template.name);
+        setInitialName(template.name);
         setDescription(template.description || '');
-        setTemplateTimeWindows(template.time_windows || []); // Ensure it's an array
+        setInitialDescription(template.description || '');
+        const fetchedTimeWindows = template.time_windows || [];
+        setTemplateTimeWindows(fetchedTimeWindows);
+        setInitialTemplateTimeWindows(fetchedTimeWindows);
         setIsCreatingNew(false); // Now we are editing
         setActualTemplateId(id); // Ensure actualTemplateId is set when editing
+        setHasUnsavedChanges(false); // Reset unsaved changes flag
       } catch (err) {
         setError('Failed to fetch template details.');
         console.error(err);
@@ -93,8 +105,61 @@ const EditTemplatePage: React.FC = () => {
 
     if (routeTemplateId) {
       fetchTemplateDetails(routeTemplateId);
+    } else {
+      // For new templates, initialize with empty values
+      setInitialName('');
+      setInitialDescription('');
+      setInitialTemplateTimeWindows([]);
+      setHasUnsavedChanges(false); // Or true if we want to prompt save for a new empty template immediately
     }
   }, [routeTemplateId]);
+
+  // Effect to check for unsaved changes
+  useEffect(() => {
+    const checkUnsavedChanges = () => {
+      const nameChanged = name !== initialName;
+      const descriptionChanged = description !== initialDescription;
+
+      // Basic comparison for time windows length and properties.
+      // For a more robust check, consider deep comparison or hashing.
+      // This simple check might not catch all modifications if only sub-properties of time windows change without adding/removing.
+      // However, our current add/delete operations for time windows should be caught.
+      // And changes to name/start_time/end_time/category_id within a time window are handled by replacing the TW array on save.
+      const timeWindowsChanged =
+        templateTimeWindows.length !== initialTemplateTimeWindows.length ||
+        JSON.stringify(templateTimeWindows.map(tw => ({id: tw.id, name: tw.name, start_time: tw.start_time, end_time: tw.end_time, category_id: tw.category.id }))) !==
+        JSON.stringify(initialTemplateTimeWindows.map(tw => ({id: tw.id, name: tw.name, start_time: tw.start_time, end_time: tw.end_time, category_id: tw.category.id })));
+
+      if (nameChanged || descriptionChanged || timeWindowsChanged) {
+        setHasUnsavedChanges(true);
+      } else {
+        setHasUnsavedChanges(false);
+      }
+    };
+
+    // Don't run this check if still loading initial data for an existing template
+    if (!isLoading && (actualTemplateId || isCreatingNew)) {
+       checkUnsavedChanges();
+    }
+  }, [name, description, templateTimeWindows, initialName, initialDescription, initialTemplateTimeWindows, isLoading, actualTemplateId, isCreatingNew]);
+
+  // Effect for warning on page leave
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        // Standard way to trigger the browser's confirmation dialog
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
 
   const loadCategories = useCallback(async () => {
     // No need to setIsLoading here as it's for the modal, not the whole page
@@ -250,10 +315,17 @@ const EditTemplatePage: React.FC = () => {
         // After update, re-fetch to ensure UI reflects the true state from backend
         const freshTemplate = await getDayTemplateById(actualTemplateId);
         setName(freshTemplate.name);
+        setInitialName(freshTemplate.name);
         setDescription(freshTemplate.description || '');
-        setTemplateTimeWindows(freshTemplate.time_windows || []);
+        setInitialDescription(freshTemplate.description || '');
+        const fetchedTimeWindows = freshTemplate.time_windows || [];
+        setTemplateTimeWindows(fetchedTimeWindows);
+        setInitialTemplateTimeWindows(fetchedTimeWindows);
+        setHasUnsavedChanges(false); // Reset unsaved changes flag
       }
       console.log('Template saved:', savedTemplate);
+      // Note: For create, the navigation to edit page will trigger a fetch
+      // which will set initial states and hasUnsavedChanges to false.
 
     } catch (err: any) {
       setError(`Failed to save template: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
@@ -453,7 +525,15 @@ const EditTemplatePage: React.FC = () => {
         <div className="flex justify-end gap-3 mt-8">
           <button
             type="button"
-            onClick={() => navigate('/templates')}
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                  navigate('/templates');
+                }
+              } else {
+                navigate('/templates');
+              }
+            }}
             className="flex items-center justify-center rounded-lg h-10 px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-300 transition-colors duration-150"
             disabled={isLoading}
           >
@@ -461,10 +541,10 @@ const EditTemplatePage: React.FC = () => {
           </button>
           <button
             type="submit"
-            className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
-            disabled={isLoading}
+            className={`flex items-center justify-center rounded-lg h-10 px-4 text-white text-sm font-semibold transition-colors duration-150 disabled:bg-blue-300 ${hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-blue-600 hover:bg-blue-700'}`}
+            disabled={isLoading || (!hasUnsavedChanges && !isCreatingNew) } // Disable if no unsaved changes unless it's a new template (which might be empty but still saveable)
           >
-            {isLoading ? 'Saving...' : 'Save'}
+            {isLoading ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}
           </button>
         </div>
       </form>

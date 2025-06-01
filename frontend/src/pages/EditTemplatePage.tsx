@@ -433,7 +433,7 @@ const EditTemplatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsTimeWindowModalOpen(true)}
-                className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors duration-150 disabled:opacity-50"
+                className="btn-standard mt-4 text-xs"
                 disabled={isLoading}
                 title={"Add new time window"}
               >
@@ -509,10 +509,10 @@ const EditTemplatePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200" disabled={isLoading}>
+                  <button type="button" onClick={() => setIsTimeWindowModalOpen(false)} className="btn-standard bg-gray-100 hover:bg-gray-200 text-gray-700" disabled={isLoading}>
                     Cancel
                   </button>
-                  <button type="button" onClick={handleCreateTimeWindow} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300" disabled={isLoading}>
+                  <button type="button" onClick={handleCreateTimeWindow} className="btn-standard" disabled={isLoading}>
                     {isLoading ? 'Creating...' : 'Create & Add'}
                   </button>
                 </div>
@@ -534,14 +534,14 @@ const EditTemplatePage: React.FC = () => {
                 navigate('/templates');
               }
             }}
-            className="flex items-center justify-center rounded-lg h-10 px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-300 transition-colors duration-150"
+            className="btn-standard bg-gray-200 hover:bg-gray-300 text-gray-700"
             disabled={isLoading}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className={`flex items-center justify-center rounded-lg h-10 px-4 text-white text-sm font-semibold transition-colors duration-150 disabled:bg-blue-300 ${hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-blue-600 hover:bg-blue-700'}`}
+            className={`btn-standard ${hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}`}
             disabled={isLoading || (!hasUnsavedChanges && !isCreatingNew) } // Disable if no unsaved changes unless it's a new template (which might be empty but still saveable)
           >
             {isLoading ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}

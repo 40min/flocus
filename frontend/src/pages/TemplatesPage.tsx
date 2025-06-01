@@ -63,7 +63,7 @@ const TemplatesPage: React.FC = () => {
           <h2 className="text-xl font-semibold text-slate-800">My Templates</h2>
           <button
             onClick={() => navigate('/templates/new')}
-            className="flex items-center gap-2 min-w-[84px] cursor-pointer justify-center overflow-hidden rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-blue-700 transition-colors"
+            className="btn-standard"
           >
             <AddIcon sx={{ fontSize: '1.125rem' }} />
             <span className="truncate">Create Template</span>

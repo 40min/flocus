@@ -14,7 +14,6 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import Home from './pages/Home';
-import About from './pages/About';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TemplatesPage from './pages/TemplatesPage';
@@ -173,7 +172,6 @@ function App() {
         }
       >
         <Route index element={<Home />} />
-        <Route path="about" element={<About />} /> {/* Kept for now, not in new nav */}
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="tasks" element={<div>Tasks Page Placeholder</div>} />
         <Route path="templates" element={<TemplatesPage />} />

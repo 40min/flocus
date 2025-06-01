@@ -30,7 +30,6 @@ const RegisterPage: React.FC = () => {
       setSuccessMessage('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setIsLoading(false); // As per example
       let errorMessage = 'Registration failed. Please try again.';
       if (err instanceof AxiosError) {
         const detail = err.response?.data?.detail;

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { DayTemplateCreateRequest, DayTemplateUpdateRequest, DayTemplateResponse } from '../types/dayTemplate';
-import { TimeWindow, TimeWindowInput } from '../types/timeWindow'; // Removed TimeWindowCreateRequest
+import { DayTemplateCreateRequest, DayTemplateUpdateRequest } from '../types/dayTemplate';
+import { TimeWindow } from '../types/timeWindow'; // Removed TimeWindowCreateRequest
 import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
 // Removed timeWindowService imports
@@ -142,8 +142,8 @@ const EditTemplatePage: React.FC = () => {
 
 
   const handleCreateTimeWindow = async () => {
-    if (!actualTemplateId || !newTimeWindowForm.categoryId) {
-        setError("A template must be saved and a category selected before adding a time window.");
+    if (!newTimeWindowForm.categoryId) { // Allow adding TW even if templateId is not yet set (for new templates)
+        setError("A category must be selected before adding a time window.");
         return;
     }
     if (!newTimeWindowForm.startTime || !newTimeWindowForm.endTime) {
@@ -312,21 +312,10 @@ const EditTemplatePage: React.FC = () => {
                 placeholder="e.g., A template for deep work sessions in the morning."
               />
             </div>
-            {!isCreatingNew && actualTemplateId && (
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {!isCreatingNew && actualTemplateId && (
+          {/* Time Windows panel is now always visible */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <h2 className="text-gray-800 text-lg font-semibold mb-4">Time Windows</h2>
             <p className="text-sm text-gray-500 mb-4">Manage time windows for this template. Add or remove as needed.</p>
@@ -367,13 +356,12 @@ const EditTemplatePage: React.FC = () => {
                 onClick={() => setIsTimeWindowModalOpen(true)}
                 className="mt-4 flex items-center gap-2 rounded-lg h-9 px-3.5 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition-colors duration-150 disabled:opacity-50"
                 disabled={isLoading}
-                title={!actualTemplateId ? "Save template first to add time windows" : "Add new time window"}
+                title={"Add new time window"}
               >
                 <AddIcon sx={{ fontSize: '1.25rem' }} />
                 Add new time window
               </button>
           </div>
-        )}
 
         {isTimeWindowModalOpen && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
@@ -464,14 +452,13 @@ const EditTemplatePage: React.FC = () => {
           >
             Cancel
           </button>
-          {isCreatingNew && (
-            <button
-              type="submit"
-              className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating...' : 'Create Template'}
-            </button>)}
+          <button
+            type="submit"
+            className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors duration-150 disabled:bg-blue-300"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Saving...' : 'Save'}
+          </button>
         </div>
       </form>
     </div>

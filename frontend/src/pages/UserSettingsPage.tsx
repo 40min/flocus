@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { updateUser } from '../services/userService';
-import { User, UserUpdatePayload } from '../types/user';
+import { UserUpdatePayload } from '../types/user';
 import { AxiosError } from 'axios';
 
 const UserSettingsPage: React.FC = () => {
@@ -58,7 +57,6 @@ const UserSettingsPage: React.FC = () => {
     }
 
     try {
-      const updatedUser = await updateUser(user.id, updatePayload);
       // The backend should return the updated user object or a success response.
       // If the token needs to be refreshed upon email/password change, that logic should be handled.
       // For now, we'll optimistically update the local user state or re-fetch.

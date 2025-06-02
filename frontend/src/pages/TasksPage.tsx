@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDueDate } from 'lib/utils'; // Import the new utility
 // DatePicker is now handled by CreateTaskModal
 // import DatePicker from 'react-datepicker';
 // import 'react-datepicker/dist/react-datepicker.css';
@@ -173,7 +174,7 @@ const TasksPage: React.FC = () => {
                 <td className="px-6 py-4 text-slate-900 text-sm">{task.title}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{statusOptions.find(s => s.value === task.status)?.label || task.status}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{priorityOptions.find(p => p.value === task.priority)?.label || task.priority}</td>
-                <td className="px-6 py-4 text-slate-600 text-sm">{task.due_date || 'N/A'}</td>
+                <td className="px-6 py-4 text-slate-600 text-sm">{formatDueDate(task.due_date ?? null)}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{task.category?.name || 'N/A'}</td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleEdit(task)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" aria-label="edit task">

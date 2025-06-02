@@ -36,6 +36,8 @@ The following data models represent the key entities in the application and are 
     *   `_id` (ObjectId): Unique identifier for the user.
     *   `username` (String): User's username.
     *   `password` (String): Hashed password.
+    *   `first_name` (String): User's first name.
+    *   `last_name` (String): User's last name.
     *   `email` (String): User's email address.
     *   `created_at` (Date): Timestamp of user creation.
     *   `updated_at` (Date): Timestamp of last update.
@@ -49,6 +51,8 @@ The following data models represent the key entities in the application and are 
     *   `end_time` (Date): Task end time.
     *   `priority` (String): Task priority (e.g., "High", "Medium", "Low").
     *   `status` (String): Task status (e.g., "Todo", "In Progress", "Completed", "Blocked").
+    *   `category_id` (ObjectId, optional): Foreign key referencing the Category collection.
+    *   `due_date` (Date, optional): Due date for the task.
     *   `created_at` (Date): Timestamp of task creation.
     *   `updated_at` (Date): Timestamp of last update.
 
@@ -61,16 +65,28 @@ The following data models represent the key entities in the application and are 
     *   `created_at` (Date): Timestamp of category creation.
     *   `updated_at` (Date): Timestamp of last update.
 
-    *Tasks can optionally be associated with a Category.*
-
-*   **TimeWindow:**
-    *   `_id` (ObjectId): Unique identifier for the time window.
+*   **DayTemplate:**
+    *   `_id` (ObjectId): Unique identifier for the day template.
     *   `user_id` (ObjectId): Foreign key referencing the User collection. Indicates the owner of the time window.
-    *   `name` (String): Name of the time window (e.g., "Morning Focus", "Lunch Break").
-    *   `start_time` (Integer): Start time of the window, represented as minutes since midnight (0-1439).
-    *   `end_time` (Integer): End time of the window, represented as minutes since midnight (0-1439).
-    *   `category_id` (ObjectId): Foreign key referencing the Category collection.
-    *   `created_at` (Date): Timestamp of time window creation.
+    *   `name` (String): Name of the day template.
+    *   `description` (String, optional): Description of the day template.
+    *   `time_windows` (List[EmbeddedTimeWindowSchema]): List of embedded time windows.
+        *   `name` (String): Name of the time window.
+        *   `start_time` (Integer): Start time in minutes since midnight.
+        *   `end_time` (Integer): End time in minutes since midnight.
+        *   `category_id` (ObjectId): Reference to a Category.
+    *   `created_at` (Date): Timestamp of template creation.
+    *   `updated_at` (Date): Timestamp of last update.
+
+*   **DailyPlan:**
+    *   `_id` (ObjectId): Unique identifier for the daily plan.
+    *   `user_id` (ObjectId): Foreign key referencing the User collection.
+    *   `plan_date` (Date): The specific date for this plan.
+    *   `allocations` (List[DailyPlanAllocation]): List of time windows and their allocated tasks for the day.
+        *   `time_window_id` (ObjectId): Reference to a TimeWindow (from a DayTemplate or ad-hoc).
+        *   `task_id` (ObjectId): Reference to a Task allocated to this time window.
+        *   (Note: The exact structure of `DailyPlanAllocation` might involve embedding TimeWindow details if not referencing a template's TW directly).
+    *   `created_at` (Date): Timestamp of plan creation.
     *   `updated_at` (Date): Timestamp of last update.
 
 ### 3. API Definitions (REST API)
@@ -78,9 +94,8 @@ The following data models represent the key entities in the application and are 
 The backend exposes a REST API with the following endpoints:
 
 *   **Authentication:**
-    *   `POST /auth/register`: Registers a new user.
-    *   `POST /auth/login`: Logs in an existing user.
-    *   `POST /auth/logout`: Logs out the current user.
+    *   `POST /users/register`: Registers a new user.
+    *   `POST /users/login`: Logs in an existing user.
 
 *   **Users:**
     *   `GET /users/me`: Retrieves information about the currently logged-in user.
@@ -91,7 +106,7 @@ The backend exposes a REST API with the following endpoints:
     *   `GET /tasks/{task_id}`: Retrieves a specific task by ID.
     *   `POST /tasks`: Creates a new task.
     *   `PUT /tasks/{task_id}`: Updates an existing task.
-    *   `DELETE /tasks/{task_id}`: Deletes a task.
+    *   `PATCH /tasks/{task_id}`: Partially updates an existing task.
 
 *   **Categories:**
     *   `GET /categories`: Retrieves all categories for the currently logged-in user.
@@ -99,6 +114,19 @@ The backend exposes a REST API with the following endpoints:
     *   `POST /categories`: Creates a new category.
     *   `PUT /categories/{category_id}`: Updates an existing category.
     *   `DELETE /categories/{category_id}`: Deletes a category.
+
+*   **Day Templates:**
+    *   `GET /day-templates`: Retrieves all day templates for the current user.
+    *   `POST /day-templates`: Creates a new day template.
+    *   `GET /day-templates/{template_id}`: Retrieves a specific day template by ID.
+    *   `PATCH /day-templates/{template_id}`: Updates an existing day template.
+    *   `DELETE /day-templates/{template_id}`: Deletes a day template.
+
+*   **Daily Plans:**
+    *   `POST /daily-plans`: Creates a new daily plan.
+    *   `GET /daily-plans/{plan_date}`: Retrieves a daily plan by date.
+    *   `GET /daily-plans/id/{plan_id}`: Retrieves a daily plan by its ID.
+    *   `PATCH /daily-plans/{plan_date}`: Updates a daily plan by date.
 
 Each endpoint will typically return JSON data.  Error responses will follow standard HTTP status codes.  Authentication will be handled using JWT (JSON Web Tokens).
 
@@ -113,10 +141,11 @@ Each endpoint will typically return JSON data.  Error responses will follow stan
     *   `src/index.tsx`: Entry point for the React application.
 
 *   **Backend (FastAPI):**
-    *   `app/main.py`: Main application file, defining API routes and middleware.
-    *   `app/routers`: Modules containing API route definitions (e.g., `auth.py`, `tasks.py`, `categories.py`, `users.py`).
+    *   `app/main.py`: Main application file, defining API routes and middleware. Includes routers for `users`, `tasks`, `categories`, `day_templates`, `daily_plans`.
+    *   `app/api/endpoints`: Modules containing API route definitions (e.g., `tasks.py`, `categories.py`, `users.py`, `day_templates.py`, `daily_plans.py`).
     *   `app/models`: Data models (Pydantic models) representing the entities (e.g., `user.py`, `task.py`, `category.py`).
-    *   `app/database.py`: Database connection and configuration.
+    *   `app/db/models`: Odmantic models for database interaction (e.g., `user.py`, `task.py`, `category.py`, `day_template.py`, `daily_plan.py`).
+    *   `app/core/config.py`: Application settings.
     *   `app/services`: Business logic and data access layer (e.g., `task_service.py`, `category_service.py`).
     *   `app/security.py`: Authentication and authorization logic.
 
@@ -138,4 +167,5 @@ The application is designed for horizontal scalability.
 *   **Deployment:** Use containerization (e.g., Docker) and orchestration (e.g., Kubernetes) to automate deployment and scaling.
 
 Created on 02.05.2025
+Updated on 02.07.2025
 ```

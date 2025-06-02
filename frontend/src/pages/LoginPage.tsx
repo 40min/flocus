@@ -23,10 +23,10 @@ const LoginPage: React.FC = () => {
       const response = await loginUser(credentials);
       await login(response.access_token);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       let message = 'Login failed. Please check your credentials.';
-      if (err instanceof AxiosError) {
-        message = err.response?.data?.detail || message;
+      if (err && err.isAxiosError && err.response?.data?.detail) {
+        message = err.response.data.detail;
       } else if (err instanceof Error) {
         message = err.message;
       }

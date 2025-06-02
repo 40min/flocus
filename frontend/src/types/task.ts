@@ -1,6 +1,6 @@
 import { Category } from './category';
 
-export type TaskStatus = 'todo' | 'inprogress' | 'done';
+export type TaskStatus = 'pending' | 'in_progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {

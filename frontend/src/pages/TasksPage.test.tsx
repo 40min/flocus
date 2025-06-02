@@ -1,16 +1,16 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { AuthContext, AuthContextType } from '../context/AuthContext';
-import TasksPage from './TasksPage';
-import * as taskService from '../services/taskService';
-import * as categoryService from '../services/categoryService';
-import { Task } from '../types/task';
-import { Category } from '../types/category';
-import { User } from '../types/user';
+import { AuthContext, AuthContextType } from 'context/AuthContext';
+import TasksPage from 'pages/TasksPage';
+import * as taskService from 'services/taskService';
+import * as categoryService from 'services/categoryService';
+import { Task } from 'types/task';
+import { Category } from 'types/category';
+import { User } from 'types/user';
 
-jest.mock('../services/taskService');
-jest.mock('../services/categoryService');
+jest.mock('services/taskService');
+jest.mock('services/categoryService');
 
 const mockedTaskService = taskService as jest.Mocked<typeof taskService>;
 const mockedCategoryService = categoryService as jest.Mocked<typeof categoryService>;
@@ -31,8 +31,8 @@ const mockCategories: Category[] = [
 ];
 
 const mockTasks: Task[] = [
-  { id: 'task1', title: 'Task 1', description: 'Description 1', status: 'todo', priority: 'medium', category_id: 'cat1', category: mockCategories[0], user_id: 'user1', due_date: '2024-01-01' },
-  { id: 'task2', title: 'Task 2', description: 'Description 2', status: 'inprogress', priority: 'high', user_id: 'user1' },
+  { id: 'task1', title: 'Task 1', description: 'Description 1', status: 'pending', priority: 'medium', category_id: 'cat1', category: mockCategories[0], user_id: 'user1', due_date: '2024-01-01' },
+  { id: 'task2', title: 'Task 2', description: 'Description 2', status: 'in_progress', priority: 'high', user_id: 'user1' },
 ];
 
 const renderTasksPage = () => {
@@ -54,7 +54,7 @@ describe('TasksPage', () => {
       id: `newTask-${Date.now()}`,
       ...taskData,
       user_id: 'user1',
-      status: taskData.status || 'todo',
+      status: taskData.status || 'pending',
       priority: taskData.priority || 'medium',
       category: taskData.category_id ? mockCategories.find(c => c.id === taskData.category_id) : undefined,
     } as Task));
@@ -68,10 +68,8 @@ describe('TasksPage', () => {
   test('renders tasks page with tasks', async () => {
     renderTasksPage();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText('Task 1')).toBeInTheDocument();
-      expect(screen.getByText('Task 2')).toBeInTheDocument();
-    });
+    await screen.findByText('Task 1');
+    await screen.findByText('Task 2');
   });
 
   test('opens and submits create task form', async () => {
@@ -83,7 +81,7 @@ describe('TasksPage', () => {
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New Test Task' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'New Description' } });
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'inprogress' } });
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'in_progress' } });
     fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'high' } });
     // fireEvent.change(screen.getByLabelText('Due Date'), { target: { value: '2024-12-31' } }); // DatePicker is tricky
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat1' } });
@@ -94,7 +92,7 @@ describe('TasksPage', () => {
       expect(mockedTaskService.createTask).toHaveBeenCalledWith(expect.objectContaining({
         title: 'New Test Task',
         description: 'New Description',
-        status: 'inprogress',
+        status: 'in_progress',
         priority: 'high',
         category_id: 'cat1',
       }));
@@ -104,7 +102,7 @@ describe('TasksPage', () => {
 
   test('opens and submits edit task form', async () => {
     renderTasksPage();
-    await waitFor(() => expect(screen.getByText('Task 1')).toBeInTheDocument());
+    await screen.findByText('Task 1');
 
     const editButtons = screen.getAllByRole('button', { name: /edit/i });
     fireEvent.click(editButtons[0]);
@@ -126,7 +124,7 @@ describe('TasksPage', () => {
   test('deletes a task', async () => {
     window.confirm = jest.fn(() => true); // Mock window.confirm
     renderTasksPage();
-    await waitFor(() => expect(screen.getByText('Task 1')).toBeInTheDocument());
+    await screen.findByText('Task 1');
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
     fireEvent.click(deleteButtons[0]);
@@ -172,7 +170,7 @@ describe('TasksPage', () => {
 
   test('form fields are reset when opening create form after editing', async () => {
     renderTasksPage();
-    await waitFor(() => expect(screen.getByText('Task 1')).toBeInTheDocument());
+    await screen.findByText('Task 1');
 
     // Open edit form for Task 1
     const editButtons = screen.getAllByRole('button', { name: /edit/i });
@@ -186,7 +184,7 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByText('New Task'));
     await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(''));
     expect(screen.getByLabelText('Description')).toHaveValue('');
-    expect(screen.getByLabelText('Status')).toHaveValue('todo');
+    expect(screen.getByLabelText('Status')).toHaveValue('pending');
     expect(screen.getByLabelText('Priority')).toHaveValue('medium');
   });
 });

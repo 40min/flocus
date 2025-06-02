@@ -14,7 +14,7 @@ describe('taskService', () => {
   const mockTask: Task = {
     id: '1',
     title: 'Test Task',
-    status: 'todo',
+    status: 'pending',
     priority: 'medium',
     user_id: 'user1',
   };
@@ -36,7 +36,7 @@ describe('taskService', () => {
   it('createTask should create a task', async () => {
     const newTaskData: TaskCreateRequest = {
       title: 'New Task',
-      status: 'todo',
+      status: 'pending',
       priority: 'high',
     };
     const createdTask: Task = {

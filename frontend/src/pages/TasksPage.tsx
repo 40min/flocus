@@ -4,15 +4,16 @@ import 'react-datepicker/dist/react-datepicker.css';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import { Task, TaskCreateRequest, TaskUpdateRequest } from '../types/task';
-import { Category } from '../types/category';
-import * as taskService from '../services/taskService';
-import * as categoryService from '../services/categoryService';
+import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
+import { Category } from 'types/category';
+import * as taskService from 'services/taskService';
+import * as categoryService from 'services/categoryService';
 
 const statusOptions = [
-  { value: 'todo', label: 'To Do' },
-  { value: 'inprogress', label: 'In Progress' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'in_progress', label: 'In Progress' },
   { value: 'done', label: 'Done' },
+  { value: 'blocked', label: 'Blocked' },
 ];
 
 const priorityOptions = [
@@ -32,7 +33,7 @@ const TasksPage: React.FC = () => {
   const initialFormData: TaskCreateRequest = {
     title: '',
     description: '',
-    status: 'todo',
+    status: 'pending',
     priority: 'medium',
     due_date: null,
     category_id: '',

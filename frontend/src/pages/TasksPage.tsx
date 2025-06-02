@@ -172,15 +172,17 @@ const TasksPage: React.FC = () => {
       {isLoading && <div className="mb-4">Loading...</div>}
 
       {showForm && (
-        <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-slate-200 max-w-2xl mx-auto">
           <h3 className="text-xl font-semibold mb-4">{editingTask ? 'Edit Task' : 'Create New Task'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div><label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label><input type="text" name="title" id="title" value={formData.title} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" /></div>
             <div><label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label><textarea name="description" id="description" value={formData.description || ''} onChange={handleInputChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea></div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label><select name="status" id="status" value={formData.status} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
             <div><label htmlFor="priority" className="block text-sm font-medium text-slate-700">Priority</label><select name="priority" id="priority" value={formData.priority} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{priorityOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
             <div><label htmlFor="due_date" className="block text-sm font-medium text-slate-700">Due Date</label><DatePicker selected={formDueDate} onChange={handleDateChange} dateFormat="yyyy-MM-dd" className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" wrapperClassName="w-full" /></div>
             <div><label htmlFor="category_id" className="block text-sm font-medium text-slate-700">Category</label><select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"><option value="">No Category</option>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select></div>
+</div>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={closeForm} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Cancel</button>
               <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800">{editingTask ? 'Update' : 'Create'}</button>

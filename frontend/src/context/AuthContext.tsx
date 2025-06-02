@@ -56,6 +56,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, [fetchUserData, setToken]); // Added fetchUserData and setToken
 
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      logout();
+    };
+
+    window.addEventListener('triggerLogout', handleLogoutEvent);
+
+    return () => {
+      window.removeEventListener('triggerLogout', handleLogoutEvent);
+    };
+  }, [logout]);
+
 // Set or remove the Authorization header on the api instance when the token changes
   useEffect(() => {
     if (token) {

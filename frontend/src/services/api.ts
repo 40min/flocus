@@ -32,14 +32,12 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
-      // Handle unauthorized errors (e.g., redirect to login)
+      // Handle unauthorized errors
       localStorage.removeItem('access_token');
-      // Consider using React Router's navigation instead of window.location
-      // import { useNavigate } from 'react-router-dom';
-      // const navigate = useNavigate(); navigate('/login');
-      console.error("Unauthorized access - redirecting to login");
-      // For now, using window.location, but should be updated if using React Router
-      window.location.href = '/login';
+      console.error("Unauthorized access - triggering logout");
+      // Dispatch a custom event to trigger logout in AuthContext
+      const logoutEvent = new CustomEvent('triggerLogout');
+      window.dispatchEvent(logoutEvent);
     }
     return Promise.reject(error);
   }

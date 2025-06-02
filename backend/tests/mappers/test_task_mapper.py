@@ -1,12 +1,12 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus
+from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatisticsSchema, TaskStatus
 from app.db.models.category import Category
-from app.db.models.task import Task
+from app.db.models.task import Task, TaskStatistics
 from app.mappers.task_mapper import TaskMapper
 
 
@@ -69,6 +69,9 @@ def sample_task_model(
         is_deleted=False,
         created_at=now,
         updated_at=now,
+        statistics=TaskStatistics(
+            lasts_min=15, was_started_at=now - timedelta(minutes=30), was_taken_at=now - timedelta(minutes=15)
+        ),
     )
 
 
@@ -121,6 +124,14 @@ class TestTaskMapper:
         assert task_response.is_deleted == sample_task_model.is_deleted
         assert task_response.created_at == sample_task_model.created_at
         assert task_response.updated_at == sample_task_model.updated_at
+        assert task_response.statistics is not None
+        assert isinstance(task_response.statistics, TaskStatisticsSchema)
+        assert task_response.statistics.lasts_min == sample_task_model.statistics.lasts_min
+        assert task_response.statistics.was_started_at == sample_task_model.statistics.was_started_at
+        assert task_response.statistics.was_taken_at == sample_task_model.statistics.was_taken_at
+        assert (
+            task_response.statistics.was_stopped_at == sample_task_model.statistics.was_stopped_at
+        )  # Should be None in this fixture
 
         assert task_response.category is not None
         assert task_response.category.id == sample_category_model.id
@@ -140,6 +151,12 @@ class TestTaskMapper:
         assert task_response.category_id is None
         assert task_response.category is None
         assert task_response.user_id == task_model_no_category.user_id
+        assert task_response.statistics is not None  # Statistics should still be present
+        assert isinstance(task_response.statistics, TaskStatisticsSchema)
+        # Assuming default statistics if not explicitly set on task_model_no_category
+        # If task_model_no_category.statistics was modified, assert against those values
+        assert task_response.statistics.lasts_min == task_model_no_category.statistics.lasts_min
+        assert task_response.statistics.was_started_at == task_model_no_category.statistics.was_started_at
 
     def test_to_response_with_category_id_but_no_category_model(self, sample_task_model: Task):
         # This simulates a scenario where category_id exists on task, but the category model
@@ -153,3 +170,7 @@ class TestTaskMapper:
         assert task_response.category_id == sample_task_model.category_id  # category_id is still present
         assert task_response.category is None  # But the category object is None
         assert task_response.user_id == sample_task_model.user_id
+        assert task_response.statistics is not None
+        assert isinstance(task_response.statistics, TaskStatisticsSchema)
+        assert task_response.statistics.lasts_min == sample_task_model.statistics.lasts_min
+        assert task_response.statistics.was_started_at == sample_task_model.statistics.was_started_at

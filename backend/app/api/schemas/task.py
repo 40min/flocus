@@ -35,6 +35,15 @@ class TaskCreateRequest(TaskBase):
     pass
 
 
+class TaskStatisticsSchema(BaseModel):
+    was_started_at: Optional[datetime] = None
+    was_taken_at: Optional[datetime] = None
+    was_stopped_at: Optional[datetime] = None
+    lasts_min: Optional[int] = Field(default=0)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskUpdateRequest(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
@@ -51,5 +60,6 @@ class TaskResponse(TaskBase):
     is_deleted: bool = False
     created_at: datetime
     updated_at: datetime
+    statistics: Optional[TaskStatisticsSchema] = None
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True, use_enum_values=True)

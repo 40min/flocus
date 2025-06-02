@@ -1,9 +1,18 @@
 from datetime import UTC, datetime
 from typing import Optional
 
-from odmantic import Field, Index, Model, ObjectId
+from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 from app.api.schemas.task import TaskPriority, TaskStatus
+
+
+class TaskStatistics(EmbeddedModel):
+    was_started_at: Optional[datetime] = None
+    was_taken_at: Optional[datetime] = None
+    was_stopped_at: Optional[datetime] = None
+    lasts_min: int = Field(default=0)
+
+    model_config = {"extra": "ignore"}  # Or "forbid" if you want to be strict
 
 
 class Task(Model):
@@ -15,6 +24,7 @@ class Task(Model):
     category_id: Optional[ObjectId] = None
     user_id: ObjectId
     is_deleted: bool = Field(default=False)
+    statistics: TaskStatistics = Field(default_factory=TaskStatistics)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

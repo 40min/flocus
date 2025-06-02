@@ -4,9 +4,9 @@ from typing import Optional
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.task import TaskCreateRequest, TaskResponse, TaskUpdateRequest
+from app.api.schemas.task import TaskCreateRequest, TaskResponse, TaskStatisticsSchema, TaskUpdateRequest
 from app.db.models.category import Category
-from app.db.models.task import Task
+from app.db.models.task import Task, TaskStatistics
 from app.mappers.base_mapper import BaseMapper
 
 
@@ -18,6 +18,10 @@ class TaskMapper(BaseMapper):
         category_response: Optional[CategoryResponse] = None
         if category_model:
             category_response = CategoryResponse.model_validate(category_model)
+
+        statistics_response: Optional[TaskStatisticsSchema] = None
+        if task.statistics:  # Should always be true due to default_factory
+            statistics_response = TaskStatisticsSchema.model_validate(task.statistics)
 
         return TaskResponse(
             id=task.id,
@@ -32,13 +36,21 @@ class TaskMapper(BaseMapper):
             is_deleted=task.is_deleted,
             created_at=task.created_at,
             updated_at=task.updated_at,
+            statistics=statistics_response,
         )
 
     @staticmethod
     def to_model_for_create(schema: TaskCreateRequest, user_id: ObjectId) -> Task:
         now_utc = datetime.now(UTC)
         task_data = schema.model_dump()
-        return Task(**task_data, user_id=user_id, is_deleted=False, created_at=now_utc, updated_at=now_utc)
+        return Task(
+            **task_data,
+            user_id=user_id,
+            is_deleted=False,
+            created_at=now_utc,
+            updated_at=now_utc,
+            statistics=TaskStatistics(),
+        )
 
     @classmethod
     def to_model_for_update(cls, task: Task, schema: TaskUpdateRequest) -> Task:

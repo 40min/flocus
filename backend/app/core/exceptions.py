@@ -181,10 +181,15 @@ class TaskServiceException(HTTPException):
 
 
 class TaskNotFoundException(TaskServiceException):
-    def __init__(self, task_id: ObjectId | str):
+    def __init__(self, task_id: Optional[ObjectId | str] = None, detail: Optional[str] = None):
+        if detail is None:
+            if task_id:
+                detail = f"Task with ID '{task_id}' not found"
+            else:
+                detail = "Task not found"
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Task with ID '{task_id}' not found",
+            detail=detail,
         )
 
 

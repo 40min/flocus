@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+// DatePicker is now handled by CreateTaskModal
+// import DatePicker from 'react-datepicker';
+// import 'react-datepicker/dist/react-datepicker.css';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
@@ -8,6 +9,7 @@ import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
 import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import * as categoryService from 'services/categoryService';
+import CreateTaskModal from 'components/modals/CreateTaskModal'; // Import the modal
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -25,9 +27,10 @@ const priorityOptions = [
 const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Keep for table loading
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState<boolean>(false);
+  // const [showForm, setShowForm] = useState<boolean>(false); // Replaced by isModalOpen
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const initialFormData: TaskCreateRequest = {
@@ -38,11 +41,12 @@ const TasksPage: React.FC = () => {
     due_date: null,
     category_id: '',
   };
-  const [formData, setFormData] = useState<TaskCreateRequest | TaskUpdateRequest>(initialFormData);
-  const [formDueDate, setFormDueDate] = useState<Date | null>(null);
+  // Form data state is now managed within CreateTaskModal
+  // const [formData, setFormData] = useState<TaskCreateRequest | TaskUpdateRequest>(initialFormData);
+  // const [formDueDate, setFormDueDate] = useState<Date | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    setIsLoading(true);
+    setIsLoading(true); // Keep for table loading
     setError(null);
     try {
       const data = await taskService.getAllTasks();
@@ -59,9 +63,10 @@ const TasksPage: React.FC = () => {
     try {
       const data = await categoryService.getAllCategories();
       setCategories(data);
-      if (data.length > 0 && !editingTask) {
-        setFormData((prev: TaskCreateRequest | TaskUpdateRequest) => ({ ...prev, category_id: prev.category_id || '' }));
-      }
+      // Category selection logic is now in CreateTaskModal, but ensure categories are available
+      // if (data.length > 0 && !editingTask) {
+      //   setFormData((prev: TaskCreateRequest | TaskUpdateRequest) => ({ ...prev, category_id: prev.category_id || '' }));
+      // }
     } catch (err) {
       setError(prev => prev ? `${prev} Failed to fetch categories.` : 'Failed to fetch categories.');
       console.error(err);
@@ -78,59 +83,24 @@ const TasksPage: React.FC = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // handleInputChange, handleDateChange, and handleSubmit are moved to CreateTaskModal
+
+  const handleFormSubmitSuccess = () => {
+    fetchTasks(); // Refresh tasks list
+    setEditingTask(null); // Reset editing task
+    setIsModalOpen(false); // Close modal
   };
 
-  const handleDateChange = (date: Date | null) => {
-    setFormDueDate(date);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const payload = {
-      ...formData,
-      due_date: formDueDate ? formDueDate.toISOString().split('T')[0] : undefined,
-    };
-
-    try {
-      if (editingTask) {
-        await taskService.updateTask(editingTask.id, payload as TaskUpdateRequest);
-      } else {
-        await taskService.createTask(payload as TaskCreateRequest);
-      }
-      setShowForm(false);
-      setEditingTask(null);
-      setFormData(initialFormData);
-      setFormDueDate(null);
-      fetchTasks();
-    } catch (err) {
-      setError(editingTask ? 'Failed to update task.' : 'Failed to create task.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
-    setFormData({
-      title: task.title,
-      description: task.description || '',
-      status: task.status,
-      priority: task.priority,
-      category_id: task.category_id || '',
-    });
-    setFormDueDate(task.due_date ? new Date(task.due_date) : null);
-    setShowForm(true);
+    // Form data setting is now handled by CreateTaskModal's useEffect
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
-      setIsLoading(true);
+      setIsLoading(true); // Keep for table loading
       setError(null);
       try {
         await taskService.deleteTask(id);
@@ -144,52 +114,43 @@ const TasksPage: React.FC = () => {
     }
   };
 
-  const openCreateForm = () => {
-    setEditingTask(null);
-    setFormData(initialFormData);
-    setFormDueDate(null);
-    setShowForm(true);
+  const openCreateModal = () => {
+    setEditingTask(null); // Ensure we are in "create" mode
+    // Initial form data is now set by CreateTaskModal's useEffect
+    setIsModalOpen(true);
   };
 
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingTask(null);
-    setFormData(initialFormData);
-    setFormDueDate(null);
+  const closeCreateModal = () => {
+    setIsModalOpen(false);
+    setEditingTask(null); // Clear editing task on close
+    // Form data reset is handled by CreateTaskModal's useEffect
   };
 
   return (
     <div className="@container">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <h2 className="text-slate-900 text-3xl font-bold">Tasks</h2>
-        <button onClick={openCreateForm} className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors">
+        <button onClick={openCreateModal} className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors">
           <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
           <span className="truncate">New Task</span>
         </button>
       </div>
 
       {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
-      {isLoading && <div className="mb-4">Loading...</div>}
+      {/* isLoading for table, not for modal form anymore */}
+      {isLoading && tasks.length === 0 && <div className="mb-4">Loading tasks...</div>}
 
-      {showForm && (
-        <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-slate-200 max-w-2xl mx-auto">
-          <h3 className="text-xl font-semibold mb-4">{editingTask ? 'Edit Task' : 'Create New Task'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div><label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label><input type="text" name="title" id="title" value={formData.title} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" /></div>
-            <div><label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label><textarea name="description" id="description" value={formData.description || ''} onChange={handleInputChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea></div>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label><select name="status" id="status" value={formData.status} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-            <div><label htmlFor="priority" className="block text-sm font-medium text-slate-700">Priority</label><select name="priority" id="priority" value={formData.priority} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{priorityOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-            <div><label htmlFor="due_date" className="block text-sm font-medium text-slate-700">Due Date</label><DatePicker selected={formDueDate} onChange={handleDateChange} dateFormat="yyyy-MM-dd" className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" wrapperClassName="w-full" /></div>
-            <div><label htmlFor="category_id" className="block text-sm font-medium text-slate-700">Category</label><select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"><option value="">No Category</option>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select></div>
-</div>
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={closeForm} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Cancel</button>
-              <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800">{editingTask ? 'Update' : 'Create'}</button>
-            </div>
-          </form>
-        </div>
-      )}
+
+      <CreateTaskModal
+        isOpen={isModalOpen}
+        onClose={closeCreateModal}
+        onSubmitSuccess={handleFormSubmitSuccess}
+        editingTask={editingTask}
+        categories={categories}
+        initialFormData={initialFormData}
+        statusOptions={statusOptions}
+        priorityOptions={priorityOptions}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left">
@@ -204,7 +165,7 @@ const TasksPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {!isLoading && tasks.length === 0 && !showForm && (
+            {!isLoading && tasks.length === 0 && ( // Removed !showForm condition
               <tr><td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">No tasks found. Add a task to get started!</td></tr>
             )}
             {tasks.map((task) => (

@@ -173,7 +173,18 @@ const TasksPage: React.FC = () => {
                 <td className="px-6 py-4 text-slate-600 text-sm">{statusOptions.find(s => s.value === task.status)?.label || task.status}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{priorityOptions.find(p => p.value === task.priority)?.label || task.priority}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{formatDueDate(task.due_date ?? null)}</td>
-                <td className="px-6 py-4 text-slate-600 text-sm">{task.category?.name || 'N/A'}</td>
+                <td className="px-6 py-4 text-slate-600 text-sm">
+                  {task.category ? (
+                    <span
+                      style={{ backgroundColor: task.category.color || '#ccc' }}
+                      className="px-2 py-1 rounded-md text-xs font-medium text-white" // Assuming white text is generally readable
+                    >
+                      {task.category.name}
+                    </span>
+                  ) : (
+                    'N/A'
+                  )}
+                </td>
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => handleEdit(task)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" aria-label="edit task">
                     <EditOutlinedIcon sx={{ fontSize: '1.125rem' }} />

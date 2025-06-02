@@ -39,7 +39,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         description: editingTask.description || '',
         status: editingTask.status,
         priority: editingTask.priority,
-        category_id: editingTask.category_id || '',
+        category_id: editingTask.category_id || undefined,
       });
       setFormDueDate(editingTask.due_date ? new Date(editingTask.due_date) : null);
     } else {
@@ -64,6 +64,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     const payload = {
       ...formData,
       due_date: formDueDate ? formDueDate.toISOString().split('T')[0] : undefined,
+      category_id: formData.category_id === '' ? undefined : formData.category_id,
     };
 
     try {

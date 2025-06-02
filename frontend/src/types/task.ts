@@ -24,7 +24,7 @@ export interface TaskCreateRequest {
   status: TaskStatus;
   priority: TaskPriority;
   due_date?: string | null;
-  category_id?: string | null;
+  category_id?: string | undefined;
 }
 
 export interface TaskUpdateRequest extends Partial<TaskCreateRequest> {

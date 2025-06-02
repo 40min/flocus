@@ -10,4 +10,6 @@ export const API_ENDPOINTS = {
   DAY_TEMPLATE_BY_ID: (id: string) => `/day-templates/${id}`,
   TIME_WINDOWS_BASE: '/time-windows',
   TIME_WINDOW_BY_ID: (id: string) => `/time-windows/${id}`,
+  TASKS_BASE: '/tasks',
+  TASK_BY_ID: (id: string) => `/tasks/${id}`,
 };

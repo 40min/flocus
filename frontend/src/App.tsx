@@ -20,6 +20,7 @@ import TemplatesPage from './pages/TemplatesPage';
 import EditTemplatePage from './pages/EditTemplatePage';
 import { useAuth } from './context/AuthContext';
 import CategoriesPage from './pages/CategoriesPage';
+import TasksPage from './pages/TasksPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 
 
@@ -173,7 +174,7 @@ function App() {
       >
         <Route index element={<Home />} />
         <Route path="categories" element={<CategoriesPage />} />
-        <Route path="tasks" element={<div>Tasks Page Placeholder</div>} />
+        <Route path="tasks" element={<TasksPage />} />
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="templates/new" element={<EditTemplatePage />} />
         <Route path="templates/edit/:templateId" element={<EditTemplatePage />} />

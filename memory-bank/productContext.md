@@ -1,4 +1,3 @@
-```markdown
 # productContext.md
 
 ## Product Context: Personal Scheduler for Software Engineers
@@ -18,6 +17,27 @@
     -   Clear visualization of time windows and tasks.
     -   Easy-to-use Pomodoro timer.
     -   Self-reflection prompts to encourage mindful work habits.
+
+## Feature: Task Statistics
+
+To enhance task tracking and provide users with more insights into their workflow, tasks now include detailed statistics. These statistics are automatically calculated and updated by the system.
+
+**New Statistical Fields:**
+
+Within a new `statistics` object for each task, the following information is available:
+
+*   **Time Taken (`was_taken_at`):** Records the timestamp when a task is first actively started (moved to an "in progress" or "doing" state). This helps understand when work on a task truly commenced.
+*   **Last Started (`was_started_at`):** Shows the most recent timestamp when the task's status was set to "in progress" or "doing".
+*   **Last Stopped (`was_stopped_at`):** Shows the most recent timestamp when the task's status was moved from "in progress" or "doing" to another state (e.g., pending, done).
+*   **Total Active Time (`lasts_min`):** Displays the total cumulative time, in minutes, that the task has spent in an "in progress" or "doing" state. This accounts for multiple start/stop cycles.
+
+**User Benefits:**
+
+*   Better visibility into how long tasks actually take.
+*   Improved understanding of work patterns and potential bottlenecks.
+*   Data for future analysis and reporting on task effort and lifecycle.
+
+These statistics will be made available in the user interface for individual tasks and can be leveraged for future analytics features.
 
 ## 1. Market Analysis
 
@@ -107,7 +127,6 @@ The following workflows illustrate how users will interact with the application:
     4.  User clicks the "Save" button.
     5.  The task is added to heap of tasks to be planned.
 
-
 ## 6. Product Roadmap
 
 The product roadmap outlines the planned development and release schedule for the application:
@@ -139,4 +158,4 @@ The product roadmap outlines the planned development and release schedule for th
 *   Analytics and reporting.
 
 Created on 02.05.2025
-```
+Updated on 02.06.2025

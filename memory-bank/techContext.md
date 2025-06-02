@@ -94,5 +94,67 @@
     *   **Deployment (Future):** Deploying the application to the target environment (after successful tests and code analysis).
 *   **Notifications:** Notifications will be sent to the team on pipeline failures.
 
+## Task Model Enhancements (Task Statistics)
+
+To provide better insights into task lifecycle and effort, the Task model has been enhanced to include a nested `statistics` object.
+
+### Backend (`backend/app/db/models/task.py`)
+
+A new `EmbeddedModel` named `TaskStatistics` has been introduced:
+
+```python
+from datetime import datetime
+from typing import Optional
+from odmantic import EmbeddedModel
+
+class TaskStatistics(EmbeddedModel):
+    was_taken_at: Optional[datetime] = None  # Timestamp of first move to 'in_progress'
+    was_started_at: Optional[datetime] = None # Timestamp of most recent move to 'in_progress'
+    was_stopped_at: Optional[datetime] = None # Timestamp of most recent move from 'in_progress'
+    lasts_min: int = 0  # Total cumulative time in minutes spent in 'in_progress'
+```
+
+The main `Task` model now includes:
+`statistics: Optional[TaskStatistics] = None`
+
+### API Schemas (`backend/app/api/schemas/task.py`)
+
+A corresponding `TaskStatisticsSchema` (Pydantic BaseModel) is used for API responses:
+
+```python
+class TaskStatisticsSchema(BaseModel):
+    was_taken_at: Optional[datetime] = None
+    was_started_at: Optional[datetime] = None
+    was_stopped_at: Optional[datetime] = None
+    lasts_min: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+```
+
+The `TaskRead` schema now includes `statistics: Optional[TaskStatisticsSchema] = None`.
+
+### Logic
+
+- `was_taken_at`: Set only once, when the task first moves to 'in_progress'.
+- `was_started_at`: Updated every time the task moves to 'in_progress'.
+- `was_stopped_at`: Updated every time the task moves from 'in_progress'.
+- `lasts_min`: Accumulates total time spent in 'in_progress'.
+- These fields are managed automatically by backend logic in the `TaskService` during status transitions.
+
+### Frontend (`frontend/src/types/task.ts`)
+
+A `TaskStatistics` interface mirrors the backend schema:
+
+```typescript
+export interface TaskStatistics {
+  was_taken_at?: string;    // ISO datetime string
+  was_started_at?: string;  // ISO datetime string
+  was_stopped_at?: string;  // ISO datetime string
+  lasts_min?: number;
+}
+```
+The main `Task` interface includes `statistics?: TaskStatistics;`.
+
 Created on 02.05.2025
-Updated on 12.05.2025
+Updated on 02.06.2025

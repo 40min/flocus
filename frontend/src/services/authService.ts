@@ -49,4 +49,10 @@ export const registerUser = async (userData: UserRegistrationData): Promise<User
   }
 };
 
+export const logoutUser = (): void => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user'); // Assuming user details are also stored
+  // Potentially call an API endpoint to invalidate the token on the server if applicable
+};
+
 // TODO: Add functions for password reset, email verification etc. if needed

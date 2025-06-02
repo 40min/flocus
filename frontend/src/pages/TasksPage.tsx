@@ -100,18 +100,16 @@ const TasksPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      setIsLoading(true); // Keep for table loading
-      setError(null);
-      try {
-        await taskService.deleteTask(id);
-        fetchTasks();
-      } catch (err) {
-        setError('Failed to delete task.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+    setIsLoading(true); // Keep for table loading
+    setError(null);
+    try {
+      await taskService.deleteTask(id);
+      fetchTasks();
+    } catch (err) {
+      setError('Failed to delete task.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 

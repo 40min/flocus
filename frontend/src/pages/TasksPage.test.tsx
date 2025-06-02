@@ -86,7 +86,7 @@ describe('TasksPage', () => {
     // fireEvent.change(screen.getByLabelText('Due Date'), { target: { value: '2024-12-31' } }); // DatePicker is tricky
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat1' } });
 
-    fireEvent.click(screen.getByText('Create'));
+    fireEvent.click(screen.getByText('Create Task'));
 
     await waitFor(() => {
       expect(mockedTaskService.createTask).toHaveBeenCalledWith(expect.objectContaining({
@@ -111,7 +111,7 @@ describe('TasksPage', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Task 1');
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Updated Task 1' } });
-    fireEvent.click(screen.getByText('Update'));
+    fireEvent.click(screen.getByText('Update Task'));
 
     await waitFor(() => {
       expect(mockedTaskService.updateTask).toHaveBeenCalledWith('task1', expect.objectContaining({
@@ -122,14 +122,12 @@ describe('TasksPage', () => {
   });
 
   test('deletes a task', async () => {
-    window.confirm = jest.fn(() => true); // Mock window.confirm
     renderTasksPage();
     await screen.findByText('Task 1');
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
     fireEvent.click(deleteButtons[0]);
 
-    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this task?');
     await waitFor(() => {
       expect(mockedTaskService.deleteTask).toHaveBeenCalledWith('task1');
     });
@@ -139,7 +137,7 @@ describe('TasksPage', () => {
   test('shows loading state', async () => {
     mockedTaskService.getAllTasks.mockImplementation(() => new Promise(() => {})); // Never resolves
     renderTasksPage();
-    expect(await screen.findByText('Loading...')).toBeInTheDocument();
+    expect(await screen.findByText('Loading tasks...')).toBeInTheDocument();
   });
 
   test('shows error state', async () => {

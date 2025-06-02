@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserUpdatePayload } from '../types/user';
 import { AxiosError } from 'axios';
+import { updateUser as updateUserService } from '../services/userService'; // Import the service
 
 const UserSettingsPage: React.FC = () => {
   const { user, login, token } = useAuth(); // Assuming login updates the user context after successful update
@@ -57,13 +58,21 @@ const UserSettingsPage: React.FC = () => {
     }
 
     try {
-      // The backend should return the updated user object or a success response.
-      // If the token needs to be refreshed upon email/password change, that logic should be handled.
-      // For now, we'll optimistically update the local user state or re-fetch.
-      // A simple way is to call login again if it re-fetches user data, using the token from AuthContext.
+      // Call the updateUser service
+      const updatedUser = await updateUserService(user.id, updatePayload);
+
+      // Update user context.
+      // If the updateUser service returns the full updated user,
+      // and login function can take a user object:
+      // login(updatedUser, token); // Hypothetical: login function updates context with new user data
+      // OR, if login just re-fetches based on token:
       if (token) {
         await login(token); // This re-fetches user data using the current auth token
       }
+      // It's also good practice to update the local user state if the AuthContext doesn't immediately reflect changes
+      // For example, if `login` is async and you want immediate UI feedback:
+      // setUser(updatedUser); // Assuming setUser is available from useAuth or similar
+
       setSuccessMessage('Account updated successfully!');
       setFormData(prev => ({ ...prev, password: '' })); // Clear password field
     } catch (err) {

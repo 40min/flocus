@@ -596,7 +596,48 @@ async def test_get_all_tasks_sorting(
 
     assert len(response_tasks) == len(expected_sorted_tasks)
     for i, task_resp in enumerate(response_tasks):
-        assert task_resp.id == expected_sorted_tasks[i].id
+        expected_task = expected_sorted_tasks[i]
+        assert task_resp.id == expected_task.id
+
+        # Add assertions for the sorted field values
+        if sort_by == "due_date":
+            # Handle None due_dates and ensure timezone awareness for comparison
+            resp_due_date = (
+                task_resp.due_date.replace(tzinfo=datetime.UTC)
+                if task_resp.due_date and task_resp.due_date.tzinfo is None
+                else task_resp.due_date
+            )
+            exp_due_date = (
+                expected_task.due_date.replace(tzinfo=datetime.UTC)
+                if expected_task.due_date and expected_task.due_date.tzinfo is None
+                else expected_task.due_date
+            )
+            if resp_due_date is None and exp_due_date is None:
+                pass  # Both are None, which is fine for sorting
+            elif resp_due_date is None or exp_due_date is None:
+                # This case should ideally be handled by the sorting logic placing Nones consistently
+                # For now, we rely on the ID check and the overall order.
+                # A more robust check might be needed if None handling is complex.
+                assert resp_due_date == exp_due_date  # Will fail if one is None and other is not
+            else:
+                assert abs((resp_due_date - exp_due_date).total_seconds()) < 1  # Compare with tolerance
+        elif sort_by == "priority":
+            assert task_resp.priority == expected_task.priority
+        elif sort_by == "created_at":
+            # Ensure timezone awareness for comparison
+            resp_created_at = (
+                task_resp.created_at.replace(tzinfo=datetime.UTC)
+                if task_resp.created_at and task_resp.created_at.tzinfo is None
+                else task_resp.created_at
+            )
+            exp_created_at = (
+                expected_task.created_at.replace(tzinfo=datetime.UTC)
+                if expected_task.created_at and expected_task.created_at.tzinfo is None
+                else expected_task.created_at
+            )
+            assert abs((resp_created_at - exp_created_at).total_seconds()) < 1  # Compare with tolerance
+        elif sort_by == "title":
+            assert task_resp.title == expected_task.title
 
 
 @pytest.mark.parametrize(

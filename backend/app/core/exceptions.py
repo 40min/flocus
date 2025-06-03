@@ -181,6 +181,14 @@ class TaskServiceException(HTTPException):
 
 
 class TaskNotFoundException(TaskServiceException):
+    """
+    Exception raised when a task is not found.
+
+    The `detail` message can be overridden. For instance, when a task
+    is soft-deleted, the `TaskService` raises this exception with the
+    detail message "Task has been deleted."
+    """
+
     def __init__(self, task_id: Optional[ObjectId | str] = None, detail: Optional[str] = None):
         if detail is None:
             if task_id:

@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import TaskStatisticsModal from './TaskStatisticsModal';
 import { Task } from 'types/task';
+import { formatDateTime } from '../../lib/utils';
 
 const mockTaskWithStats: Task = {
   id: 'task1',
@@ -50,13 +51,13 @@ describe('TaskStatisticsModal', () => {
 
     expect(screen.getByText(`Statistics for "${mockTaskWithStats.title}"`)).toBeInTheDocument();
     expect(screen.getByText('First Taken:')).toBeInTheDocument();
-    expect(screen.getByText(new Date(mockTaskWithStats.statistics!.was_taken_at!).toLocaleString())).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(mockTaskWithStats.statistics!.was_taken_at))).toBeInTheDocument();
 
     expect(screen.getByText('Last Started:')).toBeInTheDocument();
-    expect(screen.getByText(new Date(mockTaskWithStats.statistics!.was_started_at!).toLocaleString())).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(mockTaskWithStats.statistics!.was_started_at))).toBeInTheDocument();
 
     expect(screen.getByText('Last Stopped:')).toBeInTheDocument();
-    expect(screen.getByText(new Date(mockTaskWithStats.statistics!.was_stopped_at!).toLocaleString())).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(mockTaskWithStats.statistics!.was_stopped_at))).toBeInTheDocument();
 
     expect(screen.getByText('Total Active Time:')).toBeInTheDocument();
     expect(screen.getByText('55min')).toBeInTheDocument();

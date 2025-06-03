@@ -79,7 +79,7 @@ export function formatDateTime(dateString: string | undefined | null): string {
   if (!isValid(date)) {
     return 'Invalid Date'; // Or 'N/A'.
   }
-  return format(date, 'dd.MM.yyyy HH:mm:ss');
+  return format(date, 'MMM d, yyyy, h:mm a');
 }
 
 export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {

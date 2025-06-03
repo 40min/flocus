@@ -5,6 +5,7 @@ import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
 import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import Modal from './Modal'; // Import the Modal component
+import { utcToLocal, localToUtc } from 'lib/utils';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         priority: editingTask.priority,
         category_id: editingTask.category_id || undefined,
       });
-      setFormDueDate(editingTask.due_date ? new Date(editingTask.due_date) : null);
+      setFormDueDate(editingTask.due_date ? utcToLocal(editingTask.due_date) : null);
     } else {
       setFormData(initialFormData);
       setFormDueDate(null);
@@ -63,7 +64,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
     const payload = {
       ...formData,
-      due_date: formDueDate ? formDueDate.toISOString().split('T')[0] : undefined,
+      due_date: formDueDate ? localToUtc(formDueDate) : undefined,
       category_id: formData.category_id === '' ? undefined : formData.category_id,
     };
 

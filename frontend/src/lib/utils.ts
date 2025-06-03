@@ -10,29 +10,29 @@ import {
   parseISO,
   isValid,
   getYear,
-  getHours as dfnsGetHours,
-  getMinutes as dfnsGetMinutes,
+  getHours,
+  getMinutes,
 } from 'date-fns';
+import { format as formatTZ, toZonedTime } from 'date-fns-tz';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function hhMMToMinutes(timeStr: string): number | null {
-  // Use a reference date (like today) for parsing, as parse needs a full date context.
-  // The actual date part doesn't matter here, only the time.
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
   const parsedTime = parse(timeStr, 'HH:mm', new Date());
-  if (!isValid(parsedTime)) {
-    return null;
-  }
-  const hours = dfnsGetHours(parsedTime);
-  const minutes = dfnsGetMinutes(parsedTime);
+  if (!isValid(parsedTime)) return null;
+
+  const hours = getHours(parsedTime);
+  const minutes = getMinutes(parsedTime);
   return hours * 60 + minutes;
 }
 
 export function formatMinutesToHHMM(totalMinutes: number): string {
   if (totalMinutes < 0) {
-    // Handle negative durations by formatting the absolute value and prepending a sign.
     const sign = "-";
     const absMinutes = Math.abs(totalMinutes);
     const baseDate = startOfDay(new Date());
@@ -44,16 +44,27 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
   return format(targetDate, 'HH:mm');
 }
 
+// Convert UTC ISO string to local date object
+export function utcToLocal(utcDate: string | null): Date | null {
+  if (!utcDate) return null;
+  const date = parseISO(utcDate);
+  return toZonedTime(date, Intl.DateTimeFormat().resolvedOptions().timeZone);
+}
+
+// Convert local date object to UTC ISO string
+export function localToUtc(localDate: Date | null): string | null {
+  if (!localDate) return null;
+  return localDate.toISOString();
+}
+
 export function formatDueDate(dateString: string | null): string {
   if (!dateString) {
     return 'N/A';
   }
-  // Assuming dateString is an ISO 8601 string. If not, `new Date(dateString)` might be more lenient
-  // but `parseISO` is stricter and preferred for ISO strings.
-  const date = parseISO(dateString);
-  if (!isValid(date)) {
-    // Consider logging an error or returning a more informative string for debugging.
-    return 'Invalid Date'; // Or 'N/A' as per original pattern for missing date.
+
+  const date = utcToLocal(dateString);
+  if (!date || !isValid(date)) {
+    return 'Invalid Date';
   }
 
   if (isToday(date)) {
@@ -63,9 +74,9 @@ export function formatDueDate(dateString: string | null): string {
   } else {
     const currentYear = getYear(new Date());
     if (getYear(date) === currentYear) {
-      return format(date, 'MMMM d'); // e.g., "July 23"
+      return formatTZ(date, 'MMMM d', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     } else {
-      return format(date, 'MMMM d, yyyy'); // e.g., "July 23, 2025"
+      return formatTZ(date, 'MMMM d, yyyy', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     }
   }
 }
@@ -74,30 +85,28 @@ export function formatDateTime(dateString: string | undefined | null): string {
   if (!dateString) {
     return 'N/A';
   }
-  // Assuming dateString is an ISO 8601 string.
-  const date = parseISO(dateString);
-  if (!isValid(date)) {
-    return 'Invalid Date'; // Or 'N/A'.
+
+  const date = utcToLocal(dateString);
+  if (!date || !isValid(date)) {
+    return 'Invalid Date';
   }
-  return format(date, 'MMM d, yyyy, h:mm a');
+
+  return formatTZ(date, 'MMM d, yyyy, h:mm a', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
 }
 
 export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {
-  if (totalMinutes === undefined || totalMinutes === null || totalMinutes < 0) {
+  if (totalMinutes === undefined || totalMinutes === null) {
     return 'N/A';
   }
-  if (totalMinutes === 0) {
-    return '0 min';
-  }
+
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
-  const parts: string[] = [];
-  if (hours > 0) {
-    parts.push(`${hours}h`);
+  if (hours === 0) {
+    return `${minutes}min`;
+  } else if (minutes === 0) {
+    return `${hours}h`;
+  } else {
+    return `${hours}h ${minutes}min`;
   }
-  if (minutes > 0 || (hours === 0 && totalMinutes > 0)) { // Show minutes if non-zero, or if hours is zero but totalMinutes > 0
-    parts.push(`${minutes}min`);
-  }
-  return parts.join(' ') || '0 min'; // Fallback for safety, though current logic should prevent empty parts if totalMinutes > 0
 }

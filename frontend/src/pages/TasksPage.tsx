@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDueDate, formatDurationFromMinutes, formatDateTime } from 'lib/utils';
+import { formatDueDate, formatDurationFromMinutes } from 'lib/utils';
 // DatePicker is now handled by CreateTaskModal
 // import DatePicker from 'react-datepicker';
 // import 'react-datepicker/dist/react-datepicker.css';
@@ -7,7 +7,7 @@ import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOu
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { Task, TaskCreateRequest, TaskUpdateRequest, TaskStatistics } from 'types/task';
+import { Task, TaskCreateRequest } from 'types/task';
 import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import * as categoryService from 'services/categoryService';
@@ -45,9 +45,7 @@ const TasksPage: React.FC = () => {
     due_date: null,
     category_id: '',
   };
-  // Form data state is now managed within CreateTaskModal
-  // const [formData, setFormData] = useState<TaskCreateRequest | TaskUpdateRequest>(initialFormData);
-  // const [formDueDate, setFormDueDate] = useState<Date | null>(null);
+
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true); // Keep for table loading
@@ -66,15 +64,11 @@ const TasksPage: React.FC = () => {
     try {
       const data = await categoryService.getAllCategories();
       setCategories(data);
-      // Category selection logic is now in CreateTaskModal, but ensure categories are available
-      // if (data.length > 0 && !editingTask) {
-      //   setFormData((prev: TaskCreateRequest | TaskUpdateRequest) => ({ ...prev, category_id: prev.category_id || '' }));
-      // }
     } catch (err) {
       setError(prev => prev ? `${prev} Failed to fetch categories.` : 'Failed to fetch categories.');
       console.error(err);
     }
-  }, [editingTask]);
+  }, []);
 
   // useEffect for fetching tasks (runs once on mount)
   useEffect(() => {

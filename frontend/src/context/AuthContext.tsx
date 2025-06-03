@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
 import { getCurrentUser } from '../services/userService';
 import { User } from '../types/user';
 

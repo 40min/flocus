@@ -1,6 +1,5 @@
 import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
-import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined';
 import flocusLogo from './assets/flocus_logo.png';
 import HomeIcon from '@mui/icons-material/Home';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
@@ -41,7 +40,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Main layout for authenticated users
 const AppLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     logout();

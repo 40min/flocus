@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginUser, type UserCredentials } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
-import { AxiosError } from 'axios';
 
 const LoginPage: React.FC = () => {
   const [credentials, setCredentials] = useState<UserCredentials>({

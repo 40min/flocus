@@ -70,10 +70,16 @@ const EditTemplatePage: React.FC = () => {
 
     // If base name exists, start trying with suffix -1, -2, ...
     let count = 1;
-    newName = `${categoryName}-${count}`;
-    while (relevantTimeWindows.some(tw => tw.name === newName)) {
-      count++;
-      newName = `${categoryName}-${count}`;
+    // Loop to find a unique name by appending a counter.
+    // newName (declared above) will be assigned the first unique candidate.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const currentNameCandidate = `${categoryName}-${count}`;
+      if (!relevantTimeWindows.some(tw => tw.name === currentNameCandidate)) {
+        newName = currentNameCandidate; // Assign the unique name to the outer scoped 'newName'
+        break;                         // Exit the loop
+      }
+      count++;                         // Increment counter for the next attempt
     }
     return newName;
   }, []);

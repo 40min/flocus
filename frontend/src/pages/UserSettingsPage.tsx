@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserUpdatePayload } from '../types/user';
 import { AxiosError } from 'axios';
-import { updateUser as updateUserService } from '../services/userService'; // Import the service
 
 const UserSettingsPage: React.FC = () => {
   const { user, login, token } = useAuth(); // Assuming login updates the user context after successful update
@@ -58,8 +57,6 @@ const UserSettingsPage: React.FC = () => {
     }
 
     try {
-      // Call the updateUser service
-      const updatedUser = await updateUserService(user.id, updatePayload);
 
       // Update user context.
       // If the updateUser service returns the full updated user,

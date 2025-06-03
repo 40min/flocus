@@ -1,5 +1,12 @@
 import { Category } from './category';
 
+export interface TaskStatistics {
+  was_taken_at?: string;    // ISO datetime string
+  was_started_at?: string;  // ISO datetime string
+  was_stopped_at?: string;  // ISO datetime string
+  lasts_min?: number;
+}
+
 export type TaskStatus = 'pending' | 'in_progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -16,6 +23,7 @@ export interface Task {
   created_at?: string; // ISO datetime string
   updated_at?: string; // ISO datetime string
   is_deleted?: boolean;
+  statistics?: TaskStatistics;
 }
 
 export interface TaskCreateRequest {

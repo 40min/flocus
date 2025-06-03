@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatDueDate } from 'lib/utils'; // Import the new utility
+import { formatDueDate, formatDurationFromMinutes, formatDateTime } from 'lib/utils';
 // DatePicker is now handled by CreateTaskModal
 // import DatePicker from 'react-datepicker';
 // import 'react-datepicker/dist/react-datepicker.css';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Task, TaskCreateRequest, TaskUpdateRequest, TaskStatistics } from 'types/task';
 import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import * as categoryService from 'services/categoryService';
@@ -33,6 +34,8 @@ const TasksPage: React.FC = () => {
   // const [showForm, setShowForm] = useState<boolean>(false); // Replaced by isModalOpen
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [selectedTaskForStats, setSelectedTaskForStats] = useState<Task | null>(null);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
 
   const initialFormData: TaskCreateRequest = {
     title: '',
@@ -54,7 +57,6 @@ const TasksPage: React.FC = () => {
       setTasks(data);
     } catch (err) {
       setError('Failed to fetch tasks.');
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +100,18 @@ const TasksPage: React.FC = () => {
     // Form data setting is now handled by CreateTaskModal's useEffect
     setIsModalOpen(true);
   };
+
+  const openStatsModal = (task: Task) => {
+    setSelectedTaskForStats(task);
+    setIsStatsModalOpen(true);
+  };
+
+  const closeStatsModal = () => {
+    setIsStatsModalOpen(false);
+    setSelectedTaskForStats(null);
+  };
+
+  const TaskStatisticsModal = React.lazy(() => import('../components/modals/TaskStatisticsModal'));
 
   const handleDelete = async (id: string) => {
     setIsLoading(true); // Keep for table loading
@@ -151,6 +165,15 @@ const TasksPage: React.FC = () => {
         priorityOptions={priorityOptions}
       />
 
+      {isStatsModalOpen && selectedTaskForStats && (
+        <React.Suspense fallback={<div>Loading statistics...</div>}>
+          <TaskStatisticsModal
+            isOpen={isStatsModalOpen}
+            onClose={closeStatsModal}
+            task={selectedTaskForStats}
+          />
+        </React.Suspense>
+      )}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -160,12 +183,13 @@ const TasksPage: React.FC = () => {
               <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Priority</th>
               <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Due Date</th>
               <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Category</th>
+              <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Duration</th>
               <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {!isLoading && tasks.length === 0 && ( // Removed !showForm condition
-              <tr><td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">No tasks found. Add a task to get started!</td></tr>
+              <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">No tasks found. Add a task to get started!</td></tr>
             )}
             {tasks.map((task) => (
               <tr key={task.id} className="hover:bg-slate-50 transition-colors">
@@ -185,7 +209,11 @@ const TasksPage: React.FC = () => {
                     'N/A'
                   )}
                 </td>
+                <td className="px-6 py-4 text-slate-600 text-sm">{formatDurationFromMinutes(task.statistics?.lasts_min)}</td>
                 <td className="px-6 py-4 text-right space-x-2">
+                  <button onClick={() => openStatsModal(task)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" aria-label="view statistics">
+                    <InfoOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                  </button>
                   <button onClick={() => handleEdit(task)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" aria-label="edit task">
                     <EditOutlinedIcon sx={{ fontSize: '1.125rem' }} />
                   </button>

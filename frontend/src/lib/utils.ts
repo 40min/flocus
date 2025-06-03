@@ -50,3 +50,30 @@ export function formatDueDate(dateString: string | null): string {
     return date.toLocaleDateString(undefined, options);
   }
 }
+
+export function formatDateTime(dateString: string | undefined | null): string {
+  if (!dateString) {
+    return 'N/A';
+  }
+  return new Date(dateString).toLocaleString();
+}
+
+export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {
+  if (totalMinutes === undefined || totalMinutes === null || totalMinutes < 0) {
+    return 'N/A';
+  }
+  if (totalMinutes === 0) {
+    return '0 min';
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0 || (hours === 0 && totalMinutes > 0)) { // Show minutes if non-zero, or if hours is zero but totalMinutes > 0
+    parts.push(`${minutes}min`);
+  }
+  return parts.join(' ') || '0 min'; // Fallback for safety, though current logic should prevent empty parts if totalMinutes > 0
+}

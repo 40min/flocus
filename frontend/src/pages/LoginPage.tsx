@@ -31,7 +31,6 @@ const LoginPage: React.FC = () => {
         message = err.message;
       }
       setError(message);
-      console.error(err);
     } finally {
       setIsLoading(false);
     }

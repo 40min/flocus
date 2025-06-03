@@ -7,7 +7,6 @@ export const getAllTasks = async (): Promise<Task[]> => {
     const response = await api.get<Task[]>(API_ENDPOINTS.TASKS_BASE);
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch tasks:', error);
     throw error;
   }
 };

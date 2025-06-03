@@ -52,9 +52,7 @@ const RegisterPage: React.FC = () => {
         errorMessage = err.message;
       }
       setError(errorMessage);
-      console.error('Registration error object:', err);
       if (err instanceof AxiosError && err.response?.data) {
-        console.error('Error response data:', err.response.data);
       }
     } finally {
       setIsLoading(false);

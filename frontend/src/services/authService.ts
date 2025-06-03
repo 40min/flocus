@@ -34,7 +34,6 @@ export const loginUser = async (credentials: UserCredentials): Promise<AuthRespo
     });
     return response.data;
   } catch (error) {
-    console.error('Login failed:', error);
     throw error;
   }
 };
@@ -44,7 +43,6 @@ export const registerUser = async (userData: UserRegistrationData): Promise<User
     const response = await api.post<User>(API_ENDPOINTS.REGISTER, userData);
     return response.data;
   } catch (error) {
-    console.error('Registration failed:', error);
     throw error;
   }
 };

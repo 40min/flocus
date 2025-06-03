@@ -5,7 +5,7 @@ import { AuthContext, AuthContextType } from 'context/AuthContext';
 import TasksPage from 'pages/TasksPage';
 import * as taskService from 'services/taskService';
 import * as categoryService from 'services/categoryService';
-import { Task } from 'types/task';
+import { Task, TaskStatistics } from 'types/task';
 import { Category } from 'types/category';
 import { User } from 'types/user';
 
@@ -31,9 +31,24 @@ const mockCategories: Category[] = [
 ];
 
 const mockTasks: Task[] = [
-  { id: 'task1', title: 'Task 1', description: 'Description 1', status: 'pending', priority: 'medium', category_id: 'cat1', category: mockCategories[0], user_id: 'user1', due_date: '2024-01-01' },
-  { id: 'task2', title: 'Task 2', description: 'Description 2', status: 'in_progress', priority: 'high', user_id: 'user1' },
+  {
+    id: 'task1', title: 'Task 1', description: 'Description 1', status: 'pending', priority: 'medium',
+    category_id: 'cat1', category: mockCategories[0], user_id: 'user1', due_date: '2024-01-01',
+    created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z',
+    statistics: { was_taken_at: '2023-01-01T10:00:00Z', lasts_min: 60 }
+  },
+  {
+    id: 'task2', title: 'Task 2', description: 'Description 2', status: 'in_progress', priority: 'high', user_id: 'user1',
+    created_at: '2023-01-02T00:00:00Z', updated_at: '2023-01-02T00:00:00Z',
+    statistics: { lasts_min: 30 }
+  },
 ];
+
+// Mock the TaskStatisticsModal
+jest.mock('components/modals/TaskStatisticsModal', () => ({
+  __esModule: true,
+  default: jest.fn(({ isOpen, onClose, task }) => isOpen && task ? <div>Mocked TaskStatisticsModal for {task.title}</div> : null),
+}));
 
 const renderTasksPage = () => {
   return render(
@@ -53,6 +68,8 @@ describe('TasksPage', () => {
     mockedTaskService.createTask.mockImplementation(async (taskData) => ({
       id: `newTask-${Date.now()}`,
       ...taskData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       user_id: 'user1',
       status: taskData.status || 'pending',
       priority: taskData.priority || 'medium',
@@ -61,6 +78,7 @@ describe('TasksPage', () => {
     mockedTaskService.updateTask.mockImplementation(async (id, taskData) => ({
         ...mockTasks.find(t => t.id === id)!,
         ...taskData,
+        updated_at: new Date().toISOString(),
       } as Task));
     mockedTaskService.deleteTask.mockResolvedValue(undefined);
   });
@@ -70,6 +88,10 @@ describe('TasksPage', () => {
     expect(screen.getByText('Tasks')).toBeInTheDocument();
     await screen.findByText('Task 1');
     await screen.findByText('Task 2');
+    // Check for new Duration column and content
+    expect(screen.getByText('Duration')).toBeInTheDocument();
+    expect(screen.getByText('1h')).toBeInTheDocument(); // For Task 1 (60 min)
+    expect(screen.getByText('30min')).toBeInTheDocument(); // For Task 2 (30 min)
   });
 
   test('opens and submits create task form', async () => {
@@ -164,6 +186,7 @@ describe('TasksPage', () => {
     await waitFor(() => {
       expect(screen.getByText('No tasks found. Add a task to get started!')).toBeInTheDocument();
     });
+
   });
 
   test('form fields are reset when opening create form after editing', async () => {
@@ -184,5 +207,19 @@ describe('TasksPage', () => {
     expect(screen.getByLabelText('Description')).toHaveValue('');
     expect(screen.getByLabelText('Status')).toHaveValue('pending');
     expect(screen.getByLabelText('Priority')).toHaveValue('medium');
+  });
+
+  test('opens statistics modal when stats icon is clicked', async () => {
+    renderTasksPage();
+    await screen.findByText('Task 1'); // Ensure tasks are loaded
+
+    const statsButtons = screen.getAllByLabelText('view statistics');
+    expect(statsButtons.length).toBe(mockTasks.length);
+
+    fireEvent.click(statsButtons[0]); // Click stats icon for the first task
+
+    await waitFor(() => {
+      expect(screen.getByText(`Mocked TaskStatisticsModal for ${mockTasks[0].title}`)).toBeInTheDocument();
+    });
   });
 });

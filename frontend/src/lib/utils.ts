@@ -1,53 +1,72 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  parse,
+  format,
+  isToday,
+  isTomorrow,
+  startOfDay,
+  addMinutes,
+  parseISO,
+  isValid,
+  getYear,
+  getHours as dfnsGetHours,
+  getMinutes as dfnsGetMinutes,
+} from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function hhMMToMinutes(timeStr: string): number | null {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    // Invalid format or out of range
+  // Use a reference date (like today) for parsing, as parse needs a full date context.
+  // The actual date part doesn't matter here, only the time.
+  const parsedTime = parse(timeStr, 'HH:mm', new Date());
+  if (!isValid(parsedTime)) {
     return null;
   }
+  const hours = dfnsGetHours(parsedTime);
+  const minutes = dfnsGetMinutes(parsedTime);
   return hours * 60 + minutes;
 }
 
-export function formatMinutesToHHMM(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const hh = h.toString().padStart(2, '0');
-  const mm = m.toString().padStart(2, '0');
-  return `${hh}:${mm}`;
+export function formatMinutesToHHMM(totalMinutes: number): string {
+  if (totalMinutes < 0) {
+    // Handle negative durations by formatting the absolute value and prepending a sign.
+    const sign = "-";
+    const absMinutes = Math.abs(totalMinutes);
+    const baseDate = startOfDay(new Date());
+    const targetDate = addMinutes(baseDate, absMinutes);
+    return sign + format(targetDate, 'HH:mm');
+  }
+  const baseDate = startOfDay(new Date());
+  const targetDate = addMinutes(baseDate, totalMinutes);
+  return format(targetDate, 'HH:mm');
 }
 
 export function formatDueDate(dateString: string | null): string {
   if (!dateString) {
     return 'N/A';
   }
+  // Assuming dateString is an ISO 8601 string. If not, `new Date(dateString)` might be more lenient
+  // but `parseISO` is stricter and preferred for ISO strings.
+  const date = parseISO(dateString);
+  if (!isValid(date)) {
+    // Consider logging an error or returning a more informative string for debugging.
+    return 'Invalid Date'; // Or 'N/A' as per original pattern for missing date.
+  }
 
-  const date = new Date(dateString);
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Reset time part for accurate date comparison
-  today.setHours(0, 0, 0, 0);
-  tomorrow.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-
-  if (date.getTime() === today.getTime()) {
+  if (isToday(date)) {
     return 'Today';
-  } else if (date.getTime() === tomorrow.getTime()) {
+  } else if (isTomorrow(date)) {
     return 'Tomorrow';
   } else {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-    // If the year is the current year, don't show it
-    if (date.getFullYear() === today.getFullYear()) {
-      options.year = undefined;
+    const currentYear = getYear(new Date());
+    if (getYear(date) === currentYear) {
+      return format(date, 'MMMM d'); // e.g., "July 23"
+    } else {
+      return format(date, 'MMMM d, yyyy'); // e.g., "July 23, 2025"
     }
-    return date.toLocaleDateString(undefined, options);
   }
 }
 
@@ -55,16 +74,12 @@ export function formatDateTime(dateString: string | undefined | null): string {
   if (!dateString) {
     return 'N/A';
   }
-  const date = new Date(dateString);
-
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
-  const year = date.getFullYear();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-
-  return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+  // Assuming dateString is an ISO 8601 string.
+  const date = parseISO(dateString);
+  if (!isValid(date)) {
+    return 'Invalid Date'; // Or 'N/A'.
+  }
+  return format(date, 'dd.MM.yyyy HH:mm:ss');
 }
 
 export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {

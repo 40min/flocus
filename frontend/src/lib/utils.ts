@@ -48,6 +48,11 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
 export function utcToLocal(utcDate: string | null): Date | null {
   if (!utcDate) return null;
   const date = parseISO(utcDate);
+  // Add a validity check after parsing, which is good practice.
+  if (!isValid(date)) {
+    console.error(`utcToLocal: Failed to parse date input: '${utcDate}'`);
+    return null;
+  }
   return toZonedTime(date, Intl.DateTimeFormat().resolvedOptions().timeZone);
 }
 

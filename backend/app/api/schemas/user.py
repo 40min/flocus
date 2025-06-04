@@ -3,7 +3,7 @@ from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, ConfigDict, EmailStr
 from pydantic import Field as PydanticField
-from pydantic import field_validator
+from pydantic import field_serializer
 
 
 class UserBase(BaseModel):
@@ -20,9 +20,8 @@ class UserCreateRequest(UserBase):
     username: str = PydanticField(..., min_length=3, description="Unique username")
     password: str = PydanticField(..., min_length=8, description="User's password")
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
+    @field_serializer("email")
+    def serialize_email_to_lower(self, value: str, info) -> str:
         return value.lower()
 
 
@@ -34,9 +33,8 @@ class UserUpdateRequest(BaseModel):
     last_name: Optional[str] = PydanticField(None, min_length=1)
     password: Optional[str] = PydanticField(None, min_length=8)
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: Optional[EmailStr]) -> Optional[EmailStr]:
+    @field_serializer("email")
+    def serialize_email_to_lower(self, value: Optional[EmailStr], info) -> Optional[EmailStr]:
         if value:
             return value.lower()
         return value
@@ -45,21 +43,15 @@ class UserUpdateRequest(BaseModel):
 class UserResponse(UserBase):
     """Schema for user responses"""
 
-    id: str  # Keep as str, validation will handle conversion
+    id: ObjectId
     username: str
 
-    @field_validator("id", mode="before")
-    @classmethod
-    def convert_objectid_to_str(cls, value):
-        if isinstance(value, ObjectId):
-            return str(value)
-        return value
+    @field_serializer("id")
+    def serialize_id_to_string(self, id_value: ObjectId, info) -> str:
+        """Convert ObjectId to string for serialization."""
+        return str(id_value)
 
     model_config = ConfigDict(
         from_attributes=True,
-        # json_encoders are for serialization, not validation input
-        # ObjectId to str conversion for output is still good.
-        json_encoders={
-            ObjectId: lambda v: str(v),
-        },
+        arbitrary_types_allowed=True,
     )

@@ -11,6 +11,7 @@ export interface TimeWindow {
   is_deleted: boolean;
 }
 
+
 export interface TimeWindowCreateRequest {
   name?: string;
   start_time: number;

@@ -12,4 +12,7 @@ export const API_ENDPOINTS = {
   TIME_WINDOW_BY_ID: (id: string) => `/time-windows/${id}`,
   TASKS_BASE: '/tasks',
   TASK_BY_ID: (id: string) => `/tasks/${id}`,
+  DAILY_PLANS_BASE: '/daily-plans',
+  DAILY_PLAN_BY_DATE: (planDate: string) => `/daily-plans/${planDate}`,
+  DAILY_PLAN_BY_ID: (planId: string) => `/daily-plans/id/${planId}`,
 };

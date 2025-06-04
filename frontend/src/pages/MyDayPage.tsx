@@ -1,6 +1,35 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { getDailyPlanByDate } from '../services/dailyPlanService';
+import { DailyPlanResponse } from '../types/dailyPlan';
 
 const MyDayPage: React.FC = () => {
+  const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDailyPlanForToday = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const today = new Date();
+      const planDateISO = today.toISOString();
+      const data = await getDailyPlanByDate(planDateISO);
+      setDailyPlan(data);
+    } catch (err) {
+      if (err instanceof Error && (err as any).response?.status === 404) {
+        setDailyPlan(null);
+      } else {
+        setError('Failed to fetch daily plan.');
+        console.error(err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDailyPlanForToday();
+  }, [fetchDailyPlanForToday]);
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -43,7 +72,19 @@ const MyDayPage: React.FC = () => {
                 </p>
               </header>
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[300px]">
-                <p className="text-slate-700">Today's schedule editor will go here.</p>
+                {isLoading && <p className="text-slate-700">Loading today's plan...</p>}
+                {error && <p className="text-red-500">{error}</p>}
+                {!isLoading && !error && dailyPlan && (
+                  <div>
+                    <h4 className="text-lg font-semibold">Plan for {new Date(dailyPlan.plan_date).toLocaleDateString()}</h4>
+                    <pre className="text-xs bg-slate-100 p-2 rounded mt-2 overflow-auto">
+                      {JSON.stringify(dailyPlan, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {!isLoading && !error && !dailyPlan && (
+                  <p className="text-slate-700">No plan found for today. You can create one!</p>
+                )}
               </div>
             </div>
           </section>

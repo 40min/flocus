@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -12,14 +10,6 @@ from app.db.models.day_template import DayTemplate
 from app.db.models.task import Task
 from app.db.models.user import User
 from app.main import app
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope="session")

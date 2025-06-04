@@ -21,7 +21,7 @@ class TaskMapper(BaseMapper):
 
         statistics_response: Optional[TaskStatisticsSchema] = None
         if task.statistics:  # Should always be true due to default_factory
-            statistics_response = TaskStatisticsSchema.model_validate(task.statistics)
+            statistics_response = TaskStatisticsSchema.model_validate(task.statistics.model_dump())
 
         return TaskResponse(
             id=task.id,

@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.api.schemas.category import CategoryResponse
 
@@ -56,7 +56,13 @@ class TaskStatisticsSchema(BaseModel):
     was_stopped_at: Optional[datetime] = None
     lasts_min: Optional[int] = Field(default=0)
 
-    model_config = ConfigDict(from_attributes=True, json_encoders={datetime: _serialize_datetime_to_iso_z})
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("was_started_at", "was_taken_at", "was_stopped_at")
+    def serialize_datetimes(self, dt: Optional[datetime]) -> Optional[str]:
+        if dt:
+            return _serialize_datetime_to_iso_z(dt)
+        return None
 
 
 class TaskUpdateRequest(BaseModel):
@@ -81,5 +87,10 @@ class TaskResponse(TaskBase):
         from_attributes=True,
         arbitrary_types_allowed=True,
         use_enum_values=True,
-        json_encoders={datetime: _serialize_datetime_to_iso_z},
     )
+
+    @field_serializer("created_at", "updated_at", "due_date")
+    def serialize_datetimes(self, dt: Optional[datetime]) -> Optional[str]:
+        if dt:
+            return _serialize_datetime_to_iso_z(dt)
+        return None

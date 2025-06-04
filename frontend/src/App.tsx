@@ -7,12 +7,15 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import TodayIcon from '@mui/icons-material/Today';
+import TodayOutlinedIcon from '@mui/icons-material/TodayOutlined';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import Home from './pages/Home';
+import MyDayPage from './pages/MyDayPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TemplatesPage from './pages/TemplatesPage';
@@ -69,6 +72,21 @@ const AppLayout: React.FC = () => {
               <>
                 {isActive ? <HomeIcon sx={{ fontSize: '1.25rem' }} /> : <HomeOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
                 Dashboard
+              </>
+            )}
+          </NavLink>
+          <NavLink
+            to="/my-day"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive ? <TodayIcon sx={{ fontSize: '1.25rem' }} /> : <TodayOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                My Day
               </>
             )}
           </NavLink>
@@ -172,6 +190,7 @@ function App() {
         }
       >
         <Route index element={<Home />} />
+        <Route path="my-day" element={<MyDayPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="templates" element={<TemplatesPage />} />

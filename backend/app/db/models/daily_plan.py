@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
@@ -10,13 +10,15 @@ class DailyPlanAllocation(EmbeddedModel):
     category_id: ObjectId
     start_time: int
     end_time: int
-    task_id: ObjectId
+    task_ids: List[ObjectId] = Field(default_factory=list)
 
 
 class DailyPlan(Model):
     user_id: ObjectId
     plan_date: datetime
     allocations: List[DailyPlanAllocation] = Field(default_factory=list)
+    reflection_content: Optional[str] = None
+    notes_content: Optional[str] = None
 
     model_config = {
         "collection": "daily_plans",

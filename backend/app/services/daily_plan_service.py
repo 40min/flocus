@@ -28,6 +28,7 @@ from app.db.models.task import Task
 # from app.db.models.time_window import TimeWindow
 from app.mappers.daily_plan_mapper import DailyPlanMapper
 from app.mappers.task_mapper import TaskMapper
+from backend.app.api.schemas.task import TaskResponse
 
 # from app.mappers.time_window_mapper import TimeWindowMapper
 
@@ -49,14 +50,16 @@ class DailyPlanService:
                     category_id=alloc_data.category_id, detail=f"Category for allocation '{alloc_data.name}' not found."
                 )
 
-            task = await self.engine.find_one(
-                Task,
-                Task.id == alloc_data.task_id,
-                Task.user_id == current_user_id,
-                Task.is_deleted == False,  # noqa: E712
-            )
-            if not task:
-                raise TaskNotFoundException(task_id=alloc_data.task_id)
+            if alloc_data.task_ids:  # It's possible an allocation has no tasks initially
+                for task_id in alloc_data.task_ids:
+                    task = await self.engine.find_one(
+                        Task,
+                        Task.id == task_id,
+                        Task.user_id == current_user_id,
+                        Task.is_deleted == False,  # noqa: E712
+                    )
+                    if not task:
+                        raise TaskNotFoundException(task_id=task_id)
 
     async def _build_daily_plan_response(self, daily_plan_model: DailyPlan) -> DailyPlanResponse:
         populated_allocation_responses: List[DailyPlanAllocationResponse] = []
@@ -64,13 +67,22 @@ class DailyPlanService:
         if not daily_plan_model.allocations:
             return DailyPlanMapper.to_response(daily_plan_model, [])
 
-        task_ids: List[ObjectId] = list(set(alloc.task_id for alloc in daily_plan_model.allocations))
-        tasks_db = await self.engine.find(Task, Task.id.in_(task_ids), Task.is_deleted == False)  # noqa: E712
+        # Collect all unique task IDs from all allocations
+        all_task_ids_flat: List[ObjectId] = []
+        for alloc in daily_plan_model.allocations:
+            all_task_ids_flat.extend(alloc.task_ids)
+
+        unique_task_ids: List[ObjectId] = list(set(all_task_ids_flat))
+        tasks_db = []
+        if unique_task_ids:
+            tasks_db = await self.engine.find(
+                Task, Task.id.in_(unique_task_ids), Task.is_deleted == False  # noqa: E712
+            )
         tasks_map = {task.id: task for task in tasks_db}
 
         category_ids_for_tw = {alloc.category_id for alloc in daily_plan_model.allocations}
         category_ids_for_tasks = {
-            task.category_id for task_id in task_ids if (task := tasks_map.get(task_id)) and task.category_id
+            task.category_id for task_id in unique_task_ids if (task := tasks_map.get(task_id)) and task.category_id
         }
         all_category_ids = list(category_ids_for_tw.union(category_ids_for_tasks))
 
@@ -82,9 +94,20 @@ class DailyPlanService:
         categories_map = {cat.id: cat for cat in categories_db}
 
         for allocation_model in daily_plan_model.allocations:
-            task_model = tasks_map.get(allocation_model.task_id)
-            if not task_model:
-                raise TaskNotFoundException(task_id=allocation_model.task_id)
+            current_allocation_tasks_models: List[Task] = []
+            for task_id in allocation_model.task_ids:
+                task_model = tasks_map.get(task_id)
+                if not task_model:
+                    # This case should ideally be prevented by validation or data integrity
+                    # For now, we might skip this task or raise, depending on desired strictness
+                    # For robustness, let's skip if a task is somehow missing after initial validation
+                    continue
+                current_allocation_tasks_models.append(task_model)
+
+            # If, after checking all task_ids, no valid tasks were found for this allocation,
+            # it might indicate an issue or an empty allocation. We'll create an empty tasks list for it.
+            # However, the design implies allocations should have tasks.
+            # For now, we proceed assuming valid tasks are found if task_ids were present.
 
             tw_category_model = categories_map.get(allocation_model.category_id)
             if not tw_category_model:
@@ -112,12 +135,16 @@ class DailyPlanService:
                 category=tw_category_response,  # Use the constructed CategoryResponse
             )
 
-            task_category_model: Optional[Category] = None
-            if task_model.category_id:
-                task_category_model = categories_map.get(task_model.category_id)
-            task_response = TaskMapper.to_response(task_model, task_category_model)
+            task_responses_for_allocation: List[TaskResponse] = []
+            for task_model_in_alloc in current_allocation_tasks_models:
+                task_category_model: Optional[Category] = None
+                if task_model_in_alloc.category_id:
+                    task_category_model = categories_map.get(task_model_in_alloc.category_id)
+                task_responses_for_allocation.append(TaskMapper.to_response(task_model_in_alloc, task_category_model))
 
-            allocation_resp = DailyPlanMapper.to_allocation_response(time_window_response, task_response)
+            allocation_resp = DailyPlanMapper.to_allocation_response(
+                time_window_response, task_responses_for_allocation
+            )
             populated_allocation_responses.append(allocation_resp)
 
         return DailyPlanMapper.to_response(daily_plan_model, populated_allocation_responses)
@@ -135,6 +162,10 @@ class DailyPlanService:
         await self._validate_allocations(plan_data.allocations, current_user_id)
 
         daily_plan = DailyPlanMapper.to_model_for_create(schema=plan_data, user_id=current_user_id)
+        # Handle reflection and notes content
+        daily_plan.reflection_content = plan_data.reflection_content
+        daily_plan.notes_content = plan_data.notes_content
+
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)
 
@@ -178,5 +209,11 @@ class DailyPlanService:
             daily_plan.allocations = DailyPlanMapper.allocations_request_to_models(
                 allocation_data=plan_data.allocations
             )
+
+        if plan_data.reflection_content is not None:
+            daily_plan.reflection_content = plan_data.reflection_content
+        if plan_data.notes_content is not None:
+            daily_plan.notes_content = plan_data.notes_content
+
         await self.engine.save(daily_plan)
         return await self._build_daily_plan_response(daily_plan)

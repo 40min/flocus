@@ -167,6 +167,38 @@ class TaskService:
 
         return task_responses
 
+    async def get_tasks_by_ids(self, task_ids: List[ObjectId], current_user_id: ObjectId) -> List[TaskResponse]:
+        if not task_ids:
+            return []
+
+        query_conditions = [
+            Task.id.in_(task_ids),
+            Task.user_id == current_user_id,
+            Task.is_deleted == False,  # noqa: E712
+        ]
+        tasks_models = await self.engine.find(Task, *query_conditions)
+
+        # Batch fetch categories for these tasks
+        category_ids = {task.category_id for task in tasks_models if task.category_id}
+        categories_model_map: Dict[ObjectId, Category] = {}
+        if category_ids:
+            category_models = await self.engine.find(
+                Category,
+                Category.id.in_(list(category_ids)),
+                Category.user == current_user_id,  # Assuming Category.user stores the user_id
+                Category.is_deleted == False,  # noqa: E712
+            )
+            categories_model_map = {cat.id: cat for cat in category_models}
+
+        task_responses = []
+        for task_model in tasks_models:
+            category_model_for_task = (
+                categories_model_map.get(task_model.category_id) if task_model.category_id else None
+            )
+            task_responses.append(TaskMapper.to_response(task_model, category_model_for_task))
+
+        return task_responses
+
     async def update_task(
         self, task_id: ObjectId, task_data: TaskUpdateRequest, current_user_id: ObjectId
     ) -> TaskResponse:

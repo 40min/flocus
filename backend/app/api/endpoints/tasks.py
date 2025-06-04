@@ -63,6 +63,19 @@ async def get_task_by_id(
     return await service.get_task_by_id(task_id=task_id, current_user_id=current_user_id)
 
 
+@router.get(
+    "/batch/",
+    response_model=List[TaskResponse],
+    summary="Get multiple Tasks by a list of IDs",
+)
+async def get_tasks_by_ids(
+    task_ids: List[ObjectId] = Query(..., alias="ids", description="List of task IDs to retrieve"),
+    service: TaskService = Depends(TaskService),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
+):
+    return await service.get_tasks_by_ids(task_ids=task_ids, current_user_id=current_user_id)
+
+
 @router.patch(
     "/{task_id}",
     response_model=TaskResponse,

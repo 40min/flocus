@@ -17,7 +17,9 @@ class DailyPlanAllocationCreate(BaseModel):  # Inherits directly from BaseModel
     start_time: int = Field(..., description="Start time in minutes since midnight.")
     end_time: int = Field(..., description="End time in minutes since midnight.")
     # Original field
-    task_id: ObjectId = Field(..., description="The ID of the Task allocated to the TimeWindow.")
+    task_ids: List[ObjectId] = Field(
+        default_factory=list, description="The IDs of the Tasks allocated to the TimeWindow."
+    )
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
@@ -36,26 +38,31 @@ class DailyPlanAllocationCreate(BaseModel):  # Inherits directly from BaseModel
 
 
 class DailyPlanAllocationResponse(BaseModel):
-    time_window: TimeWindowResponse  # This structure remains, but data source changes
-    task: TaskResponse
+    time_window: TimeWindowResponse
+    tasks: List[TaskResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
 class DailyPlanBase(BaseModel):
     plan_date: date = Field(..., description="The specific date for this daily plan.")
+    reflection_content: Optional[str] = Field(None, description="User's reflection for the day.")
+    notes_content: Optional[str] = Field(None, description="User's notes for the day.")
 
 
 class DailyPlanCreateRequest(DailyPlanBase):
     allocations: List[DailyPlanAllocationCreate] = Field(
         default_factory=list, description="List of time windows and their allocated tasks."
     )
+    # reflection_content and notes_content are optional on creation, inherited from DailyPlanBase
 
 
 class DailyPlanUpdateRequest(BaseModel):
     allocations: Optional[List[DailyPlanAllocationCreate]] = Field(
         None, description="Updated list of time windows and their allocated tasks. Replaces existing allocations."
     )
+    reflection_content: Optional[str] = Field(None, description="Updated user's reflection for the day.")
+    notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
     model_config = ConfigDict(extra="forbid")
 
 

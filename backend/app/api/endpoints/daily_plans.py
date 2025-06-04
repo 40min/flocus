@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from odmantic import ObjectId
@@ -15,6 +15,10 @@ router = APIRouter()
     response_model=DailyPlanResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new Daily Plan",
+    description="Creates a new daily plan for the user. "
+    "Validates that tasks assigned to a time window (allocation) "
+    "share the same category as the time window. "
+    "Raises a 400 error if a category mismatch is detected.",
 )
 async def create_daily_plan(
     plan_data: DailyPlanCreateRequest,
@@ -30,7 +34,7 @@ async def create_daily_plan(
     summary="Get a Daily Plan by date",
 )
 async def get_daily_plan_by_date(
-    plan_date: date,
+    plan_date: datetime,
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
@@ -55,9 +59,13 @@ async def get_daily_plan_by_id(
     "/{plan_date}",
     response_model=DailyPlanResponse,
     summary="Update a Daily Plan by date",
+    description="Updates an existing daily plan for the user, identified by date. "
+    "If allocations are updated, validates that tasks assigned to a time window "
+    "share the same category as the time window. "
+    "Raises a 400 error if a category mismatch is detected.",
 )
 async def update_daily_plan(
-    plan_date: date,
+    plan_date: datetime,
     plan_data: DailyPlanUpdateRequest,
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),

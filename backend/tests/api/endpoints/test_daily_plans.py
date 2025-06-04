@@ -1,6 +1,6 @@
 import random
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import List
 
 import pytest
@@ -42,8 +42,39 @@ async def user_one_task_alt(test_db, test_user_one: UserModel, user_one_category
 
 
 @pytest.fixture
-async def unique_date() -> date:
-    return date.today() + timedelta(days=random.randint(100, 10000))
+async def user_one_category_alt(test_db, test_user_one: UserModel) -> CategoryModel:
+    category_data = {
+        "name": f"UserOne_Category_Alt_{uuid.uuid4()}",
+        "user": test_user_one.id,
+        "color": "#FF00AA",  # Different color
+        "icon": "settings_alt",  # Different icon
+        "is_default": False,
+    }
+    instance = CategoryModel(**category_data)
+    await test_db.save(instance)
+    return instance
+
+
+@pytest.fixture
+async def user_one_task_no_category_model(test_db, test_user_one: UserModel) -> TaskModel:
+    task_data = {
+        "title": f"UserOne_Task_NoCat_{uuid.uuid4()}",
+        "user_id": test_user_one.id,
+        "category_id": None,  # Explicitly None
+        "priority": TaskPriority.MEDIUM,
+        "status": TaskStatus.PENDING,
+        "description": "A task without a category",
+    }
+    instance = TaskModel(**task_data)
+    await test_db.save(instance)
+    return instance
+
+
+@pytest.fixture
+async def unique_date() -> datetime:
+    # Return a datetime object, for example, at the beginning of a unique future day
+    unique_future_date = date.today() + timedelta(days=random.randint(100, 10000))
+    return datetime.combine(unique_future_date, datetime.min.time())
 
 
 def create_allocation_payload(
@@ -64,7 +95,7 @@ async def test_create_daily_plan_success_with_allocations(
     test_user_one: UserModel,
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     plan_date = unique_date
     allocations = [
@@ -96,7 +127,7 @@ async def test_create_daily_plan_success_with_allocations(
 
 
 async def test_create_daily_plan_success_empty_allocations(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], test_user_one: UserModel, unique_date: date
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str], test_user_one: UserModel, unique_date: datetime
 ):
     plan_date = unique_date
     payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=[])
@@ -111,7 +142,7 @@ async def test_create_daily_plan_success_empty_allocations(
 
 
 async def test_create_daily_plan_duplicate_date_fails(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: date
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: datetime
 ):
     plan_date = unique_date
     payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=[])
@@ -119,8 +150,8 @@ async def test_create_daily_plan_duplicate_date_fails(
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
-    assert response.status_code == 409
-    assert f"Daily plan for date '{plan_date.isoformat()}' already exists" in response.json()["detail"]
+    assert response.status_code == 400  # Service explicitly checks and raises 400
+    assert response.json()["detail"] == "A daily plan for this date already exists."
 
 
 async def test_create_daily_plan_invalid_embedded_time_window_data_fails(
@@ -128,7 +159,7 @@ async def test_create_daily_plan_invalid_embedded_time_window_data_fails(
     auth_headers_user_one: dict[str, str],
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     # Send raw dict to bypass client-side Pydantic validation and test server-side
     raw_allocations_payload = [
@@ -150,7 +181,10 @@ async def test_create_daily_plan_invalid_embedded_time_window_data_fails(
 
 
 async def test_create_daily_plan_non_existent_category_for_tw_fails(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel, unique_date: date
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_task_model: TaskModel,
+    unique_date: datetime,
 ):
     non_existent_category_id = ObjectId()
     allocations = [
@@ -167,7 +201,7 @@ async def test_create_daily_plan_non_existent_category_for_tw_fails(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
     assert response.status_code == 404
-    assert "Category for allocation 'Test TW' not found." in response.json()["detail"]
+    assert f"Category with ID '{non_existent_category_id}' not found" in response.json()["detail"]
 
 
 async def test_create_daily_plan_unowned_category_for_tw_fails(
@@ -175,7 +209,7 @@ async def test_create_daily_plan_unowned_category_for_tw_fails(
     auth_headers_user_one: dict[str, str],
     user_two_category: CategoryModel,
     user_one_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     allocations = [
         create_allocation_payload(
@@ -190,15 +224,15 @@ async def test_create_daily_plan_unowned_category_for_tw_fails(
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
-    assert response.status_code == 404
-    assert "Category for allocation 'Unowned Cat TW' not found." in response.json()["detail"]
+    assert response.status_code == 403  # NotOwnerException from CategoryService results in 403
+    assert response.json()["detail"] == "Not authorized to access this category"
 
 
 async def test_create_daily_plan_non_existent_task_fails(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     user_one_category: CategoryModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     non_existent_task_id = ObjectId()
     allocations = [
@@ -225,7 +259,7 @@ async def test_create_daily_plan_unowned_task_fails(
     auth_headers_user_one: dict[str, str],
     user_one_category: CategoryModel,
     user_two_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     allocations = [
         create_allocation_payload(
@@ -245,7 +279,7 @@ async def test_create_daily_plan_unowned_task_fails(
     assert "not found" in response.json()["detail"].lower() or "access" in response.json()["detail"].lower()
 
 
-async def test_create_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
+async def test_create_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: datetime):
     payload = DailyPlanCreateRequest(plan_date=unique_date, allocations=[])
     response = await async_client.post(DAILY_PLANS_ENDPOINT, json=payload.model_dump(mode="json"))
     assert response.status_code == 401
@@ -257,7 +291,7 @@ async def test_get_daily_plan_by_date_success(
     test_user_one: UserModel,
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     plan_date = unique_date
     allocations = [
@@ -288,14 +322,14 @@ async def test_get_daily_plan_by_date_success(
 
 
 async def test_get_daily_plan_by_date_not_found(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: date
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: datetime
 ):
     non_existent_date = unique_date + timedelta(days=100)
     response = await async_client.get(
         f"{DAILY_PLANS_ENDPOINT}/{non_existent_date.isoformat()}", headers=auth_headers_user_one
     )
     assert response.status_code == 404
-    assert f"Daily plan for date '{non_existent_date.isoformat()}' not found" in response.json()["detail"]
+    assert response.json()["detail"] == "Daily plan not found for this date."  # Adjusted detail
 
 
 async def test_get_daily_plan_by_date_invalid_date_format(
@@ -305,7 +339,7 @@ async def test_get_daily_plan_by_date_invalid_date_format(
     assert response.status_code == 422
 
 
-async def test_get_daily_plan_by_date_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
+async def test_get_daily_plan_by_date_unauthenticated_fails(async_client: AsyncClient, unique_date: datetime):
     response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/{unique_date.isoformat()}")
     assert response.status_code == 401
 
@@ -316,7 +350,7 @@ async def test_get_daily_plan_by_id_success(
     test_user_one: UserModel,
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     create_payload = DailyPlanCreateRequest(
         plan_date=unique_date,
@@ -359,7 +393,7 @@ async def test_get_daily_plan_by_id_not_owner_fails(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     auth_headers_user_two: dict[str, str],
-    unique_date: date,
+    unique_date: datetime,
 ):
     create_payload = DailyPlanCreateRequest(plan_date=unique_date, allocations=[])
     create_response = await async_client.post(
@@ -369,7 +403,7 @@ async def test_get_daily_plan_by_id_not_owner_fails(
     plan_id_user_one = create_response.json()["id"]
 
     response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/id/{plan_id_user_one}", headers=auth_headers_user_two)
-    assert response.status_code == 403
+    assert response.status_code == 404  # Service returns 404 if not found for the user
 
 
 async def test_get_daily_plan_by_id_unauthenticated_fails(async_client: AsyncClient):
@@ -384,7 +418,7 @@ async def test_update_daily_plan_success(
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
     user_one_task_alt: TaskModel,
-    unique_date: date,
+    unique_date: datetime,
 ):
     plan_date = unique_date
     initial_allocations = [
@@ -431,7 +465,7 @@ async def test_update_daily_plan_success(
 async def test_update_daily_plan_to_empty_allocations_success(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    unique_date: date,
+    unique_date: datetime,
     user_one_category: CategoryModel,
     user_one_task_model: TaskModel,
 ):
@@ -462,7 +496,7 @@ async def test_update_daily_plan_to_empty_allocations_success(
 
 
 async def test_update_daily_plan_date_not_found_fails(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: date
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: datetime
 ):
     non_existent_date = unique_date + timedelta(days=200)
     update_payload = DailyPlanUpdateRequest(allocations=[])
@@ -540,8 +574,8 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
-    assert response.status_code == 404
-    assert "Category for allocation 'Bad Cat TW' not found." in response.json()["detail"]
+    assert response.status_code == 403  # NotOwnerException from CategoryService results in 403
+    assert response.json()["detail"] == "Not authorized to access this category"
 
 
 async def test_update_daily_plan_unowned_task_fails(
@@ -581,7 +615,9 @@ async def test_update_daily_plan_unowned_task_fails(
         json=update_payload.model_dump(mode="json"),
     )
     assert response.status_code == 404
-    assert f"Task with ID '{str(user_two_task_model.id)}' not found" in response.json()["detail"]
+    assert (
+        response.json()["detail"] == f"Task with ID {str(user_two_task_model.id)} not found for user."
+    )  # Adjusted detail
 
 
 async def test_update_daily_plan_not_owner_fails(
@@ -618,4 +654,133 @@ async def test_update_daily_plan_not_owner_fails(
         json=update_payload_by_two.model_dump(mode="json"),
     )
     assert response.status_code == 404
-    assert f"Daily plan for date '{plan_date.isoformat()}' not found" in response.json()["detail"]
+    assert response.json()["detail"] == "Daily plan not found for this date."  # Adjusted detail
+
+
+async def test_create_daily_plan_fail_task_category_mismatch(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: CategoryModel,  # This will be the category for the allocation
+    user_one_category_alt: CategoryModel,  # This will be the category for the task
+    unique_date: date,
+    test_db,
+    test_user_one: UserModel,
+):
+    # Create a task that belongs to user_one_category_alt
+    task_with_alt_category_data = {
+        "title": f"Task_With_Alt_Cat_{uuid.uuid4()}",
+        "user_id": test_user_one.id,
+        "category_id": user_one_category_alt.id,  # Task's category
+        "priority": TaskPriority.HIGH,
+        "status": TaskStatus.IN_PROGRESS,
+    }
+    task_instance = TaskModel(**task_with_alt_category_data)
+    await test_db.save(task_instance)
+
+    allocations = [
+        create_allocation_payload(
+            name="Mismatch Category Allocation",
+            category_id=user_one_category.id,  # Allocation's category
+            start_time=540,
+            end_time=600,
+            task_ids=[task_instance.id],  # Task with alt_category
+        )
+    ]
+    payload = DailyPlanCreateRequest(plan_date=unique_date, allocations=allocations)
+    response = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
+    )
+    assert response.status_code == 400
+    assert "Task category does not match Time Window category" in response.json()["detail"]
+
+
+async def test_create_daily_plan_success_task_no_category(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: CategoryModel,  # Allocation will use this category
+    user_one_task_no_category_model: TaskModel,  # Task has no category
+    unique_date: date,
+    test_user_one: UserModel,
+):
+    plan_date = unique_date
+    allocations = [
+        create_allocation_payload(
+            name="Task With No Category Allocation",
+            category_id=user_one_category.id,  # Allocation has a category
+            start_time=540,
+            end_time=720,
+            task_ids=[user_one_task_no_category_model.id],  # Task has no category
+        )
+    ]
+    payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=allocations)
+    response = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
+    )
+    assert response.status_code == 201
+    created_plan = DailyPlanResponse(**response.json())
+    assert created_plan.plan_date == plan_date
+    assert created_plan.user_id == test_user_one.id
+    assert len(created_plan.allocations) == 1
+    allocation_resp = created_plan.allocations[0]
+    assert allocation_resp.time_window.category.id == user_one_category.id
+    assert len(allocation_resp.tasks) == 1
+    assert allocation_resp.tasks[0].id == user_one_task_no_category_model.id
+    assert allocation_resp.tasks[0].category is None  # Verify task still has no category
+
+
+async def test_update_daily_plan_fail_task_category_mismatch(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: CategoryModel,
+    user_one_category_alt: CategoryModel,  # Task will have this category
+    user_one_task_model: TaskModel,  # Initially in user_one_category
+    unique_date: date,
+    test_db,
+    test_user_one: UserModel,
+):
+    plan_date = unique_date
+    # Create a task that will be used for mismatch, belonging to user_one_category_alt
+    mismatch_task_data = {
+        "title": f"Mismatch_Update_Task_{uuid.uuid4()}",
+        "user_id": test_user_one.id,
+        "category_id": user_one_category_alt.id,  # Different category from allocation
+        "priority": TaskPriority.LOW,
+        "status": TaskStatus.PENDING,
+    }
+    mismatch_task_instance = TaskModel(**mismatch_task_data)
+    await test_db.save(mismatch_task_instance)
+
+    # Initial plan with a task that matches its allocation category
+    initial_allocations = [
+        create_allocation_payload(
+            name="Initial Allocation",
+            category_id=user_one_category.id,  # Allocation category
+            start_time=540,
+            end_time=600,
+            task_ids=[user_one_task_model.id],  # Task with matching category
+        )
+    ]
+    create_payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=initial_allocations)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+
+    # Attempt to update: allocation keeps user_one_category, but task is mismatch_task_instance (user_one_category_alt)
+    updated_allocations = [
+        create_allocation_payload(
+            name="Updated Mismatch Allocation",
+            category_id=user_one_category.id,  # Allocation category remains user_one_category
+            start_time=660,
+            end_time=720,
+            task_ids=[mismatch_task_instance.id],  # Task has user_one_category_alt
+        )
+    ]
+    update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
+    response = await async_client.patch(
+        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        headers=auth_headers_user_one,
+        json=update_payload.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert "Task category does not match Time Window category" in response.json()["detail"]

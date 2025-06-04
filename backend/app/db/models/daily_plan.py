@@ -5,7 +5,6 @@ from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 
 class DailyPlanAllocation(EmbeddedModel):
-    id: ObjectId = Field(default_factory=ObjectId)
     name: str
     category_id: ObjectId
     start_time: int
@@ -14,8 +13,8 @@ class DailyPlanAllocation(EmbeddedModel):
 
 
 class DailyPlan(Model):
-    user_id: ObjectId
     plan_date: datetime
+    user_id: ObjectId
     allocations: List[DailyPlanAllocation] = Field(default_factory=list)
     reflection_content: Optional[str] = None
     notes_content: Optional[str] = None

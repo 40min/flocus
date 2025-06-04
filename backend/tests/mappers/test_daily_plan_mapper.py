@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import datetime
 
 import pytest
 from odmantic import ObjectId
@@ -68,8 +68,7 @@ def sample_task_response(sample_category_response: CategoryResponse, sample_user
 
 @pytest.fixture
 def sample_daily_plan_model(sample_user_id: ObjectId, sample_category_id: ObjectId) -> DailyPlan:
-    plan_date = date(2024, 7, 20)
-    plan_datetime = datetime.combine(plan_date, time.min)
+    plan_datetime = datetime(2024, 7, 20, 0, 0, 0)
     return DailyPlan(
         id=ObjectId(),
         user_id=sample_user_id,
@@ -96,7 +95,7 @@ def sample_daily_plan_model(sample_user_id: ObjectId, sample_category_id: Object
 @pytest.fixture
 def sample_daily_plan_create_request(sample_category_id: ObjectId) -> DailyPlanCreateRequest:
     return DailyPlanCreateRequest(
-        plan_date=date(2024, 7, 21),
+        plan_date=datetime(2024, 7, 21, 0, 0, 0),
         allocations=[
             DailyPlanAllocationCreate(
                 name="Morning Session",
@@ -159,7 +158,7 @@ def test_to_response(
     assert isinstance(result, DailyPlanResponse)
     assert result.id == sample_daily_plan_model.id
     assert result.user_id == sample_daily_plan_model.user_id
-    assert result.plan_date == sample_daily_plan_model.plan_date.date()
+    assert result.plan_date == sample_daily_plan_model.plan_date
     assert result.allocations == populated_allocations
     assert len(result.allocations) == 1
 
@@ -171,7 +170,7 @@ def test_to_response_empty_allocations(sample_daily_plan_model: DailyPlan):
     assert isinstance(result, DailyPlanResponse)
     assert result.id == sample_daily_plan_model.id
     assert result.user_id == sample_daily_plan_model.user_id
-    assert result.plan_date == sample_daily_plan_model.plan_date.date()
+    assert result.plan_date == sample_daily_plan_model.plan_date
     assert result.allocations == []
 
 
@@ -180,8 +179,8 @@ def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRe
 
     assert isinstance(result, DailyPlan)
     assert result.user_id == sample_user_id
-    expected_datetime = datetime.combine(sample_daily_plan_create_request.plan_date, time.min)
-    assert result.plan_date == expected_datetime
+    expected_date = sample_daily_plan_create_request.plan_date
+    assert result.plan_date == expected_date
     assert len(result.allocations) == len(sample_daily_plan_create_request.allocations)
 
     for i, alloc_schema in enumerate(sample_daily_plan_create_request.allocations):
@@ -195,11 +194,11 @@ def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRe
 
 
 def test_to_model_for_create_empty_allocations(sample_user_id: ObjectId):
-    create_request_empty_allocs = DailyPlanCreateRequest(plan_date=date(2024, 8, 1), allocations=[])
+    create_request_empty_allocs = DailyPlanCreateRequest(plan_date=datetime(2024, 8, 1, 0, 0, 0), allocations=[])
     result = DailyPlanMapper.to_model_for_create(schema=create_request_empty_allocs, user_id=sample_user_id)
 
     assert isinstance(result, DailyPlan)
     assert result.user_id == sample_user_id
-    expected_datetime = datetime.combine(create_request_empty_allocs.plan_date, time.min)
-    assert result.plan_date == expected_datetime
+    expected_date = create_request_empty_allocs.plan_date
+    assert result.plan_date == expected_date
     assert result.allocations == []

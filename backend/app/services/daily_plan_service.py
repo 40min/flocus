@@ -175,8 +175,14 @@ class DailyPlanService:
         return await self._map_plan_to_response(daily_plan, current_user_id)
 
     async def get_daily_plan_by_date_internal(self, plan_date: datetime, current_user_id: ObjectId) -> DailyPlan:
+        # To compare only the date part, query for plans within the 24-hour range of the given date
+        start_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 0, 0, 0)
+        end_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 23, 59, 59, 999999)
         plan = await self.engine.find_one(
-            DailyPlan, (DailyPlan.plan_date == plan_date) & (DailyPlan.user_id == current_user_id)
+            DailyPlan,
+            (DailyPlan.plan_date >= start_of_day)
+            & (DailyPlan.plan_date <= end_of_day)
+            & (DailyPlan.user_id == current_user_id),
         )
         if not plan:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily plan not found for this date.")

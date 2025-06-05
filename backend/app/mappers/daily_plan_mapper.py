@@ -22,7 +22,7 @@ class DailyPlanMapper:
                 category_id=alloc.category_id,
                 start_time=alloc.start_time,
                 end_time=alloc.end_time,
-                task_ids=alloc.task_ids,  # Changed from task_id
+                task_ids=alloc.task_ids,
             )
             for alloc in allocation_data
         ]
@@ -44,6 +44,7 @@ class DailyPlanMapper:
             allocations=populated_allocations_responses,
             reflection_content=daily_plan_model.reflection_content,
             notes_content=daily_plan_model.notes_content,
+            reviewed=daily_plan_model.reviewed,
         )
 
     @staticmethod

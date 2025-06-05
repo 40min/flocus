@@ -66,9 +66,15 @@ class DailyPlanUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class DailyPlanReviewRequest(BaseModel):
+    reflection_content: Optional[str] = Field(None, description="User's reflection for the day.")
+    notes_content: Optional[str] = Field(None, description="User's notes for the day.")
+
+
 class DailyPlanResponse(DailyPlanBase):
     id: ObjectId
     user_id: ObjectId
     allocations: List[DailyPlanAllocationResponse] = []
+    reviewed: bool
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

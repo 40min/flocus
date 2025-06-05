@@ -18,6 +18,7 @@ class DailyPlan(Model):
     allocations: List[DailyPlanAllocation] = Field(default_factory=list)
     reflection_content: Optional[str] = None
     notes_content: Optional[str] = None
+    reviewed: bool = Field(default=False)
 
     model_config = {
         "collection": "daily_plans",

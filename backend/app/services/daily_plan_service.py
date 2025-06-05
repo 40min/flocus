@@ -1,25 +1,26 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import Depends, HTTPException, status
 from odmantic import AIOEngine, ObjectId
 
-from app.api.schemas.category import CategoryResponse  # Uncommented
+from app.api.schemas.category import CategoryResponse
 from app.api.schemas.daily_plan import (
     DailyPlanAllocationCreate,
     DailyPlanAllocationResponse,
     DailyPlanCreateRequest,
     DailyPlanResponse,
+    DailyPlanReviewRequest,
     DailyPlanUpdateRequest,
 )
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse
 from app.db.connection import get_database
-from app.db.models.category import Category  # Added
+from app.db.models.category import Category
 from app.db.models.daily_plan import DailyPlan
 from app.mappers.daily_plan_mapper import DailyPlanMapper
 from app.mappers.task_mapper import TaskMapper
-from app.services.category_service import CategoryService  # Uncommented
+from app.services.category_service import CategoryService
 from app.services.task_service import TaskService
 
 
@@ -30,13 +31,13 @@ class DailyPlanService:
         task_service: TaskService = Depends(TaskService),
         daily_plan_mapper: DailyPlanMapper = Depends(DailyPlanMapper),
         task_mapper: TaskMapper = Depends(TaskMapper),
-        category_service: CategoryService = Depends(CategoryService),  # Uncommented
+        category_service: CategoryService = Depends(CategoryService),
     ):
         self.engine = engine
         self.task_service = task_service
         self.daily_plan_mapper = daily_plan_mapper
         self.task_mapper = task_mapper
-        self.category_service = category_service  # Uncommented
+        self.category_service = category_service
 
     async def _validate_allocation_categories(
         self,
@@ -138,7 +139,7 @@ class DailyPlanService:
             )
 
         if plan_data.allocations:
-            await self._validate_allocation_categories(plan_data.allocations, current_user_id)  # Added
+            await self._validate_allocation_categories(plan_data.allocations, current_user_id)
             await self._validate_task_categories_for_allocations(plan_data.allocations, current_user_id)
 
         daily_plan_model = self.daily_plan_mapper.to_model_for_create(plan_data, current_user_id)
@@ -147,7 +148,7 @@ class DailyPlanService:
         return await self._map_plan_to_response(daily_plan_model, current_user_id)
 
     async def update_daily_plan(
-        self, plan_id: ObjectId, plan_data: DailyPlanUpdateRequest, current_user_id: ObjectId
+        self, plan_id: ObjectId, daily_plan_update_request: DailyPlanUpdateRequest, current_user_id: ObjectId
     ) -> DailyPlanResponse:
         daily_plan = await self.engine.find_one(
             DailyPlan, (DailyPlan.id == plan_id) & (DailyPlan.user_id == current_user_id)
@@ -155,21 +156,24 @@ class DailyPlanService:
         if not daily_plan:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily plan not found")
 
-        update_data = plan_data.model_dump(exclude_unset=True)
+        update_data = daily_plan_update_request.model_dump(exclude_unset=True)
 
         if "allocations" in update_data:
-            if plan_data.allocations is not None:  # It's a list (possibly empty)
-                await self._validate_allocation_categories(plan_data.allocations, current_user_id)  # Added
-                await self._validate_task_categories_for_allocations(plan_data.allocations, current_user_id)
-                # Use mapper to convert allocation schemas to models
-                daily_plan.allocations = self.daily_plan_mapper.allocations_request_to_models(plan_data.allocations)
-            else:  # plan_data.allocations is explicitly None, meaning clear allocations
+            if daily_plan_update_request.allocations is not None:
+                await self._validate_allocation_categories(daily_plan_update_request.allocations, current_user_id)
+                await self._validate_task_categories_for_allocations(
+                    daily_plan_update_request.allocations, current_user_id
+                )
+                daily_plan.allocations = self.daily_plan_mapper.allocations_request_to_models(
+                    daily_plan_update_request.allocations
+                )
+            else:
                 daily_plan.allocations = []
 
         if "reflection_content" in update_data:
-            daily_plan.reflection_content = plan_data.reflection_content
+            daily_plan.reflection_content = daily_plan_update_request.reflection_content
         if "notes_content" in update_data:
-            daily_plan.notes_content = plan_data.notes_content
+            daily_plan.notes_content = daily_plan_update_request.notes_content
 
         await self.engine.save(daily_plan)
         return await self._map_plan_to_response(daily_plan, current_user_id)
@@ -196,4 +200,30 @@ class DailyPlanService:
 
     async def get_daily_plan_by_date(self, plan_date: datetime, current_user_id: ObjectId) -> DailyPlanResponse:
         plan = await self.get_daily_plan_by_date_internal(plan_date, current_user_id)
+        return await self._map_plan_to_response(plan, current_user_id)
+
+    async def review_yesterday_daily_plan(
+        self, review_data: DailyPlanReviewRequest, current_user_id: ObjectId
+    ) -> DailyPlanResponse:
+        yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
+        # Convert date object to datetime for internal method
+        yesterday_datetime = datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0)
+
+        daily_plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
+
+        daily_plan.reviewed = True
+        if review_data.reflection_content is not None:
+            daily_plan.reflection_content = review_data.reflection_content
+        if review_data.notes_content is not None:
+            daily_plan.notes_content = review_data.notes_content
+
+        await self.engine.save(daily_plan)
+        return await self._map_plan_to_response(daily_plan, current_user_id)
+
+    async def get_yesterday_daily_plan(self, current_user_id: ObjectId) -> DailyPlanResponse:
+        yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
+        # Convert date object to datetime for internal method
+        yesterday_datetime = datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0)
+
+        plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id)

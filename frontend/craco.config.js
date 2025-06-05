@@ -47,4 +47,12 @@ module.exports = {
       return webpackConfig;
     },
   },
+  jest: {
+    configure: (config) => {
+      config.transformIgnorePatterns = [
+        'node_modules/(?!date-fns|date-fns-tz)/',
+      ];
+      return config;
+    },
+  },
 };

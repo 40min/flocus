@@ -109,14 +109,12 @@ const MyDayPage: React.FC = () => {
                 <div className="max-w-6xl mx-auto">
                   <header className="mb-6">
                     <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                      Review: Yesterday's Unfinished Tasks
+                      Review: Yesterday's Tasks
                     </h2>
-                    <p className="text-slate-500 text-sm">
-                      Placeholder for unfinished tasks from yesterday.
-                    </p>
+
                   </header>
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <p className="text-slate-700">Unfinished tasks list will go here.</p>
+                    <p className="text-slate-700">Tasks list will go here.</p>
                   </div>
                 </div>
               </section>

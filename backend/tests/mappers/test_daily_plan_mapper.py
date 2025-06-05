@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from odmantic import ObjectId
@@ -24,6 +24,11 @@ def sample_user_id() -> ObjectId:
 @pytest.fixture
 def sample_category_id() -> ObjectId:
     return ObjectId()
+
+
+@pytest.fixture
+def sample_plan_date() -> datetime:
+    return datetime(2024, 7, 20, 0, 0, 0).replace(tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -67,12 +72,13 @@ def sample_task_response(sample_category_response: CategoryResponse, sample_user
 
 
 @pytest.fixture
-def sample_daily_plan_model(sample_user_id: ObjectId, sample_category_id: ObjectId) -> DailyPlan:
-    plan_datetime = datetime(2024, 7, 20, 0, 0, 0)
+def sample_daily_plan_model(
+    sample_user_id: ObjectId, sample_category_id: ObjectId, sample_plan_date: datetime
+) -> DailyPlan:
     return DailyPlan(
         id=ObjectId(),
         user_id=sample_user_id,
-        plan_date=plan_datetime,
+        plan_date=sample_plan_date,
         allocations=[
             DailyPlanAllocation(
                 name="Embedded TW 1",
@@ -93,9 +99,11 @@ def sample_daily_plan_model(sample_user_id: ObjectId, sample_category_id: Object
 
 
 @pytest.fixture
-def sample_daily_plan_create_request(sample_category_id: ObjectId) -> DailyPlanCreateRequest:
+def sample_daily_plan_create_request(
+    sample_category_id: ObjectId, sample_plan_date: datetime
+) -> DailyPlanCreateRequest:
     return DailyPlanCreateRequest(
-        plan_date=datetime(2024, 7, 21, 0, 0, 0),
+        plan_date=sample_plan_date,
         allocations=[
             DailyPlanAllocationCreate(
                 name="Morning Session",
@@ -193,8 +201,8 @@ def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRe
         assert model_alloc.task_ids == alloc_schema.task_ids
 
 
-def test_to_model_for_create_empty_allocations(sample_user_id: ObjectId):
-    create_request_empty_allocs = DailyPlanCreateRequest(plan_date=datetime(2024, 8, 1, 0, 0, 0), allocations=[])
+def test_to_model_for_create_empty_allocations(sample_user_id: ObjectId, sample_plan_date: datetime):
+    create_request_empty_allocs = DailyPlanCreateRequest(plan_date=sample_plan_date, allocations=[])
     result = DailyPlanMapper.to_model_for_create(schema=create_request_empty_allocs, user_id=sample_user_id)
 
     assert isinstance(result, DailyPlan)

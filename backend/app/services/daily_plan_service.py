@@ -10,7 +10,6 @@ from app.api.schemas.daily_plan import (
     DailyPlanAllocationResponse,
     DailyPlanCreateRequest,
     DailyPlanResponse,
-    DailyPlanReviewRequest,
     DailyPlanUpdateRequest,
 )
 from app.api.schemas.task import TaskResponse
@@ -120,6 +119,10 @@ class DailyPlanService:
             )
             response_allocations.append(allocation_resp)
 
+        # Ensure plan_date is timezone-aware (UTC) before mapping to response
+        if plan.plan_date.tzinfo is None or plan.plan_date.tzinfo.utcoffset(plan.plan_date) is None:
+            plan.plan_date = plan.plan_date.replace(tzinfo=timezone.utc)
+
         return self.daily_plan_mapper.to_response(
             daily_plan_model=plan, populated_allocations_responses=response_allocations
         )
@@ -127,10 +130,14 @@ class DailyPlanService:
     async def create_daily_plan(
         self, plan_data: DailyPlanCreateRequest, current_user_id: ObjectId
     ) -> DailyPlanResponse:
-        # Check for existing plan for the same date and user
-        # Check for existing plan for the same date and user
+        plan_date = plan_data.plan_date
+        normalized_date_for_storage = datetime(
+            plan_date.year, plan_date.month, plan_date.day, 0, 0, 0, tzinfo=timezone.utc
+        )
+
+        # Check for existing plan for the same date (normalized) and user
         existing_plan = await self.engine.find_one(
-            DailyPlan, (DailyPlan.plan_date == plan_data.plan_date) & (DailyPlan.user_id == current_user_id)
+            DailyPlan, (DailyPlan.plan_date == normalized_date_for_storage) & (DailyPlan.user_id == current_user_id)
         )
         if existing_plan:
             raise HTTPException(
@@ -143,6 +150,7 @@ class DailyPlanService:
             await self._validate_task_categories_for_allocations(plan_data.allocations, current_user_id)
 
         daily_plan_model = self.daily_plan_mapper.to_model_for_create(plan_data, current_user_id)
+        daily_plan_model.plan_date = normalized_date_for_storage  # Ensure stored date is normalized UTC midnight
 
         await self.engine.save(daily_plan_model)
         return await self._map_plan_to_response(daily_plan_model, current_user_id)
@@ -174,14 +182,20 @@ class DailyPlanService:
             daily_plan.reflection_content = daily_plan_update_request.reflection_content
         if "notes_content" in update_data:
             daily_plan.notes_content = daily_plan_update_request.notes_content
+        if "reviewed" in update_data:
+            # Only update if the value is explicitly True or False, not None
+            if daily_plan_update_request.reviewed is not None:
+                daily_plan.reviewed = daily_plan_update_request.reviewed
 
         await self.engine.save(daily_plan)
+
         return await self._map_plan_to_response(daily_plan, current_user_id)
 
     async def get_daily_plan_by_date_internal(self, plan_date: datetime, current_user_id: ObjectId) -> DailyPlan:
-        # To compare only the date part, query for plans within the 24-hour range of the given date
-        start_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 0, 0, 0)
-        end_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 23, 59, 59, 999999)
+
+        start_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 0, 0, 0, tzinfo=timezone.utc)
+        end_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
+
         plan = await self.engine.find_one(
             DailyPlan,
             (DailyPlan.plan_date >= start_of_day)
@@ -202,28 +216,12 @@ class DailyPlanService:
         plan = await self.get_daily_plan_by_date_internal(plan_date, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id)
 
-    async def review_yesterday_daily_plan(
-        self, review_data: DailyPlanReviewRequest, current_user_id: ObjectId
-    ) -> DailyPlanResponse:
-        yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
-        # Convert date object to datetime for internal method
-        yesterday_datetime = datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0)
-
-        daily_plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
-
-        daily_plan.reviewed = True
-        if review_data.reflection_content is not None:
-            daily_plan.reflection_content = review_data.reflection_content
-        if review_data.notes_content is not None:
-            daily_plan.notes_content = review_data.notes_content
-
-        await self.engine.save(daily_plan)
-        return await self._map_plan_to_response(daily_plan, current_user_id)
-
     async def get_yesterday_daily_plan(self, current_user_id: ObjectId) -> DailyPlanResponse:
         yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
         # Convert date object to datetime for internal method
-        yesterday_datetime = datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0)
+        yesterday_datetime = datetime(
+            yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0, tzinfo=timezone.utc
+        )
 
         plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id)

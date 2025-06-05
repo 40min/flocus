@@ -1,6 +1,6 @@
 import random
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone  # Added timezone
 from typing import List
 
 import pytest
@@ -16,6 +16,7 @@ from app.api.schemas.daily_plan import (
 from app.api.schemas.task import TaskPriority, TaskStatus
 from app.core.config import settings
 from app.db.models.category import Category as CategoryModel
+from app.db.models.daily_plan import DailyPlan as DailyPlanModel  # Added import
 
 # from app.db.models.day_template import DayTemplate as DayTemplateModel
 from app.db.models.task import Task as TaskModel
@@ -74,7 +75,9 @@ async def user_one_task_no_category_model(test_db, test_user_one: UserModel) -> 
 async def unique_date() -> datetime:
     # Return a datetime object, for example, at the beginning of a unique future day
     unique_future_date = date.today() + timedelta(days=random.randint(100, 10000))
-    return datetime.combine(unique_future_date, datetime.min.time())
+    return datetime.combine(unique_future_date, datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )  # Ensure it's UTC aware
 
 
 def create_allocation_payload(
@@ -113,7 +116,7 @@ async def test_create_daily_plan_success_with_allocations(
     )
     assert response.status_code == 201
     created_plan = DailyPlanResponse(**response.json())
-    assert created_plan.plan_date == plan_date
+    assert created_plan.plan_date == plan_date.replace(tzinfo=timezone.utc)  # Make expected date UTC aware
     assert created_plan.user_id == test_user_one.id
     assert len(created_plan.allocations) == 1
     allocation_resp = created_plan.allocations[0]
@@ -136,7 +139,7 @@ async def test_create_daily_plan_success_empty_allocations(
     )
     assert response.status_code == 201
     created_plan = DailyPlanResponse(**response.json())
-    assert created_plan.plan_date == plan_date
+    assert created_plan.plan_date == plan_date.replace(tzinfo=timezone.utc)  # Make expected date UTC aware
     assert created_plan.user_id == test_user_one.id
     assert len(created_plan.allocations) == 0
 
@@ -352,8 +355,12 @@ async def test_get_daily_plan_by_id_success(
     user_one_task_model: TaskModel,
     unique_date: datetime,
 ):
+
+    some_date = datetime.combine(date.today(), datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )  # Ensure it's UTC aware
     create_payload = DailyPlanCreateRequest(
-        plan_date=unique_date,
+        plan_date=some_date,  # Use a fixed date for consistency
         allocations=[
             create_allocation_payload(
                 name="Focus Time",
@@ -435,7 +442,7 @@ async def test_update_daily_plan_success(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
-    # created_plan_id = create_resp.json()["id"] # Not needed for PATCH by date
+    created_plan_id = create_resp.json()["id"]
 
     updated_allocations = [
         create_allocation_payload(
@@ -448,13 +455,13 @@ async def test_update_daily_plan_success(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",  # Use plan_date for PATCH URL
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
     assert response.status_code == 200
     updated_plan = DailyPlanResponse(**response.json())
-    assert updated_plan.plan_date == plan_date
+    assert updated_plan.plan_date == plan_date.replace(tzinfo=timezone.utc)  # Make expected date UTC aware
     assert len(updated_plan.allocations) == 1
     assert updated_plan.allocations[0].time_window.name == "Updated Work"
     assert updated_plan.allocations[0].time_window.start_time == 660
@@ -462,46 +469,118 @@ async def test_update_daily_plan_success(
     assert updated_plan.allocations[0].tasks[0].id == user_one_task_alt.id
 
 
-async def test_update_daily_plan_to_empty_allocations_success(
+async def test_update_daily_plan_mark_reviewed_and_add_reflection(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    unique_date: datetime,
-    user_one_category: CategoryModel,
-    user_one_task_model: TaskModel,
+    test_user_one: UserModel,
+    test_db,
 ):
-    plan_date = unique_date
-    # The commented out line below caused NameError, fixtures are added for completeness
-    # create_payload = DailyPlanCreateRequest(plan_date=plan_date, allocations=[
-    #      create_allocation_payload("Initial", user_one_category.id, 100, 200, user_one_task_model.id)
-    # ])
+    # Create a daily plan for yesterday
+    yesterday_date = datetime.now().date() - timedelta(days=1)
+    yesterday_datetime = datetime.combine(yesterday_date, datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )  # Ensure it's UTC aware
 
-    # Create a plan first (can be empty or with some allocs)
+    create_payload = DailyPlanCreateRequest(plan_date=yesterday_datetime, allocations=[])
     create_resp = await async_client.post(
-        DAILY_PLANS_ENDPOINT,
-        headers=auth_headers_user_one,
-        json=DailyPlanCreateRequest(plan_date=plan_date, allocations=[]).model_dump(mode="json"),
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
-    # created_plan_id = create_resp.json()["id"] # Not needed for PATCH by date
+    created_plan = DailyPlanResponse(**create_resp.json())
+    assert created_plan.reviewed is False
+    assert created_plan.reflection_content is None
+    assert created_plan.notes_content is None
 
-    update_payload = DailyPlanUpdateRequest(allocations=[])
+    # Update the plan to mark as reviewed and add reflection/notes
+    update_payload = DailyPlanUpdateRequest(
+        reviewed=True,
+        reflection_content="Yesterday was productive.",
+        notes_content="Remember to follow up on task X.",
+    )
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",  # Use plan_date
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan.id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
     assert response.status_code == 200
     updated_plan = DailyPlanResponse(**response.json())
-    assert len(updated_plan.allocations) == 0
+    assert updated_plan.plan_date.date() == yesterday_date  # Comparing only date part is fine here
+    assert updated_plan.reviewed is True
+    assert updated_plan.reflection_content == "Yesterday was productive."
+    assert updated_plan.notes_content == "Remember to follow up on task X."
 
 
-async def test_update_daily_plan_date_not_found_fails(
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: datetime
+async def test_get_yesterday_daily_plan_success(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    test_db,
 ):
-    non_existent_date = unique_date + timedelta(days=200)
+    # Ensure no plan exists for yesterday for this user (UTC midnight)
+    yesterday_date_for_del = datetime.now(timezone.utc).date() - timedelta(days=1)
+    utc_midnight_yesterday_for_del = datetime(
+        yesterday_date_for_del.year,
+        yesterday_date_for_del.month,
+        yesterday_date_for_del.day,
+        0,
+        0,
+        0,
+        tzinfo=timezone.utc,
+    )
+    await test_db.get_collection(DailyPlanModel).delete_many(
+        {"user_id": test_user_one.id, "plan_date": utc_midnight_yesterday_for_del}
+    )
+
+    # Create a daily plan for yesterday
+    yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
+    yesterday_datetime = datetime.combine(yesterday_date, datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )  # Ensure it's UTC aware
+
+    create_payload = DailyPlanCreateRequest(plan_date=yesterday_datetime, allocations=[])
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+
+    # Request yesterday's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
+    assert response.status_code == 200
+    fetched_plan = DailyPlanResponse(**response.json())
+    assert fetched_plan.plan_date.date() == yesterday_date  # Comparing only date part is fine here
+    assert fetched_plan.user_id == test_user_one.id
+
+
+async def test_get_yesterday_daily_plan_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    test_db,
+    unique_date: datetime,  # Added unique_date fixture parameter
+):
+    # Ensure no plan exists for yesterday for this user (UTC midnight)
+    yesterday_date_for_del = datetime.now(timezone.utc).date() - timedelta(days=1)
+    utc_midnight_yesterday_for_del = datetime(
+        yesterday_date_for_del.year,
+        yesterday_date_for_del.month,
+        yesterday_date_for_del.day,
+        0,
+        0,
+        0,
+        tzinfo=timezone.utc,
+    )
+    await test_db.get_collection(DailyPlanModel).delete_many(
+        {"user_id": test_user_one.id, "plan_date": utc_midnight_yesterday_for_del}
+    )
+
+    # Request yesterday's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Daily plan not found for this date."
+    non_existent_id = ObjectId()
     update_payload = DailyPlanUpdateRequest(allocations=[])
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{non_existent_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{non_existent_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -517,11 +596,11 @@ async def test_update_daily_plan_with_extra_fields_fails(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
-    # created_plan_id = create_resp.json()["id"] # Not needed
+    created_plan_id = create_resp.json()["id"]
 
     invalid_update_payload = {"allocations": [], "extra_field": "should_fail"}
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=invalid_update_payload,
     )
@@ -531,9 +610,9 @@ async def test_update_daily_plan_with_extra_fields_fails(
 
 async def test_update_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
     update_payload = DailyPlanUpdateRequest(allocations=[])
-    some_date_string = unique_date.isoformat()
+    some_date_id = ObjectId()  # Use a random ObjectId for testing
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{some_date_string}", json=update_payload.model_dump(mode="json")
+        f"{DAILY_PLANS_ENDPOINT}/{some_date_id}", json=update_payload.model_dump(mode="json")
     )
     assert response.status_code == 401
 
@@ -557,7 +636,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
-    # created_plan_id = create_resp.json()["id"] # Not needed
+    created_plan_id = create_resp.json()["id"]
 
     updated_allocations = [
         create_allocation_payload(
@@ -570,7 +649,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -597,7 +676,7 @@ async def test_update_daily_plan_unowned_task_fails(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
-    # created_plan_id = create_resp.json()["id"] # Not needed
+    created_plan_id = create_resp.json()["id"]
 
     updated_allocations = [
         create_allocation_payload(
@@ -610,7 +689,7 @@ async def test_update_daily_plan_unowned_task_fails(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )
@@ -639,7 +718,7 @@ async def test_update_daily_plan_not_owner_fails(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_response.status_code == 201
-    # plan_id_user_one = create_response.json()["id"] # Not needed for PATCH by date
+    created_response_id = create_response.json()["id"]
 
     update_payload_by_two = DailyPlanUpdateRequest(
         allocations=[
@@ -649,12 +728,12 @@ async def test_update_daily_plan_not_owner_fails(
         ]
     )
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
         headers=auth_headers_user_two,
         json=update_payload_by_two.model_dump(mode="json"),
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Daily plan not found for this date."  # Adjusted detail
+    assert response.json()["detail"] == "Daily plan not found"
 
 
 async def test_create_daily_plan_fail_task_category_mismatch(
@@ -718,7 +797,7 @@ async def test_create_daily_plan_success_task_no_category(
     )
     assert response.status_code == 201
     created_plan = DailyPlanResponse(**response.json())
-    assert created_plan.plan_date == plan_date
+    assert created_plan.plan_date == plan_date.replace(tzinfo=timezone.utc)  # Make expected date UTC aware
     assert created_plan.user_id == test_user_one.id
     assert len(created_plan.allocations) == 1
     allocation_resp = created_plan.allocations[0]
@@ -765,6 +844,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
+    created_response_id = create_resp.json()["id"]
 
     # Attempt to update: allocation keeps user_one_category, but task is mismatch_task_instance (user_one_category_alt)
     updated_allocations = [
@@ -778,7 +858,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
     ]
     update_payload = DailyPlanUpdateRequest(allocations=updated_allocations)
     response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{plan_date.isoformat()}",
+        f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
     )

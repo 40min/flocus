@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from odmantic import ObjectId
@@ -49,6 +49,13 @@ class DailyPlanBase(BaseModel):
     reflection_content: Optional[str] = Field(None, description="User's reflection for the day.")
     notes_content: Optional[str] = Field(None, description="User's notes for the day.")
 
+    @field_validator("plan_date")
+    @classmethod
+    def validate_and_convert_plan_date(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+            raise ValueError("plan_date must be timezone-aware.")
+        return value.astimezone(timezone.utc)
+
 
 class DailyPlanCreateRequest(DailyPlanBase):
     allocations: List[DailyPlanAllocationCreate] = Field(
@@ -63,12 +70,8 @@ class DailyPlanUpdateRequest(BaseModel):
     )
     reflection_content: Optional[str] = Field(None, description="Updated user's reflection for the day.")
     notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
+    reviewed: Optional[bool] = Field(None, description="Whether the daily plan has been reviewed.")
     model_config = ConfigDict(extra="forbid")
-
-
-class DailyPlanReviewRequest(BaseModel):
-    reflection_content: Optional[str] = Field(None, description="User's reflection for the day.")
-    notes_content: Optional[str] = Field(None, description="User's notes for the day.")
 
 
 class DailyPlanResponse(DailyPlanBase):

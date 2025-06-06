@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../services/userService';
 import { User } from '../types/user';
@@ -20,6 +20,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const fetchedUserRef = useRef(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -31,6 +32,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Fetch user data using the token
   const fetchUserData = useCallback(async (authToken: string) => {
+    if (fetchedUserRef.current) {
+      return;
+    }
+    fetchedUserRef.current = true;
     try {
       const userData = await getCurrentUser();
       setUser(userData);
@@ -40,7 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // If we can't fetch user data, clear the authentication
       logout();
     }
-  }, [logout, setUser, setIsAuthenticated]); // Added getCurrentUser if it's not stable, but it's an import.
+  }, [logout, setUser, setIsAuthenticated]);
 
   useEffect(() => {
     const initializeAuth = async () => {

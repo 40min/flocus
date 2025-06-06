@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -20,7 +20,14 @@ const MyDayPage: React.FC = () => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [dayTemplates, setDayTemplates] = useState<DayTemplateResponse[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
+  const fetchedPlansRef = useRef(false);
+  const fetchedTemplatesRef = useRef(false);
+
   const fetchPlans = useCallback(async () => {
+    if (fetchedPlansRef.current) {
+      return;
+    }
+    fetchedPlansRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
@@ -49,6 +56,10 @@ const MyDayPage: React.FC = () => {
 
   useEffect(() => {
     const fetchTemplates = async () => {
+      if (fetchedTemplatesRef.current) {
+        return;
+      }
+      fetchedTemplatesRef.current = true;
       try {
         const templates = await getAllDayTemplates();
         setDayTemplates(templates);

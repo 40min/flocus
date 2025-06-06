@@ -7,10 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse
 
-# DailyPlanAllocationBase is removed as its fields are now directly in DailyPlanAllocationCreate
 
-
-class DailyPlanAllocationCreate(BaseModel):  # Inherits directly from BaseModel
+class TimeWindowCreate(BaseModel):  # Inherits directly from BaseModel
     # Fields from TimeWindowInputSchema
     name: str = Field(..., min_length=1, max_length=100, description="Name of the time window.")
     category_id: ObjectId = Field(..., description="Category ID for the time window.")
@@ -31,13 +29,13 @@ class DailyPlanAllocationCreate(BaseModel):  # Inherits directly from BaseModel
         return value
 
     @model_validator(mode="after")
-    def check_end_time_greater_than_start_time(cls, values: "DailyPlanAllocationCreate") -> "DailyPlanAllocationCreate":
+    def check_end_time_greater_than_start_time(cls, values: "TimeWindowCreate") -> "TimeWindowCreate":
         if values.start_time is not None and values.end_time is not None and values.end_time <= values.start_time:
             raise ValueError("end_time must be greater than start_time")
         return values
 
 
-class DailyPlanAllocationResponse(BaseModel):
+class TimeWindowResponse(BaseModel):
     time_window: TimeWindowResponse
     tasks: List[TaskResponse] = Field(default_factory=list)
 
@@ -61,15 +59,15 @@ class DailyPlanBase(BaseModel):
 
 
 class DailyPlanCreateRequest(DailyPlanBase):
-    allocations: List[DailyPlanAllocationCreate] = Field(
+    time_windows: List[TimeWindowCreate] = Field(
         default_factory=list, description="List of time windows and their allocated tasks."
     )
     # reflection_content and notes_content are optional on creation, inherited from DailyPlanBase
 
 
 class DailyPlanUpdateRequest(BaseModel):
-    allocations: Optional[List[DailyPlanAllocationCreate]] = Field(
-        None, description="Updated list of time windows and their allocated tasks. Replaces existing allocations."
+    time_windows: Optional[List[TimeWindowCreate]] = Field(
+        None, description="Updated list of time windows and their allocated tasks. Replaces existing time windows."
     )
     reflection_content: Optional[str] = Field(None, description="Updated user's reflection for the day.")
     notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
@@ -80,7 +78,7 @@ class DailyPlanUpdateRequest(BaseModel):
 class DailyPlanResponse(DailyPlanBase):
     id: ObjectId
     user_id: ObjectId
-    allocations: List[DailyPlanAllocationResponse] = []
+    time_windows: List[TimeWindowResponse] = []
     reviewed: bool
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

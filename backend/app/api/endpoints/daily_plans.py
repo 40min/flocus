@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)  # Initialize logger
     response_model=DailyPlanResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new Daily Plan",
-    description="Creates a new daily plan for the current user with optional allocations.",
+    description="Creates a new daily plan for the current user with optional time windows.",
 )
 async def create_daily_plan(
     daily_plan_request: DailyPlanCreateRequest,
@@ -91,7 +91,7 @@ async def get_daily_plan_by_date(
     response_model=DailyPlanResponse,
     summary="Update a Daily Plan by date",
     description="Updates an existing daily plan for the user, identified by date. "
-    "If allocations are updated, validates that tasks assigned to a time window "
+    "If time windows are updated, validates that tasks assigned to a time window "
     "share the same category as the time window. "
     "Raises a 400 error if a category mismatch is detected.",
 )

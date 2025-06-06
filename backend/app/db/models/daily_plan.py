@@ -4,7 +4,7 @@ from typing import List, Optional
 from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 
-class DailyPlanAllocation(EmbeddedModel):
+class TimeWindow(EmbeddedModel):
     name: str
     category_id: ObjectId
     start_time: int
@@ -15,7 +15,7 @@ class DailyPlanAllocation(EmbeddedModel):
 class DailyPlan(Model):
     plan_date: datetime
     user_id: ObjectId
-    allocations: List[DailyPlanAllocation] = Field(default_factory=list)
+    time_windows: List[TimeWindow] = Field(default_factory=list)
     reflection_content: Optional[str] = None
     notes_content: Optional[str] = None
     reviewed: bool = Field(default=False)

@@ -82,7 +82,7 @@ The following data models represent the key entities in the application and are 
     *   `_id` (ObjectId): Unique identifier for the daily plan.
     *   `user_id` (ObjectId): Foreign key referencing the User collection.
     *   `plan_date` (Date): The specific date for this plan.
-    *   `allocations` (List[DailyPlanAllocation]): List of time windows and their allocated tasks for the day.
+    *   `time_windows` (List[DailyPlanAllocation]): List of time windows and their allocated tasks for the day.
         *   `time_window_id` (ObjectId): Reference to a TimeWindow (from a DayTemplate or ad-hoc).
         *   `task_id` (ObjectId): Reference to a Task allocated to this time window.
         *   (Note: The exact structure of `DailyPlanAllocation` might involve embedding TimeWindow details if not referencing a template's TW directly).

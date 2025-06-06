@@ -4,15 +4,10 @@ import pytest
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.daily_plan import (
-    DailyPlanAllocationCreate,
-    DailyPlanAllocationResponse,
-    DailyPlanCreateRequest,
-    DailyPlanResponse,
-)
+from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, TimeWindowCreate, TimeWindowResponse
 from app.api.schemas.task import TaskPriority, TaskResponse, TaskStatus
-from app.api.schemas.time_window import TimeWindowResponse
-from app.db.models.daily_plan import DailyPlan, DailyPlanAllocation
+from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
+from app.db.models.daily_plan import DailyPlan, TimeWindow
 from app.mappers.daily_plan_mapper import DailyPlanMapper
 
 
@@ -36,17 +31,17 @@ def sample_category_response(sample_category_id: ObjectId, sample_user_id: Objec
     return CategoryResponse(
         id=sample_category_id,
         name="Test Category",
-        user=sample_user_id,  # Corrected: use alias 'user'
+        user=sample_user_id,
         color="#FF0000",
-        description="A test category for mappers.",  # Optional, but good for completeness
-        is_deleted=False,  # This field is in CategoryResponse
+        description="A test category for mappers.",
+        is_deleted=False,
     )
 
 
 @pytest.fixture
-def sample_time_window_response_for_allocation(sample_category_response: CategoryResponse) -> TimeWindowResponse:
-    return TimeWindowResponse(
-        id=ObjectId(),  # Added dummy ID for the response schema
+def sample_time_window_response_for_allocation(sample_category_response: CategoryResponse) -> TimeWindowModelResponse:
+    return TimeWindowModelResponse(
+        id=ObjectId(),
         name="Morning Focus",
         start_time=540,  # 09:00
         end_time=720,  # 12:00
@@ -79,15 +74,15 @@ def sample_daily_plan_model(
         id=ObjectId(),
         user_id=sample_user_id,
         plan_date=sample_plan_date,
-        allocations=[
-            DailyPlanAllocation(
+        time_windows=[
+            TimeWindow(
                 name="Embedded TW 1",
                 category_id=sample_category_id,
                 start_time=540,
                 end_time=600,
                 task_ids=[ObjectId()],
             ),
-            DailyPlanAllocation(
+            TimeWindow(
                 name="Embedded TW 2",
                 category_id=sample_category_id,
                 start_time=660,
@@ -104,15 +99,15 @@ def sample_daily_plan_create_request(
 ) -> DailyPlanCreateRequest:
     return DailyPlanCreateRequest(
         plan_date=sample_plan_date,
-        allocations=[
-            DailyPlanAllocationCreate(
+        time_windows=[
+            TimeWindowCreate(
                 name="Morning Session",
                 category_id=sample_category_id,
                 start_time=540,
                 end_time=720,
                 task_ids=[ObjectId()],
             ),
-            DailyPlanAllocationCreate(
+            TimeWindowCreate(
                 name="Afternoon Block",
                 category_id=sample_category_id,
                 start_time=780,
@@ -123,14 +118,14 @@ def sample_daily_plan_create_request(
     )
 
 
-def test_allocations_request_to_models(sample_daily_plan_create_request: DailyPlanCreateRequest):
-    allocation_dtos = sample_daily_plan_create_request.allocations
-    result_models = DailyPlanMapper.allocations_request_to_models(allocation_dtos)
+def test_time_windows_request_to_models(sample_daily_plan_create_request: DailyPlanCreateRequest):
+    time_window_dtos = sample_daily_plan_create_request.time_windows
+    result_models = DailyPlanMapper.time_windows_request_to_models(time_window_dtos)
 
-    assert len(result_models) == len(allocation_dtos)
-    for i, dto in enumerate(allocation_dtos):
+    assert len(result_models) == len(time_window_dtos)
+    for i, dto in enumerate(time_window_dtos):
         model = result_models[i]
-        assert isinstance(model, DailyPlanAllocation)
+        assert isinstance(model, TimeWindow)
         assert model.name == dto.name
         assert model.category_id == dto.category_id
         assert model.start_time == dto.start_time
@@ -138,48 +133,46 @@ def test_allocations_request_to_models(sample_daily_plan_create_request: DailyPl
         assert model.task_ids == dto.task_ids
 
 
-def test_to_allocation_response(
-    sample_time_window_response_for_allocation: TimeWindowResponse, sample_task_response: TaskResponse
+def test_to_time_window_response(
+    sample_time_window_response_for_allocation: TimeWindowModelResponse, sample_task_response: TaskResponse
 ):
-    result = DailyPlanMapper.to_allocation_response(
+    result = DailyPlanMapper.to_time_window_response(
         time_window_response=sample_time_window_response_for_allocation, task_responses=[sample_task_response]
     )
-    assert isinstance(result, DailyPlanAllocationResponse)
+    assert isinstance(result, TimeWindowResponse)
     assert result.time_window == sample_time_window_response_for_allocation
     assert result.tasks == [sample_task_response]
 
 
 def test_to_response(
     sample_daily_plan_model: DailyPlan,
-    sample_time_window_response_for_allocation: TimeWindowResponse,
+    sample_time_window_response_for_allocation: TimeWindowModelResponse,
     sample_task_response: TaskResponse,
 ):
-    populated_allocations = [
-        DailyPlanAllocationResponse(
-            time_window=sample_time_window_response_for_allocation, tasks=[sample_task_response]
-        )
+    populated_time_windows = [
+        TimeWindowResponse(time_window=sample_time_window_response_for_allocation, tasks=[sample_task_response])
     ]
     result = DailyPlanMapper.to_response(
-        daily_plan_model=sample_daily_plan_model, populated_allocations_responses=populated_allocations
+        daily_plan_model=sample_daily_plan_model, populated_time_window_responses=populated_time_windows
     )
 
     assert isinstance(result, DailyPlanResponse)
     assert result.id == sample_daily_plan_model.id
     assert result.user_id == sample_daily_plan_model.user_id
     assert result.plan_date == sample_daily_plan_model.plan_date
-    assert result.allocations == populated_allocations
-    assert len(result.allocations) == 1
+    assert result.time_windows == populated_time_windows
+    assert len(result.time_windows) == 1
 
 
-def test_to_response_empty_allocations(sample_daily_plan_model: DailyPlan):
-    sample_daily_plan_model.allocations = []
-    result = DailyPlanMapper.to_response(daily_plan_model=sample_daily_plan_model, populated_allocations_responses=[])
+def test_to_response_empty_time_windows(sample_daily_plan_model: DailyPlan):
+    sample_daily_plan_model.time_windows = []
+    result = DailyPlanMapper.to_response(daily_plan_model=sample_daily_plan_model, populated_time_window_responses=[])
 
     assert isinstance(result, DailyPlanResponse)
     assert result.id == sample_daily_plan_model.id
     assert result.user_id == sample_daily_plan_model.user_id
     assert result.plan_date == sample_daily_plan_model.plan_date
-    assert result.allocations == []
+    assert result.time_windows == []
 
 
 def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRequest, sample_user_id: ObjectId):
@@ -189,24 +182,24 @@ def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRe
     assert result.user_id == sample_user_id
     expected_date = sample_daily_plan_create_request.plan_date
     assert result.plan_date == expected_date
-    assert len(result.allocations) == len(sample_daily_plan_create_request.allocations)
+    assert len(result.time_windows) == len(sample_daily_plan_create_request.time_windows)
 
-    for i, alloc_schema in enumerate(sample_daily_plan_create_request.allocations):
-        model_alloc = result.allocations[i]
-        assert isinstance(model_alloc, DailyPlanAllocation)
-        assert model_alloc.name == alloc_schema.name
-        assert model_alloc.category_id == alloc_schema.category_id
-        assert model_alloc.start_time == alloc_schema.start_time
-        assert model_alloc.end_time == alloc_schema.end_time
-        assert model_alloc.task_ids == alloc_schema.task_ids
+    for i, tw_schema in enumerate(sample_daily_plan_create_request.time_windows):
+        model_tw = result.time_windows[i]
+        assert isinstance(model_tw, TimeWindow)
+        assert model_tw.name == tw_schema.name
+        assert model_tw.category_id == tw_schema.category_id
+        assert model_tw.start_time == tw_schema.start_time
+        assert model_tw.end_time == tw_schema.end_time
+        assert model_tw.task_ids == tw_schema.task_ids
 
 
-def test_to_model_for_create_empty_allocations(sample_user_id: ObjectId, sample_plan_date: datetime):
-    create_request_empty_allocs = DailyPlanCreateRequest(plan_date=sample_plan_date, allocations=[])
-    result = DailyPlanMapper.to_model_for_create(schema=create_request_empty_allocs, user_id=sample_user_id)
+def test_to_model_for_create_empty_time_windows(sample_user_id: ObjectId, sample_plan_date: datetime):
+    create_request_empty_tws = DailyPlanCreateRequest(plan_date=sample_plan_date, time_windows=[])
+    result = DailyPlanMapper.to_model_for_create(schema=create_request_empty_tws, user_id=sample_user_id)
 
     assert isinstance(result, DailyPlan)
     assert result.user_id == sample_user_id
-    expected_date = create_request_empty_allocs.plan_date
+    expected_date = create_request_empty_tws.plan_date
     assert result.plan_date == expected_date
-    assert result.allocations == []
+    assert result.time_windows == []

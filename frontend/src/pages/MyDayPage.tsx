@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan } from '../services/dailyPlanService';
-import { DailyPlanAllocationResponse, DailyPlanResponse } from '../types/dailyPlan';
+import { TimeWindowResponse, DailyPlanResponse } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
 import { Task } from '../types/task';
@@ -124,8 +124,8 @@ const MyDayPage: React.FC = () => {
             </header>
             <main className="flex flex-row gap-2 md:gap-8">
               <section className="flex-1 space-y-4">
-                {dailyPlan.allocations && dailyPlan.allocations.length > 0 ? (
-                  dailyPlan.allocations
+                {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
+                  dailyPlan.time_windows
                     .slice() // Create a copy before sorting to avoid mutating the original state
                     .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
                     .map(alloc => (
@@ -262,7 +262,7 @@ const MyDayPage: React.FC = () => {
 };
 
 interface TimeWindowCardProps {
-  allocation: DailyPlanAllocationResponse;
+  allocation: TimeWindowResponse;
 }
 
 const TimeWindowCard: React.FC<TimeWindowCardProps> = ({ allocation }) => {

@@ -1,7 +1,7 @@
 import { TaskResponse } from './task';
 import { TimeWindow } from './timeWindow';
 
-export interface DailyPlanAllocationResponse {
+export interface TimeWindowResponse {
   time_window: TimeWindow;
   tasks: TaskResponse[];
 }
@@ -12,6 +12,6 @@ export interface DailyPlanResponse {
   plan_date: string; // ISO datetime string
   reflection_content?: string | null;
   notes_content?: string | null;
-  allocations: DailyPlanAllocationResponse[];
+  time_windows: TimeWindowResponse[];
   reviewed: boolean;
 }

@@ -45,7 +45,10 @@ class DailyPlanAllocationResponse(BaseModel):
 
 
 class DailyPlanBase(BaseModel):
-    plan_date: datetime = Field(..., description="The specific date and time for this daily plan.")
+    plan_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="The specific date and time for this daily plan.",
+    )
     reflection_content: Optional[str] = Field(None, description="User's reflection for the day.")
     notes_content: Optional[str] = Field(None, description="User's notes for the day.")
 

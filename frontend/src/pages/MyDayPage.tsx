@@ -126,10 +126,10 @@ const MyDayPage: React.FC = () => {
               <section className="flex-1 space-y-4">
                 {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
                   dailyPlan.time_windows
-                    .slice() // Create a copy before sorting to avoid mutating the original state
+                    .slice()
                     .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
                     .map(alloc => (
-                      <TimeWindowCard key={alloc.time_window.id} allocation={alloc} />
+                      <TimeWindowBalloon key={alloc.time_window.id} timeWindow={alloc.time_window} tasks={alloc.tasks} />
                     ))
                 ) : (
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">
@@ -261,50 +261,5 @@ const MyDayPage: React.FC = () => {
   );
 };
 
-interface TimeWindowCardProps {
-  allocation: TimeWindowResponse;
-}
-
-const TimeWindowCard: React.FC<TimeWindowCardProps> = ({ allocation }) => {
-  const { time_window, tasks } = allocation;
-  const categoryColor = time_window.category?.color || '#A0AEC0'; // Default to a neutral gray
-  const durationMinutes = time_window.end_time - time_window.start_time;
-
-  // Create a light background color from the category hex color
-  const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
-
-  return (
-    <div
-      className="p-4 md:p-6 rounded-xl shadow-lg border-2"
-      style={{ borderColor: categoryColor, backgroundColor: lightBgColor }}
-    >
-      <header className="mb-4">
-        <h3 className="text-xl md:text-2xl font-bold mb-1" style={{ color: categoryColor }}>{time_window.name}</h3>
-        <div className="flex items-center text-sm md:text-base" style={{ color: categoryColor }}>
-          <span className="font-medium">
-            {formatMinutesToHHMM(time_window.start_time)} - {formatMinutesToHHMM(time_window.end_time)}
-          </span>
-          <span className="ml-3 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: categoryColor + '33' }}>
-            {formatDurationFromMinutes(durationMinutes)}
-          </span>
-        </div>
-      </header>
-      {tasks.length > 0 ? (
-        <ul className="space-y-2">
-          {tasks.map((task: Task) => (
-            <li
-              key={task.id}
-              className="bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 shadow-sm"
-            >
-              {task.title}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm italic" style={{ color: categoryColor }}>No tasks in this time window.</p>
-      )}
-    </div>
-  );
-};
 
 export default MyDayPage;

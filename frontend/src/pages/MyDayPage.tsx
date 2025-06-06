@@ -39,10 +39,8 @@ const MyDayPage: React.FC = () => {
         setYesterdayPlan(yesterdayData);
       }
     } catch (err: any) {
-      if (err.response?.status !== 404) {
-        setError('Failed to fetch plans.');
-        console.error(err);
-      }
+      setError('Failed to fetch plans.');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }

@@ -43,10 +43,23 @@ async def get_yesterday_daily_plan(
 
 
 @router.get(
+    "/today",
+    response_model=DailyPlanResponse,
+    summary="Get today's Daily Plan",
+    description="Retrieves the daily plan for the current day.",
+)
+async def get_today_daily_plan(
+    service: DailyPlanService = Depends(DailyPlanService),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
+):
+    return await service.get_today_daily_plan(current_user_id=current_user_id)
+
+
+@router.get(
     "/id/{plan_id}",
     response_model=DailyPlanResponse,
-    summary="Get a Daily Plan by ID",
-    description="Alternative way to get a specific daily plan if its ID is known.",
+    summary="Get Daily Plan by ID",
+    description="Retrieves a specific daily plan by its ID.",
 )
 async def get_daily_plan_by_id(
     plan_id: ObjectId = Path(..., description="The ID of the daily plan to retrieve"),

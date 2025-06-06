@@ -225,3 +225,11 @@ class DailyPlanService:
 
         plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id)
+
+    async def get_today_daily_plan(self, current_user_id: ObjectId) -> DailyPlanResponse:
+        today_date = datetime.now(timezone.utc).date()
+        # Convert date object to datetime for internal method
+        today_datetime = datetime(today_date.year, today_date.month, today_date.day, 0, 0, 0, tzinfo=timezone.utc)
+
+        plan = await self.get_daily_plan_by_date_internal(today_datetime, current_user_id)
+        return await self._map_plan_to_response(plan, current_user_id)

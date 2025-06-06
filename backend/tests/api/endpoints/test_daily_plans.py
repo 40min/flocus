@@ -551,12 +551,52 @@ async def test_get_yesterday_daily_plan_success(
     assert fetched_plan.user_id == test_user_one.id
 
 
+async def test_get_today_daily_plan_success(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    test_db,
+):
+    # Ensure no plan exists for today for this user (UTC midnight)
+    today_date_for_del = datetime.now(timezone.utc).date()
+    utc_midnight_today_for_del = datetime(
+        today_date_for_del.year,
+        today_date_for_del.month,
+        today_date_for_del.day,
+        0,
+        0,
+        0,
+        tzinfo=timezone.utc,
+    )
+    await test_db.get_collection(DailyPlanModel).delete_many(
+        {"user_id": test_user_one.id, "plan_date": utc_midnight_today_for_del}
+    )
+
+    # Create a daily plan for today
+    today_date = datetime.now(timezone.utc).date()
+    today_datetime = datetime.combine(today_date, datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )  # Ensure it's UTC aware
+
+    create_payload = DailyPlanCreateRequest(plan_date=today_datetime, allocations=[])
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+
+    # Request today's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/today", headers=auth_headers_user_one)
+    assert response.status_code == 200
+    fetched_plan = DailyPlanResponse(**response.json())
+    assert fetched_plan.plan_date.date() == today_date
+    assert fetched_plan.user_id == test_user_one.id
+
+
 async def test_get_yesterday_daily_plan_not_found(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     test_user_one: UserModel,
     test_db,
-    unique_date: datetime,  # Added unique_date fixture parameter
 ):
     # Ensure no plan exists for yesterday for this user (UTC midnight)
     yesterday_date_for_del = datetime.now(timezone.utc).date() - timedelta(days=1)
@@ -577,14 +617,33 @@ async def test_get_yesterday_daily_plan_not_found(
     response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
     assert response.status_code == 404
     assert response.json()["detail"] == "Daily plan not found for this date."
-    non_existent_id = ObjectId()
-    update_payload = DailyPlanUpdateRequest(allocations=[])
-    response = await async_client.patch(
-        f"{DAILY_PLANS_ENDPOINT}/{non_existent_id}",
-        headers=auth_headers_user_one,
-        json=update_payload.model_dump(mode="json"),
+
+
+async def test_get_today_daily_plan_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    test_db,
+):
+    # Ensure no plan exists for today for this user (UTC midnight)
+    today_date_for_del = datetime.now(timezone.utc).date()
+    utc_midnight_today_for_del = datetime(
+        today_date_for_del.year,
+        today_date_for_del.month,
+        today_date_for_del.day,
+        0,
+        0,
+        0,
+        tzinfo=timezone.utc,
     )
+    await test_db.get_collection(DailyPlanModel).delete_many(
+        {"user_id": test_user_one.id, "plan_date": utc_midnight_today_for_del}
+    )
+
+    # Request today's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/today", headers=auth_headers_user_one)
     assert response.status_code == 404
+    assert response.json()["detail"] == "Daily plan not found for this date."
 
 
 async def test_update_daily_plan_with_extra_fields_fails(

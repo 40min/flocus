@@ -3,9 +3,13 @@ import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import { getDailyPlanByDate, getYesterdayDailyPlan } from '../services/dailyPlanService';
-import { DailyPlanResponse, DailyPlanAllocationResponse } from '../types/dailyPlan';
+import { DailyPlanAllocationResponse, DailyPlanResponse } from '../types/dailyPlan';
+import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
 import { Task } from '../types/task';
+import { getAllDayTemplates } from '../services/dayTemplateService';
+import Modal from '../components/modals/Modal';
+import TimeWindowBalloon from '../components/TimeWindowBalloon';
 
 
 const MyDayPage: React.FC = () => {
@@ -13,6 +17,9 @@ const MyDayPage: React.FC = () => {
   const [yesterdayPlan, setYesterdayPlan] = useState<DailyPlanResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [dayTemplates, setDayTemplates] = useState<DayTemplateResponse[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
   const fetchPlans = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -39,6 +46,24 @@ const MyDayPage: React.FC = () => {
   useEffect(() => {
     fetchPlans();
   }, [fetchPlans]);
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const templates = await getAllDayTemplates();
+        setDayTemplates(templates);
+      } catch (err) {
+        console.error('Failed to fetch day templates:', err);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
+  const handleSelectTemplate = (template: DayTemplateResponse) => {
+    setSelectedTemplate(template);
+    setIsTemplateModalOpen(false);
+  };
 
   if (isLoading) {
     return (
@@ -131,19 +156,31 @@ const MyDayPage: React.FC = () => {
                     <h2 className="text-2xl font-semibold text-slate-800 mb-2">Today's Schedule</h2>
                     <p className="text-slate-500 text-sm">Plan your day, drag and drop tasks, and manage your time windows.</p>
                   </header>
-                  <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
-                    <h3 className="text-slate-800 text-xl font-semibold mb-2">No plan for today</h3>
-                    <p className="text-slate-600 text-sm max-w-md mb-6">
-                      Create a plan from a Day Template or start from scratch to organize your tasks and boost your productivity.
-                    </p>
-                    <button
-                      className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
-                      onClick={() => console.log('Create plan action')}
-                    >
-                      <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-                      Create Plan
-                    </button>
-                  </div>
+                  {selectedTemplate ? (
+                    <div className="space-y-4">
+                      {selectedTemplate.time_windows
+                        .slice()
+                        .sort((a, b) => a.start_time - b.start_time)
+                        .map(tw => (
+                          <TimeWindowBalloon key={tw.id} timeWindow={tw} tasks={[]} />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
+                      <h3 className="text-slate-800 text-xl font-semibold mb-2">No plan for today</h3>
+                      <p className="text-slate-600 text-sm max-w-md mb-6">
+                        Create a plan from a Day Template or start from scratch to organize your tasks and boost your
+                        productivity.
+                      </p>
+                      <button
+                        className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
+                        onClick={() => setIsTemplateModalOpen(true)}
+                      >
+                        <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                        Create Plan
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -171,6 +208,24 @@ const MyDayPage: React.FC = () => {
           </>
         )}
       </div>
+      <Modal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} title="Choose a Day Template">
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {dayTemplates.length > 0 ? (
+            dayTemplates.map(template => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template)}
+                className="w-full text-left p-3 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                <p className="font-semibold">{template.name}</p>
+                <p className="text-sm text-slate-600">{template.description || 'No description'}</p>
+              </button>
+            ))
+          ) : (
+            <p className="text-slate-600 text-sm">No day templates found. You can create one on the Templates page.</p>
+          )}
+        </div>
+      </Modal>
     </main>
   );
 };

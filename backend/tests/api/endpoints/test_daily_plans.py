@@ -331,8 +331,8 @@ async def test_get_daily_plan_by_date_not_found(
     response = await async_client.get(
         f"{DAILY_PLANS_ENDPOINT}/{non_existent_date.isoformat()}", headers=auth_headers_user_one
     )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Daily plan not found for this date."  # Adjusted detail
+    assert response.status_code == 200
+    assert response.json() is None
 
 
 async def test_get_daily_plan_by_date_invalid_date_format(
@@ -615,8 +615,8 @@ async def test_get_yesterday_daily_plan_not_found(
 
     # Request yesterday's plan
     response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Daily plan not found for this date."
+    assert response.status_code == 200
+    assert response.json() is None
 
 
 async def test_get_today_daily_plan_not_found(
@@ -642,8 +642,8 @@ async def test_get_today_daily_plan_not_found(
 
     # Request today's plan
     response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/today", headers=auth_headers_user_one)
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Daily plan not found for this date."
+    assert response.status_code == 200
+    assert response.json() is None
 
 
 async def test_update_daily_plan_with_extra_fields_fails(

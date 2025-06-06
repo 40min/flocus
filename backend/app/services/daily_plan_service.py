@@ -191,20 +191,19 @@ class DailyPlanService:
 
         return await self._map_plan_to_response(daily_plan, current_user_id)
 
-    async def get_daily_plan_by_date_internal(self, plan_date: datetime, current_user_id: ObjectId) -> DailyPlan:
+    async def get_daily_plan_by_date_internal(
+        self, plan_date: datetime, current_user_id: ObjectId
+    ) -> Optional[DailyPlan]:
 
         start_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 0, 0, 0, tzinfo=timezone.utc)
         end_of_day = datetime(plan_date.year, plan_date.month, plan_date.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
 
-        plan = await self.engine.find_one(
+        return await self.engine.find_one(
             DailyPlan,
             (DailyPlan.plan_date >= start_of_day)
             & (DailyPlan.plan_date <= end_of_day)
             & (DailyPlan.user_id == current_user_id),
         )
-        if not plan:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily plan not found for this date.")
-        return plan
 
     async def get_daily_plan_by_id(self, plan_id: ObjectId, current_user_id: ObjectId) -> DailyPlanResponse:
         plan = await self.engine.find_one(DailyPlan, (DailyPlan.id == plan_id) & (DailyPlan.user_id == current_user_id))
@@ -212,11 +211,13 @@ class DailyPlanService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily plan not found by ID.")
         return await self._map_plan_to_response(plan, current_user_id)
 
-    async def get_daily_plan_by_date(self, plan_date: datetime, current_user_id: ObjectId) -> DailyPlanResponse:
+    async def get_daily_plan_by_date(
+        self, plan_date: datetime, current_user_id: ObjectId
+    ) -> Optional[DailyPlanResponse]:
         plan = await self.get_daily_plan_by_date_internal(plan_date, current_user_id)
-        return await self._map_plan_to_response(plan, current_user_id)
+        return await self._map_plan_to_response(plan, current_user_id) if plan else None
 
-    async def get_yesterday_daily_plan(self, current_user_id: ObjectId) -> DailyPlanResponse:
+    async def get_yesterday_daily_plan(self, current_user_id: ObjectId) -> Optional[DailyPlanResponse]:
         yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
         # Convert date object to datetime for internal method
         yesterday_datetime = datetime(
@@ -224,12 +225,12 @@ class DailyPlanService:
         )
 
         plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
-        return await self._map_plan_to_response(plan, current_user_id)
+        return await self._map_plan_to_response(plan, current_user_id) if plan else None
 
-    async def get_today_daily_plan(self, current_user_id: ObjectId) -> DailyPlanResponse:
+    async def get_today_daily_plan(self, current_user_id: ObjectId) -> Optional[DailyPlanResponse]:
         today_date = datetime.now(timezone.utc).date()
         # Convert date object to datetime for internal method
         today_datetime = datetime(today_date.year, today_date.month, today_date.day, 0, 0, 0, tzinfo=timezone.utc)
 
         plan = await self.get_daily_plan_by_date_internal(today_datetime, current_user_id)
-        return await self._map_plan_to_response(plan, current_user_id)
+        return await self._map_plan_to_response(plan, current_user_id) if plan else None

@@ -1,5 +1,6 @@
 import logging  # Added import for logging
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from odmantic import ObjectId
@@ -31,7 +32,7 @@ async def create_daily_plan(
 # Specific string routes should come before parameterized routes
 @router.get(
     "/yesterday",
-    response_model=DailyPlanResponse,
+    response_model=Optional[DailyPlanResponse],
     summary="Get yesterday's Daily Plan for review",
     description="Retrieves the daily plan for the previous day, typically for review purposes.",
 )
@@ -39,12 +40,12 @@ async def get_yesterday_daily_plan(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    return await service.get_yesterday_daily_plan(current_user_id=current_user_id)
+    return await service.get_yesterday_daily_plan(current_user_id=current_user_id) or None
 
 
 @router.get(
     "/today",
-    response_model=DailyPlanResponse,
+    response_model=Optional[DailyPlanResponse],
     summary="Get today's Daily Plan",
     description="Retrieves the daily plan for the current day.",
 )
@@ -52,12 +53,12 @@ async def get_today_daily_plan(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    return await service.get_today_daily_plan(current_user_id=current_user_id)
+    return await service.get_today_daily_plan(current_user_id=current_user_id) or None
 
 
 @router.get(
     "/id/{plan_id}",
-    response_model=DailyPlanResponse,
+    response_model=Optional[DailyPlanResponse],
     summary="Get Daily Plan by ID",
     description="Retrieves a specific daily plan by its ID.",
 )
@@ -66,13 +67,14 @@ async def get_daily_plan_by_id(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    return await service.get_daily_plan_by_id(plan_id=plan_id, current_user_id=current_user_id)
+
+    return await service.get_daily_plan_by_id(plan_id=plan_id, current_user_id=current_user_id) or None
 
 
 # Parameterized routes after specific ones
 @router.get(
     "/{plan_date}",
-    response_model=DailyPlanResponse,
+    response_model=Optional[DailyPlanResponse],
     summary="Get Daily Plan by date",
     description="Retrieves a specific daily plan for the current user by its date.",
 )
@@ -81,7 +83,7 @@ async def get_daily_plan_by_date(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    return await service.get_daily_plan_by_date(plan_date, current_user_id)
+    return await service.get_daily_plan_by_date(plan_date, current_user_id) or None
 
 
 @router.patch(

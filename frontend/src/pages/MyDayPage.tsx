@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import { getDailyPlanByDate } from '../services/dailyPlanService';
+import { getDailyPlanByDate, getYesterdayDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, DailyPlanAllocationResponse } from '../types/dailyPlan';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
 import { Task } from '../types/task';
@@ -10,9 +10,10 @@ import { Task } from '../types/task';
 
 const MyDayPage: React.FC = () => {
   const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
+  const [yesterdayPlan, setYesterdayPlan] = useState<DailyPlanResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchDailyPlanForToday = useCallback(async () => {
+  const fetchPlans = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -20,11 +21,14 @@ const MyDayPage: React.FC = () => {
       const planDateISO = today.toISOString();
       const data = await getDailyPlanByDate(planDateISO);
       setDailyPlan(data);
-    } catch (err) {
-      if (err instanceof Error && (err as any).response?.status === 404) {
-        setDailyPlan(null);
-      } else {
-        setError('Failed to fetch daily plan.');
+
+      if (!data) {
+        const yesterdayData = await getYesterdayDailyPlan();
+        setYesterdayPlan(yesterdayData);
+      }
+    } catch (err: any) {
+      if (err.response?.status !== 404) {
+        setError('Failed to fetch plans.');
         console.error(err);
       }
     } finally {
@@ -33,8 +37,8 @@ const MyDayPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchDailyPlanForToday();
-  }, [fetchDailyPlanForToday]);
+    fetchPlans();
+  }, [fetchPlans]);
 
   if (isLoading) {
     return (
@@ -105,19 +109,20 @@ const MyDayPage: React.FC = () => {
 
             <div className="space-y-16">
               {/* Section 1: Review Unfinished Tasks */}
-              <section className="w-full">
-                <div className="max-w-6xl mx-auto">
-                  <header className="mb-6">
-                    <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                      Review: Yesterday's Tasks
-                    </h2>
-
-                  </header>
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <p className="text-slate-700">Tasks list will go here.</p>
+              {yesterdayPlan && !yesterdayPlan.reviewed && (
+                <section className="w-full">
+                  <div className="max-w-6xl mx-auto">
+                    <header className="mb-6">
+                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
+                        Review: Yesterday's Tasks
+                      </h2>
+                    </header>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <p className="text-slate-700">Tasks list will go here.</p>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
 
               {/* Section 2: Today's Schedule (Create Plan Prompt) */}
               <section className="w-full">
@@ -143,17 +148,19 @@ const MyDayPage: React.FC = () => {
               </section>
 
               {/* Section 3: Self-Reflection */}
-              <section className="w-full">
-                <div className="max-w-4xl mx-auto">
-                  <header className="mb-6">
-                    <h2 className="text-2xl font-semibold text-slate-800 mb-2">Self-Reflection</h2>
-                    <p className="text-slate-500 text-sm">Take a moment to reflect on your day.</p>
-                  </header>
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <p className="text-slate-700">Self-reflection form and tips will go here.</p>
+              {yesterdayPlan && !yesterdayPlan.reviewed && (
+                <section className="w-full">
+                  <div className="max-w-4xl mx-auto">
+                    <header className="mb-6">
+                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">Self-Reflection</h2>
+                      <p className="text-slate-500 text-sm">Take a moment to reflect on your day.</p>
+                    </header>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <p className="text-slate-700">Self-reflection form and tips will go here.</p>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
             </div>
 
             <footer className="mt-16 pt-8 border-t border-slate-200 text-center">

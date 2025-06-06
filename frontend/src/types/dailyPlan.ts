@@ -13,4 +13,5 @@ export interface DailyPlanResponse {
   reflection_content?: string | null;
   notes_content?: string | null;
   allocations: DailyPlanAllocationResponse[];
+  reviewed: boolean;
 }

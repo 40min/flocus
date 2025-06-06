@@ -15,3 +15,17 @@ export const getDailyPlanByDate = async (planDate: string): Promise<DailyPlanRes
     throw error;
   }
 };
+
+export const getYesterdayDailyPlan = async (): Promise<DailyPlanResponse | null> => {
+  try {
+    const response = await api.get<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_YESTERDAY);
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      console.log(`No daily plan found for yesterday.`);
+      return null;
+    }
+    console.error(`Failed to fetch yesterday's daily plan:`, error);
+    throw error;
+  }
+};

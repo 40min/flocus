@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import { getDailyPlanByDate, getYesterdayDailyPlan } from '../services/dailyPlanService';
+import { getYesterdayDailyPlan, getTodayDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanAllocationResponse, DailyPlanResponse } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
@@ -31,9 +31,7 @@ const MyDayPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const today = new Date();
-      const planDateISO = today.toISOString();
-      const data = await getDailyPlanByDate(planDateISO);
+      const data = await getTodayDailyPlan();
       setDailyPlan(data);
 
       if (!data) {

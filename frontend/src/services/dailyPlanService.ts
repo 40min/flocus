@@ -29,3 +29,17 @@ export const getYesterdayDailyPlan = async (): Promise<DailyPlanResponse | null>
     throw error;
   }
 };
+
+export const getTodayDailyPlan = async (): Promise<DailyPlanResponse | null> => {
+  try {
+    const response = await api.get<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_TODAY);
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      console.log(`No daily plan found for today.`);
+      return null;
+    }
+    console.error(`Failed to fetch today's daily plan:`, error);
+    throw error;
+  }
+};

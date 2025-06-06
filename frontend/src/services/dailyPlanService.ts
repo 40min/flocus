@@ -30,6 +30,16 @@ export const getYesterdayDailyPlan = async (): Promise<DailyPlanResponse | null>
   }
 };
 
+export const createDailyPlan = async (timeWindows: any[]): Promise<DailyPlanResponse> => {
+  try {
+    const response = await api.post<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN, { time_windows: timeWindows });
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to create daily plan:', error);
+    throw error;
+  }
+};
+
 export const getTodayDailyPlan = async (): Promise<DailyPlanResponse | null> => {
   try {
     const response = await api.get<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_TODAY);

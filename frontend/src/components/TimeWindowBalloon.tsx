@@ -10,56 +10,34 @@ interface TimeWindowBalloonProps {
   tasks?: TaskType[];
 }
 
-const categoryColorToTailwindPrefix: { [hex: string]: string } = {
-  '#EF4444': 'red',
-  '#F97316': 'orange',
-  '#F59E0B': 'amber',
-  '#EAB308': 'yellow',
-  '#84CC16': 'lime',
-  '#22C55E': 'green',
-  '#10B981': 'emerald',
-  '#14B8A6': 'teal',
-  '#06B6D4': 'cyan',
-  '#0EA5E9': 'sky',
-  '#3B82F6': 'blue',
-  '#6366F1': 'indigo',
-  '#8B5CF6': 'violet',
-  '#A855F7': 'purple',
-  '#D946EF': 'fuchsia',
-  '#EC4899': 'pink',
-  '#F43F5E': 'rose',
-  '#6B7280': 'gray',
-};
+const getTextColor = (bgColor: string): string => {
+  if (!bgColor) return 'text-slate-900'; // Default text color
 
-const getColorScheme = (hexColor?: string) => {
-  const defaultColorName = 'slate';
-  const colorName = hexColor ? (categoryColorToTailwindPrefix[hexColor.toUpperCase()] || defaultColorName) : defaultColorName;
+  // Convert hex to RGB
+  let r = 0, g = 0, b = 0;
+  if (bgColor.length === 7) { // #RRGGBB
+    r = parseInt(bgColor.slice(1, 3), 16);
+    g = parseInt(bgColor.slice(3, 5), 16);
+    b = parseInt(bgColor.slice(5, 7), 16);
+  } else if (bgColor.length === 4) { // #RGB
+    r = parseInt(bgColor[1] + bgColor[1], 16);
+    g = parseInt(bgColor[2] + bgColor[2], 16);
+    b = parseInt(bgColor[3] + bgColor[3], 16);
+  }
 
-  const balloonColors = {
-    bg: `bg-${colorName === defaultColorName ? 'slate-100/80' : `${colorName}-100/80`}`,
-    border: `border-${colorName === defaultColorName ? 'slate-300' : `${colorName}-300`}`,
-    text: `text-${colorName === defaultColorName ? 'slate-900' : `${colorName}-900`}`,
-    hoverBorder: `hover:border-${colorName === defaultColorName ? 'slate-400' : `${colorName}-400`}`,
-    shadow: `hover:shadow-${colorName === defaultColorName ? 'slate-200/50' : `${colorName}-200/50`}`,
-    durationBadgeBg: `bg-${colorName === defaultColorName ? 'slate-100/80' : `${colorName}-100/80`}`,
-    durationBadgeText: `text-${colorName === defaultColorName ? 'slate-900' : `${colorName}-900`}`,
-  };
+  // Calculate luminance (perceived brightness)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-  const taskItemColors = {
-    baseBgColor: `bg-${colorName === defaultColorName ? 'slate-50' : `${colorName}-50`}`,
-    baseBorderColor: `border-${colorName === defaultColorName ? 'slate-200' : `${colorName}-200`}`,
-    baseTextColor: `text-${colorName === defaultColorName ? 'slate-700' : `${colorName}-700`}`,
-    hoverBgColor: `hover:bg-${colorName === defaultColorName ? 'slate-100' : `${colorName}-100`}`,
-    hoverBorderColor: `hover:border-${colorName === defaultColorName ? 'slate-300' : `${colorName}-300`}`,
-    hoverShadowColor: `hover:shadow-${colorName === defaultColorName ? 'slate-200/50' : `${colorName}-200/50`}`,
-  };
-
-  return { balloonColors, taskItemColors };
+  // Use a threshold to determine text color
+  return luminance > 0.3 ? 'text-slate-900' : 'text-white';
 };
 
 const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks = [] }) => {
   const { name, start_time, end_time, category } = timeWindow;
-  const { balloonColors, taskItemColors } = getColorScheme(category?.color);
+  const categoryColor = category?.color || '#A0AEC0'; // Default to a neutral gray
+  const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
+
+  const textColorClass = getTextColor(categoryColor);
 
   const formattedStartTime = formatMinutesToHHMM(start_time);
   const formattedEndTime = formatMinutesToHHMM(end_time);
@@ -68,16 +46,8 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
 
   const mainDivClasses = cn(
     'relative rounded-t-[2rem] rounded-b-[1.5rem] border-2 p-4 md:p-6 shadow-lg backdrop-blur-sm transition-all duration-300 max-w-lg scale-80 ml-0',
-    balloonColors.bg,
-    balloonColors.border,
-    balloonColors.hoverBorder,
-    balloonColors.shadow,
     'hover:shadow-xl' // General hover shadow enhancement from design
   );
-
-  const titleClasses = cn('text-base md:text-lg font-bold mb-3', balloonColors.text);
-  const timeTextClasses = cn('flex items-center gap-1 text-sm text-slate-400', balloonColors.text);
-  const durationBadgeClasses = cn('px-2 py-1 rounded-full text-xs font-small text-slate-600', balloonColors.durationBadgeBg, balloonColors.durationBadgeText);
 
   return (
     <article
@@ -85,20 +55,23 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
       role="article"
       aria-label={`Time window: ${name} from ${formattedStartTime} to ${formattedEndTime}, duration ${formattedDuration}`}
     >
-      <div className={mainDivClasses}>
+      <div
+        className={mainDivClasses}
+        style={{ borderColor: categoryColor, backgroundColor: lightBgColor }}
+      >
         <header className="mb-6">
-          <h4 className={titleClasses}>{name}</h4>
+          <h4 className={cn('text-base md:text-lg font-bold mb-3', textColorClass)}>{name}</h4>
           <div className="flex items-center justify-between text-sm md:text-base">
             <div className="flex items-center gap-4">
               <time
                 dateTime={`${formattedStartTime}/${formattedEndTime}`}
-                className={timeTextClasses}
+                className={cn('flex items-center gap-1 text-sm', textColorClass)}
                 aria-label={`Time from ${formattedStartTime} to ${formattedEndTime}`}
               >
                 <Clock className="h-3 w-3" />
-                <span className="text-sm text-slate-600">{formattedStartTime} - {formattedEndTime}</span>
+                <span className={cn('text-sm', textColorClass)}>{formattedStartTime} - {formattedEndTime}</span>
               </time>
-              <span className={durationBadgeClasses} aria-label={`Duration: ${formattedDuration}`}>
+              <span className={cn('px-2 py-1 rounded-full text-xs font-small', textColorClass)} style={{ backgroundColor: categoryColor + '33' }} aria-label={`Duration: ${formattedDuration}`}>
                 {formattedDuration}
               </span>
             </div>
@@ -112,19 +85,18 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
                 <li key={task.id} className="relative" role="listitem">
                   <TaskItem
                     task={task}
-                    baseBgColor={taskItemColors.baseBgColor}
-                    baseBorderColor={taskItemColors.baseBorderColor}
-                    baseTextColor={taskItemColors.baseTextColor}
-                    hoverBgColor={taskItemColors.hoverBgColor}
-                    hoverBorderColor={taskItemColors.hoverBorderColor}
-                    hoverShadowColor={taskItemColors.hoverShadowColor}
+                    baseBgColor={lightBgColor} // Use the light background color for task items
+                    baseBorderColor={categoryColor + '40'} // Slightly darker border for task items
+                    baseTextColor={textColorClass}
+                    hoverBgColor={categoryColor + '30'} // Slightly darker hover for task items
+                    hoverBorderColor={categoryColor + '60'}
+                    hoverShadowColor={categoryColor + '20'}
                   />
                 </li>
               ))}
             </ul>
           )}
         </section>
-        {/* Resize handle omitted as per thought process */}
       </div>
     </article>
   );

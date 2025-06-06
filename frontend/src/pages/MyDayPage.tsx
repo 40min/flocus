@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import { getYesterdayDailyPlan, getTodayDailyPlan } from '../services/dailyPlanService';
+import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanAllocationResponse, DailyPlanResponse } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
@@ -10,6 +10,7 @@ import { Task } from '../types/task';
 import { getAllDayTemplates } from '../services/dayTemplateService';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
+import { TimeWindow } from '../types/timeWindow';
 
 
 const MyDayPage: React.FC = () => {
@@ -72,6 +73,32 @@ const MyDayPage: React.FC = () => {
     setIsTemplateModalOpen(false);
   };
 
+  const handleSavePlan = async () => {
+    if (!selectedTemplate) {
+      console.error('No template selected to save.');
+      return;
+    }
+
+    try {
+      // Map time_windows to the expected format for the backend
+      const timeWindowsForSave = selectedTemplate.time_windows.map((tw: TimeWindow) => ({
+        name: tw.name,
+        start_time: tw.start_time,
+        end_time: tw.end_time,
+        category_id: tw.category?.id || null,
+        task_ids: [], // Assuming no tasks are allocated yet when saving from a template
+      }));
+
+      const savedPlan = await createDailyPlan(timeWindowsForSave);
+      setDailyPlan(savedPlan);
+      setSelectedTemplate(null); // Clear selected template after saving
+      alert('Daily plan saved successfully!');
+    } catch (err) {
+      console.error('Failed to save daily plan:', err);
+      alert('Failed to save daily plan.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
@@ -101,13 +128,6 @@ const MyDayPage: React.FC = () => {
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
-              <button
-                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
-                onClick={() => console.log('Save plan action for:', dailyPlan.id)}
-              >
-                <SaveOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-                Save
-              </button>
             </header>
             <main className="flex flex-row gap-2 md:gap-8">
               <section className="flex-1 space-y-4">
@@ -164,14 +184,25 @@ const MyDayPage: React.FC = () => {
                     <p className="text-slate-400 text-sm scale-80 origin-top-left">Plan your day, drag and drop tasks, and manage your time windows.</p>
                   </header>
                   {selectedTemplate ? (
-                    <div className="space-y-2 mt-8">
-                      {selectedTemplate.time_windows
-                        .slice()
-                        .sort((a, b) => a.start_time - b.start_time)
-                        .map(tw => (
-                          <TimeWindowBalloon key={tw.id} timeWindow={tw} tasks={[]} />
-                        ))}
-                    </div>
+                    <>
+                      <div className="space-y-2 mt-8">
+                        {selectedTemplate.time_windows
+                          .slice()
+                          .sort((a, b) => a.start_time - b.start_time)
+                          .map(tw => (
+                            <TimeWindowBalloon key={tw.id} timeWindow={tw} tasks={[]} />
+                          ))}
+                      </div>
+                      <div className="space-y-2 mt-8 text-right">
+                        <button
+                          className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                          onClick={handleSavePlan}
+                        >
+                          <SaveOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                          Save Plan
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
                       <h3 className="text-slate-800 text-xl font-semibold mb-2">No plan for today</h3>

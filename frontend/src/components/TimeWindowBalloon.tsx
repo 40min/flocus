@@ -67,7 +67,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
   const formattedDuration = formatDurationFromMinutes(durationMinutes);
 
   const mainDivClasses = cn(
-    'relative rounded-t-[2rem] rounded-b-[1.5rem] border-2 p-6 md:p-8 shadow-lg backdrop-blur-sm transition-all duration-300',
+    'relative rounded-t-[2rem] rounded-b-[1.5rem] border-2 p-4 md:p-6 shadow-lg backdrop-blur-sm transition-all duration-300 max-w-lg scale-80 ml-0',
     balloonColors.bg,
     balloonColors.border,
     balloonColors.hoverBorder,
@@ -75,9 +75,9 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
     'hover:shadow-xl' // General hover shadow enhancement from design
   );
 
-  const titleClasses = cn('text-xl md:text-2xl font-bold mb-3', balloonColors.text);
-  const timeTextClasses = cn('flex items-center gap-1', balloonColors.text);
-  const durationBadgeClasses = cn('px-2 py-1 rounded-full text-xs font-medium', balloonColors.durationBadgeBg, balloonColors.durationBadgeText);
+  const titleClasses = cn('text-base md:text-lg font-bold mb-3', balloonColors.text);
+  const timeTextClasses = cn('flex items-center gap-1 text-sm text-slate-400', balloonColors.text);
+  const durationBadgeClasses = cn('px-2 py-1 rounded-full text-xs font-small text-slate-600', balloonColors.durationBadgeBg, balloonColors.durationBadgeText);
 
   return (
     <article
@@ -87,7 +87,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
     >
       <div className={mainDivClasses}>
         <header className="mb-6">
-          <h2 className={titleClasses}>{name}</h2>
+          <h4 className={titleClasses}>{name}</h4>
           <div className="flex items-center justify-between text-sm md:text-base">
             <div className="flex items-center gap-4">
               <time
@@ -95,8 +95,8 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
                 className={timeTextClasses}
                 aria-label={`Time from ${formattedStartTime} to ${formattedEndTime}`}
               >
-                <Clock className="h-4 w-4" />
-                <span className="font-medium">{formattedStartTime} - {formattedEndTime}</span>
+                <Clock className="h-3 w-3" />
+                <span className="text-sm text-slate-600">{formattedStartTime} - {formattedEndTime}</span>
               </time>
               <span className={durationBadgeClasses} aria-label={`Duration: ${formattedDuration}`}>
                 {formattedDuration}

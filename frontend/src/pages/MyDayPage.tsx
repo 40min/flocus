@@ -131,10 +131,10 @@ const MyDayPage: React.FC = () => {
           // Review & Reflect View (when no plan for today)
           <>
             <header className="text-center mb-12">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+              <h1 className="text-3xl md:text-3xl font-bold mb-4">
                 Daily Planning
               </h1>
-              <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+              <p className="text-slate-400 text-sm max-w-2xl mx-auto">
                 Review yesterday's progress, plan today's schedule, and reflect on your journey.
               </p>
             </header>
@@ -160,11 +160,11 @@ const MyDayPage: React.FC = () => {
               <section className="w-full">
                 <div className="max-w-7xl mx-auto">
                   <header className="mb-6">
-                    <h2 className="text-2xl font-semibold text-slate-800 mb-2">Today's Schedule</h2>
-                    <p className="text-slate-500 text-sm">Plan your day, drag and drop tasks, and manage your time windows.</p>
+                    <h2 className="text-md font-semibold text-slate-800 mb-2">Today's Schedule</h2>
+                    <p className="text-slate-400 text-sm scale-80 origin-top-left">Plan your day, drag and drop tasks, and manage your time windows.</p>
                   </header>
                   {selectedTemplate ? (
-                    <div className="space-y-4">
+                    <div className="space-y-2 mt-8">
                       {selectedTemplate.time_windows
                         .slice()
                         .sort((a, b) => a.start_time - b.start_time)

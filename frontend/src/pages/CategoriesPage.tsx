@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
@@ -42,8 +42,13 @@ const CategoriesPage: React.FC = () => {
     }
   }, []);
 
+  const hasFetched = useRef(false);
+
   useEffect(() => {
-    fetchCategories();
+    if (!hasFetched.current) {
+      fetchCategories();
+      hasFetched.current = true;
+    }
   }, [fetchCategories]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

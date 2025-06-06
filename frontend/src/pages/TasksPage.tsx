@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { formatDueDate, formatDurationFromMinutes } from 'lib/utils';
 // DatePicker is now handled by CreateTaskModal
 // import DatePicker from 'react-datepicker';
@@ -71,13 +71,21 @@ const TasksPage: React.FC = () => {
   }, []);
 
   // useEffect for fetching tasks (runs once on mount)
+  const hasFetchedTasks = useRef(false);
   useEffect(() => {
-    fetchTasks();
+    if (!hasFetchedTasks.current) {
+      fetchTasks();
+      hasFetchedTasks.current = true;
+    }
   }, [fetchTasks]); // fetchTasks is stable
 
   // useEffect for fetching categories (runs on mount and when editingTask changes, or fetchCategories itself changes)
+  const hasFetchedCategories = useRef(false);
   useEffect(() => {
-    fetchCategories();
+    if (!hasFetchedCategories.current) {
+      fetchCategories();
+      hasFetchedCategories.current = true;
+    }
   }, [fetchCategories]);
 
   // handleInputChange, handleDateChange, and handleSubmit are moved to CreateTaskModal

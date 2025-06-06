@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -28,8 +28,13 @@ const TemplatesPage: React.FC = () => {
     }
   }, []);
 
+  const hasFetched = useRef(false);
+
   useEffect(() => {
-    fetchTemplates();
+    if (!hasFetched.current) {
+      fetchTemplates();
+      hasFetched.current = true;
+    }
   }, [fetchTemplates]);
 
   const handleDelete = async (id: string) => {

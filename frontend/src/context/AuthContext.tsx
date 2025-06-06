@@ -20,7 +20,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const fetchedUserRef = useRef(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
@@ -31,30 +30,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [navigate, setToken, setUser, setIsAuthenticated]);
 
   // Fetch user data using the token
-  const fetchUserData = useCallback(async (authToken: string) => {
-    if (fetchedUserRef.current) {
-      return;
-    }
-    fetchedUserRef.current = true;
+  const fetchUserData = useCallback(async () => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Failed to fetch user data:', error);
-      // If we can't fetch user data, clear the authentication
       logout();
+    } finally {
+      setIsLoading(false);
     }
-  }, [logout, setUser, setIsAuthenticated]);
+  }, [logout, setUser, setIsAuthenticated, setIsLoading]);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('access_token');
       if (storedToken) {
         setToken(storedToken);
-        await fetchUserData(storedToken);
+        await fetchUserData();
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initializeAuth();
@@ -77,13 +74,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       localStorage.setItem('access_token', newToken);
       setToken(newToken);
-      await fetchUserData(newToken);
+      await fetchUserData();
     } catch (error) {
       console.error('Error during login execution:', error);
-      // Depending on how fetchUserData handles errors (e.g., if it re-throws or calls logout),
-      // additional error handling here might be needed or could be minimal.
-    } finally {
-      setIsLoading(false); // Ensure loading is set to false
     }
   };
 

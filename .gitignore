@@ -59,3 +59,4 @@ prd/
 designs/
 mcp_servers/mcp_settings.json
 mcp_servers/context7/mcp_settings.json
+mcp_servers/fetch-mcp

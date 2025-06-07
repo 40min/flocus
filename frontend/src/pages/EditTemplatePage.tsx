@@ -7,7 +7,7 @@ import { TimeWindow, TimeWindowInput } from '../types/timeWindow'; // Removed Ti
 import { Category } from '../types/category';
 import { getDayTemplateById, createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
 // Removed timeWindowService imports
-import * as categoryService from '../services/categoryService';
+import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM, hhMMToMinutes } from '../lib/utils';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
@@ -29,9 +29,9 @@ const EditTemplatePage: React.FC = () => {
   const [initialTemplateTimeWindows, setInitialTemplateTimeWindows] = useState<TimeWindow[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: availableCategories = [], isLoading: isLoadingCategories, error: categoriesError } = useCategories();
+  const [isLoading, setIsLoading] = useState(false); // For template specific loading
+  const [error, setError] = useState<string | null>(null); // For template specific errors
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [isNameAutofilled, setIsNameAutofilled] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -87,7 +87,7 @@ const EditTemplatePage: React.FC = () => {
   const handleCategoryChange = useCallback((categoryId: string) => {
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
     const newName = selectedCategory
-      ? generateTimeWindowName(selectedCategory.name, templateTimeWindows) // actualTemplateId removed
+      ? generateTimeWindowName(selectedCategory.name, templateTimeWindows)
       : '';
 
     setNewTimeWindowForm(prev => ({
@@ -96,7 +96,7 @@ const EditTemplatePage: React.FC = () => {
       name: newName,
     }));
     setIsNameAutofilled(!!selectedCategory);
-  }, [availableCategories, generateTimeWindowName, templateTimeWindows]); // actualTemplateId removed from dependencies
+  }, [availableCategories, generateTimeWindowName, templateTimeWindows]);
 
 
   useEffect(() => {
@@ -181,33 +181,10 @@ const EditTemplatePage: React.FC = () => {
   }, [hasUnsavedChanges]);
 
 
-  const loadCategories = useCallback(async () => {
-    // No need to setIsLoading here as it's for the modal, not the whole page
-    try {
-      const cats = await categoryService.getAllCategories();
-      setAvailableCategories(cats);
-      if (cats.length > 0 && !newTimeWindowForm.categoryId) { // Only autofill if categoryId is not already set
-        const selectedCategory = cats[0];
-        setNewTimeWindowForm((prev) => ({
-          ...prev,
-          categoryId: selectedCategory.id,
-          name: generateTimeWindowName(selectedCategory.name, templateTimeWindows) // actualTemplateId removed
-        }));
-        setIsNameAutofilled(true);
-      }
-    } catch (err) {
-      console.error("Error loading categories:", err);
-      setError(
-        (prevError) => (prevError ? prevError + " " : "") + "Failed to load categories for new time window."
-      );
-    }
-  }, [generateTimeWindowName, newTimeWindowForm.categoryId, templateTimeWindows]); // actualTemplateId removed from dependencies
+  // No longer need a separate loadCategories function, as useCategories hook handles fetching
+  // The availableCategories state is now directly from the useCategories hook.
 
-  useEffect(() => {
-    if (isTimeWindowModalOpen) {
-      loadCategories();
-    }
-  }, [isTimeWindowModalOpen, loadCategories]);
+  // Removed useEffect for loadCategories, as useCategories hook handles fetching
 
   useEffect(() => {
     if (isTimeWindowModalOpen) {
@@ -253,8 +230,8 @@ const EditTemplatePage: React.FC = () => {
   }, [isTimeWindowModalOpen]);
 
   useEffect(() => {
-    if (isTimeWindowModalOpen && availableCategories.length > 0) {
-      // Only set initial category if form is in initial state
+    if (isTimeWindowModalOpen && availableCategories.length > 0 && !isLoadingCategories) {
+      // Only set initial category if form is in initial state and categories are loaded
       const isFormEmpty = !newTimeWindowForm.name && !newTimeWindowForm.startTime && !newTimeWindowForm.endTime;
       if (isFormEmpty) {
         handleCategoryChange(availableCategories[0].id);
@@ -263,6 +240,7 @@ const EditTemplatePage: React.FC = () => {
   }, [
     isTimeWindowModalOpen,
     availableCategories,
+    isLoadingCategories,
     handleCategoryChange,
     newTimeWindowForm.name,
     newTimeWindowForm.startTime,
@@ -415,6 +393,9 @@ const EditTemplatePage: React.FC = () => {
     }
   };
 
+  // Combine errors from template fetching and category fetching
+  const displayError = error || (categoriesError ? `Failed to load categories: ${categoriesError.message}` : null);
+
   return (
     <div className="p-8 @container">
       <div className="mb-6">
@@ -442,7 +423,7 @@ const EditTemplatePage: React.FC = () => {
         </p>
       </header>
 
-      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
+      {displayError && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{displayError}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">

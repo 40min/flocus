@@ -209,9 +209,9 @@ const MyDayPage: React.FC = () => {
                 )}
               </section>
             </main>
-            <div className="flex justify-end gap-4 mt-8">
+            <div className="flex justify-start gap-4 mt-8">
               <button
-                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
+                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                 onClick={() => setIsTimeWindowModalOpen(true)}
               >
                 <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
@@ -272,7 +272,7 @@ const MyDayPage: React.FC = () => {
                             <TimeWindowBalloon key={tw.id} timeWindow={tw} tasks={[]} />
                           ))}
                       </div>
-                      <div className="space-y-2 mt-8 text-right">
+                      <div className="space-y-2 mt-8 text-left">
                         <button
                           className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                           onClick={handleSavePlan}
@@ -290,7 +290,7 @@ const MyDayPage: React.FC = () => {
                         productivity.
                       </p>
                       <button
-                        className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
+                        className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                         onClick={() => setIsTemplateModalOpen(true)}
                       >
                         <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />

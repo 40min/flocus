@@ -145,6 +145,18 @@ const MyDayPage: React.FC = () => {
     }
   };
 
+  const handleDeleteTimeWindow = (timeWindowId: string) => {
+    setDailyPlan(prevDailyPlan => {
+      if (!prevDailyPlan) return null;
+      return {
+        ...prevDailyPlan,
+        time_windows: prevDailyPlan.time_windows.filter(
+          alloc => alloc.time_window.id !== timeWindowId
+        ),
+      };
+    });
+  };
+
   const handleSaveDailyPlan = async () => {
     if (!dailyPlan) {
       showError('No daily plan to save.');
@@ -199,7 +211,12 @@ const MyDayPage: React.FC = () => {
                     .slice()
                     .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
                     .map(alloc => (
-                      <TimeWindowBalloon key={alloc.time_window.id} timeWindow={alloc.time_window} tasks={alloc.tasks} />
+                      <TimeWindowBalloon
+                        key={alloc.time_window.id}
+                        timeWindow={alloc.time_window}
+                        tasks={alloc.tasks}
+                        onDelete={handleDeleteTimeWindow}
+                      />
                     ))
                 ) : (
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">

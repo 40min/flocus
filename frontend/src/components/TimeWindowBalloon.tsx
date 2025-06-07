@@ -2,12 +2,13 @@ import React from 'react';
 import { TimeWindow as TimeWindowType } from 'types/timeWindow';
 import { Task as TaskType } from 'types/task';
 import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from 'lib/utils';
-import { Clock } from 'lucide-react';
+import { Clock, XCircle } from 'lucide-react';
 import TaskItem from './TaskItem';
 
 interface TimeWindowBalloonProps {
   timeWindow: TimeWindowType;
   tasks?: TaskType[];
+  onDelete?: (timeWindowId: string) => void;
 }
 
 const getTextColor = (bgColor: string): string => {
@@ -32,8 +33,8 @@ const getTextColor = (bgColor: string): string => {
   return luminance > 0.3 ? 'text-slate-900' : 'text-white';
 };
 
-const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks = [] }) => {
-  const { name, start_time, end_time, category } = timeWindow;
+const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks = [], onDelete }) => {
+  const { id, name, start_time, end_time, category } = timeWindow;
   const categoryColor = category?.color || '#A0AEC0'; // Default to a neutral gray
   const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
 
@@ -60,7 +61,18 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
         style={{ borderColor: categoryColor, backgroundColor: lightBgColor }}
       >
         <header className="mb-6">
-          <h4 className={cn('text-base md:text-lg font-bold mb-3', textColorClass)}>{name}</h4>
+          <div className="flex items-center justify-between">
+            <h4 className={cn('text-base md:text-lg font-bold mb-3', textColorClass)}>{name}</h4>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(id)}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+                aria-label="Delete time window"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between text-sm md:text-base">
             <div className="flex items-center gap-4">
               <time

@@ -86,7 +86,7 @@ async def get_daily_plan_by_date(
     return await service.get_daily_plan_by_date(plan_date, current_user_id) or None
 
 
-@router.patch(
+@router.put(
     "/{plan_id}",
     response_model=DailyPlanResponse,
     summary="Update a Daily Plan by date",

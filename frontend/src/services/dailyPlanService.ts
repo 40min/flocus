@@ -42,7 +42,7 @@ export const createDailyPlan = async (timeWindows: any[]): Promise<DailyPlanResp
 
 export const updateDailyPlan = async (dailyPlanId: string, payload: { time_windows?: any[], reflection_content?: string, notes_content?: string, reviewed?: boolean }): Promise<DailyPlanResponse> => {
   try {
-    const response = await api.put<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_BY_ID(dailyPlanId), payload);
+    const response = await api.put<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_UPDATE_BY_ID(dailyPlanId), payload);
     return response.data;
   } catch (error: any) {
     console.error(`Failed to update daily plan with ID ${dailyPlanId}:`, error);

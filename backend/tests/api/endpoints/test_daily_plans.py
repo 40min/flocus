@@ -454,7 +454,7 @@ async def test_update_daily_plan_success(
         )
     ]
     update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
@@ -497,7 +497,7 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
         reflection_content="Yesterday was productive.",
         notes_content="Remember to follow up on task X.",
     )
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan.id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
@@ -658,7 +658,7 @@ async def test_update_daily_plan_with_extra_fields_fails(
     created_plan_id = create_resp.json()["id"]
 
     invalid_update_payload = {"time_windows": [], "extra_field": "should_fail"}
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=invalid_update_payload,
@@ -670,7 +670,7 @@ async def test_update_daily_plan_with_extra_fields_fails(
 async def test_update_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
     update_payload = DailyPlanUpdateRequest(time_windows=[])
     some_date_id = ObjectId()  # Use a random ObjectId for testing
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{some_date_id}", json=update_payload.model_dump(mode="json")
     )
     assert response.status_code == 401
@@ -707,7 +707,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
         )
     ]
     update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
@@ -749,7 +749,7 @@ async def test_update_daily_plan_unowned_task_fails(
         )
     ]
     update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),
@@ -790,7 +790,7 @@ async def test_update_daily_plan_not_owner_fails(
             )
         ]
     )
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
         headers=auth_headers_user_two,
         json=update_payload_by_two.model_dump(mode="json"),
@@ -920,7 +920,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
         )
     ]
     update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
-    response = await async_client.patch(
+    response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
         headers=auth_headers_user_one,
         json=update_payload.model_dump(mode="json"),

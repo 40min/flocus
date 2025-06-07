@@ -58,3 +58,4 @@ env/
 prd/
 designs/
 mcp_servers/*
+tasks/

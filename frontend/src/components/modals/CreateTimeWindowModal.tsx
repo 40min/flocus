@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
 import { Category } from '../../types/category';
-import { formatMinutesToHHMM, hhMMToMinutes } from '../../lib/utils';
+import { formatMinutesToHHMM, hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
 import { useError } from '../../context/ErrorContext';
 import { TimeWindowAllocation } from '../../types/dailyPlan';
 
@@ -29,6 +29,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     category_id: '',
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [overlapError, setOverlapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +40,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
         end_time: 600,
         category_id: defaultCategoryId,
       });
+      setOverlapError(null); // Clear error on modal open
     }
   }, [isOpen, categories]);
 
@@ -62,6 +64,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setOverlapError(null); // Clear error on input change
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,11 +72,23 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     const minutes = hhMMToMinutes(value);
     if (minutes !== null) {
       setFormData(prev => ({ ...prev, [name]: minutes }));
+      setOverlapError(null); // Clear error on time change
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.start_time >= formData.end_time) {
+      setOverlapError('End time must be after start time.');
+      return;
+    }
+
+    if (checkTimeWindowOverlap(formData, existingTimeWindows)) {
+      setOverlapError('New time window overlaps with an existing one.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -161,6 +176,9 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
             />
           </div>
         </div>
+        {overlapError && (
+          <p className="text-red-500 text-sm">{overlapError}</p>
+        )}
         <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
@@ -171,7 +189,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={isLoading || !formData.category_id}
+            disabled={isLoading || !formData.category_id || !!overlapError}
             className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
           >
             {isLoading ? 'Adding...' : 'Add Time Window'}

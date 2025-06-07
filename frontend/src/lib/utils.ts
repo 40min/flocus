@@ -14,6 +14,8 @@ import {
   getMinutes,
 } from 'date-fns';
 import { format as formatTZ, toZonedTime } from 'date-fns-tz';
+import { TimeWindowCreateRequest } from '../types/timeWindow';
+import { TimeWindowAllocation } from '../types/dailyPlan';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -114,4 +116,25 @@ export function formatDurationFromMinutes(totalMinutes: number | undefined | nul
   } else {
     return `${hours}h ${minutes}min`;
   }
+}
+
+
+export function checkTimeWindowOverlap(
+  newTimeWindow: TimeWindowCreateRequest,
+  existingTimeWindows: TimeWindowAllocation[]
+): boolean {
+  const newStart = newTimeWindow.start_time;
+  const newEnd = newTimeWindow.end_time;
+
+  for (const allocation of existingTimeWindows) {
+    const existingStart = allocation.time_window.start_time;
+    const existingEnd = allocation.time_window.end_time;
+
+    // Check for overlap:
+    // (start1 < end2) && (end1 > start2)
+    if (newStart < existingEnd && newEnd > existingStart) {
+      return true; // Overlap detected
+    }
+  }
+  return false; // No overlap
 }

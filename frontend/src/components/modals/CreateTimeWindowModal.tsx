@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
 import { Category } from '../../types/category';
 import { formatMinutesToHHMM, hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
-import { useError } from '../../context/ErrorContext';
+import { useMessage } from '../../context/MessageContext';
 import { TimeWindowAllocation } from '../../types/dailyPlan';
 
 interface CreateTimeWindowModalProps {
@@ -21,7 +21,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
   categories,
   existingTimeWindows,
 }) => {
-  const { showError } = useError();
+  const { showMessage } = useMessage();
   const [formData, setFormData] = useState<TimeWindowCreateRequest>({
     name: '',
     start_time: 540, // Default to 9:00 AM
@@ -114,7 +114,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
       onSubmitSuccess(newTimeWindowAllocation);
       onClose();
     } catch (err) {
-      showError('Failed to create time window.');
+      showMessage('Failed to create time window.', 'error');
       console.error('Failed to create time window:', err);
     } finally {
       setIsLoading(false);

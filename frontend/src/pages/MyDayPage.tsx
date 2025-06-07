@@ -12,7 +12,7 @@ import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
 import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow } from '../types/timeWindow';
-import { useError } from '../context/ErrorContext';
+import { useMessage } from '../context/MessageContext';
 import { Category } from '../types/category';
 import { getAllCategories } from '../services/categoryService';
 
@@ -28,7 +28,7 @@ const MyDayPage: React.FC = () => {
   const fetchedTemplatesRef = useRef(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const fetchedCategoriesRef = useRef(false);
-  const { showError } = useError();
+  const { showMessage } = useMessage();
 
   const fetchPlans = useCallback(async () => {
     if (fetchedPlansRef.current) {
@@ -45,12 +45,12 @@ const MyDayPage: React.FC = () => {
         setYesterdayPlan(yesterdayData);
       }
     } catch (err: any) {
-      showError('Failed to fetch plans.');
+      showMessage('Failed to fetch plans.', 'error');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [showError]);
+  }, [showMessage]);
 
   useEffect(() => {
     fetchPlans();
@@ -66,12 +66,12 @@ const MyDayPage: React.FC = () => {
         const templates = await getAllDayTemplates();
         setDayTemplates(templates);
       } catch (err) {
-        showError('Failed to fetch day templates.');
+        showMessage('Failed to fetch day templates.', 'error');
         console.error('Failed to fetch day templates:', err);
       }
     };
 
-  }, [showError]);
+  }, [showMessage]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -83,13 +83,13 @@ const MyDayPage: React.FC = () => {
         const fetchedCategories = await getAllCategories();
         setCategories(fetchedCategories);
       } catch (err) {
-        showError('Failed to fetch categories.');
+        showMessage('Failed to fetch categories.', 'error');
         console.error('Failed to fetch categories:', err);
       }
     };
 
     fetchCategories();
-  }, [showError]);
+  }, [showMessage]);
 
   const handleSelectTemplate = (template: DayTemplateResponse) => {
     setSelectedTemplate(template);
@@ -99,7 +99,7 @@ const MyDayPage: React.FC = () => {
   const handleSavePlan = async () => {
     if (!selectedTemplate) {
       console.error('No template selected to save.');
-      showError('No template selected to save.');
+      showMessage('No template selected to save.', 'error');
       return;
     }
 
@@ -117,7 +117,7 @@ const MyDayPage: React.FC = () => {
       setDailyPlan(savedPlan);
       setSelectedTemplate(null); // Clear selected template after saving
     } catch (err) {
-      showError('Failed to save daily plan.');
+      showMessage('Failed to save daily plan.', 'error');
       console.error('Failed to save daily plan:', err);
     }
   };
@@ -159,7 +159,7 @@ const MyDayPage: React.FC = () => {
 
   const handleSaveDailyPlan = async () => {
     if (!dailyPlan) {
-      showError('No daily plan to save.');
+      showMessage('No daily plan to save.', 'error');
       return;
     }
 
@@ -175,9 +175,9 @@ const MyDayPage: React.FC = () => {
 
       const updatedPlan = await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
       setDailyPlan(updatedPlan);
-      showError('Daily plan saved successfully!');
+      showMessage('Daily plan saved successfully!', 'success');
     } catch (err) {
-      showError('Failed to save daily plan.');
+      showMessage('Failed to save daily plan.', 'error');
       console.error('Failed to save daily plan:', err);
     }
   };

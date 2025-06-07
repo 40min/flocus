@@ -24,6 +24,8 @@ import { useAuth } from './context/AuthContext';
 import CategoriesPage from './pages/CategoriesPage';
 import TasksPage from './pages/TasksPage';
 import UserSettingsPage from './pages/UserSettingsPage';
+import MessageBalloon from './components/MessageBalloon';
+import { MessageProvider } from './context/MessageContext';
 
 
 // Simple component to protect routes
@@ -175,33 +177,35 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+    <MessageProvider>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
-      {/* Protected routes rendered inside AppLayout */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Home />} />
-        <Route path="my-day" element={<MyDayPage />} />
-        <Route path="categories" element={<CategoriesPage />} />
-        <Route path="tasks" element={<TasksPage />} />
-        <Route path="templates" element={<TemplatesPage />} />
-        <Route path="templates/new" element={<EditTemplatePage />} />
-        <Route path="templates/edit/:templateId" element={<EditTemplatePage />} />
-        <Route path="settings" element={<UserSettingsPage />} />
-        {/* Fallback for any other authenticated path under "/" */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+        {/* Protected routes rendered inside AppLayout */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Home />} />
+          <Route path="my-day" element={<MyDayPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="templates" element={<TemplatesPage />} />
+          <Route path="templates/new" element={<EditTemplatePage />} />
+          <Route path="templates/edit/:templateId" element={<EditTemplatePage />} />
+          <Route path="settings" element={<UserSettingsPage />} />
+          {/* Fallback for any other authenticated path under "/" */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+      <MessageBalloon />
+    </MessageProvider>
   );
 }
-
 export default App;

@@ -1,6 +1,11 @@
 import { TaskResponse } from './task';
 import { TimeWindow } from './timeWindow';
 
+export interface TimeWindowAllocation {
+  time_window: TimeWindow;
+  tasks: TaskResponse[];
+}
+
 export interface TimeWindowResponse {
   time_window: TimeWindow;
   tasks: TaskResponse[];

@@ -3,26 +3,31 @@ import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
-import { TimeWindowResponse, DailyPlanResponse } from '../types/dailyPlan';
+import { DailyPlanResponse, TimeWindowAllocation } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
 import { Task } from '../types/task';
 import { getAllDayTemplates } from '../services/dayTemplateService';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
+import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow } from '../types/timeWindow';
 import { useError } from '../context/ErrorContext';
-
+import { Category } from '../types/category';
+import { getAllCategories } from '../services/categoryService';
 
 const MyDayPage: React.FC = () => {
   const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
   const [yesterdayPlan, setYesterdayPlan] = useState<DailyPlanResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [dayTemplates, setDayTemplates] = useState<DayTemplateResponse[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
   const fetchedPlansRef = useRef(false);
   const fetchedTemplatesRef = useRef(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const fetchedCategoriesRef = useRef(false);
   const { showError } = useError();
 
   const fetchPlans = useCallback(async () => {
@@ -66,7 +71,24 @@ const MyDayPage: React.FC = () => {
       }
     };
 
-    fetchTemplates();
+  }, [showError]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (fetchedCategoriesRef.current) {
+        return;
+      }
+      fetchedCategoriesRef.current = true;
+      try {
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (err) {
+        showError('Failed to fetch categories.');
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+
+    fetchCategories();
   }, [showError]);
 
   const handleSelectTemplate = (template: DayTemplateResponse) => {
@@ -97,6 +119,29 @@ const MyDayPage: React.FC = () => {
     } catch (err) {
       showError('Failed to save daily plan.');
       console.error('Failed to save daily plan:', err);
+    }
+  };
+
+  const handleAddTimeWindow = (newTimeWindowAllocation: TimeWindowAllocation) => {
+    if (dailyPlan) {
+      setDailyPlan(prevDailyPlan => {
+        if (!prevDailyPlan) return null;
+        return {
+          ...prevDailyPlan,
+          time_windows: [...prevDailyPlan.time_windows, newTimeWindowAllocation],
+        };
+      });
+    } else {
+      // If there's no daily plan yet, create a new one with the added time window
+      setDailyPlan({
+        id: `temp-daily-plan-${Date.now()}`, // Temporary ID
+        user_id: '', // Will be filled on save
+        plan_date: new Date().toISOString(),
+        reflection_content: null,
+        notes_content: null,
+        time_windows: [newTimeWindowAllocation],
+        reviewed: false,
+      });
     }
   };
 
@@ -164,7 +209,14 @@ const MyDayPage: React.FC = () => {
                 )}
               </section>
             </main>
-            <div className="space-y-2 mt-8 text-right">
+            <div className="flex justify-end gap-4 mt-8">
+              <button
+                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
+                onClick={() => setIsTimeWindowModalOpen(true)}
+              >
+                <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                Add Time Window
+              </button>
               <button
                 className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                 onClick={handleSaveDailyPlan}
@@ -291,6 +343,13 @@ const MyDayPage: React.FC = () => {
           )}
         </div>
       </Modal>
+
+      <CreateTimeWindowModal
+        isOpen={isTimeWindowModalOpen}
+        onClose={() => setIsTimeWindowModalOpen(false)}
+        onSubmitSuccess={handleAddTimeWindow}
+        categories={categories}
+      />
     </main>
   );
 };

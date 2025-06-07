@@ -13,18 +13,17 @@ export interface TimeWindow {
 
 
 export interface TimeWindowCreateRequest {
-  name?: string;
+  name: string;
   start_time: number;
   end_time: number;
-  category: string; // category_id
-  day_template_id: string;
+  category_id?: string; // category_id
 }
 
 export interface TimeWindowUpdateRequest {
   name?: string;
   start_time?: number;
   end_time?: number;
-  category?: string; // category_id
+  category_id?: string; // category_id
 }
 
 // Corresponds to backend's TimeWindowInputSchema

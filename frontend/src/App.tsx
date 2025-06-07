@@ -1,5 +1,6 @@
 import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import flocusLogo from './assets/flocus_logo.png';
 import HomeIcon from '@mui/icons-material/Home';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
@@ -164,6 +165,7 @@ const AppLayout: React.FC = () => {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <Outlet />
+        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
       </main>
     </div>
   );

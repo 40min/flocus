@@ -1,10 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './styles/index.css';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { MessageProvider } from './context/MessageContext';
+
+const queryClient = new QueryClient();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -12,11 +15,13 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <Router>
-      <AuthProvider>
-        <MessageProvider>
-          <App />
-        </MessageProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MessageProvider>
+            <App />
+          </MessageProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </Router>
   </React.StrictMode>
 );

@@ -1,54 +1,27 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import { DayTemplateResponse } from '../types/dayTemplate';
-import { getAllDayTemplates, deleteDayTemplate } from '../services/dayTemplateService';
+import { deleteDayTemplate } from '../services/dayTemplateService';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { TimeWindow } from '../types/timeWindow';
+import { useTemplates } from '../hooks/useTemplates';
 
 const TemplatesPage: React.FC = () => {
-  const [templates, setTemplates] = useState<DayTemplateResponse[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: templates = [], isLoading, error } = useTemplates();
   const navigate = useNavigate();
-
-  const fetchTemplates = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getAllDayTemplates();
-      setTemplates(data);
-    } catch (err) {
-      setError('Failed to fetch templates.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      fetchTemplates();
-      hasFetched.current = true;
-    }
-  }, [fetchTemplates]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this template?')) {
-      setIsLoading(true);
-      setError(null);
       try {
         await deleteDayTemplate(id);
-        fetchTemplates(); // Refresh templates list
+        queryClient.invalidateQueries({ queryKey: ['templates'] });
       } catch (err) {
-        setError('Failed to delete template.');
         console.error(err);
-      } finally {
-        setIsLoading(false);
+        // Optionally show an error message to the user
       }
     }
   };
@@ -60,8 +33,7 @@ const TemplatesPage: React.FC = () => {
         <p className="text-slate-600 mt-1">Create and manage your day templates.</p>
       </header>
 
-      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
-      {isLoading && <div className="mb-4">Loading templates...</div>}
+      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
 
       <div className="bg-white shadow-sm rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
@@ -85,14 +57,17 @@ const TemplatesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {!isLoading && templates.length === 0 && (
+              {isLoading && (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">Loading templates...</td></tr>
+              )}
+              {!isLoading && !error && templates.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
                     No templates found. Create one to get started!
                   </td>
                 </tr>
               )}
-              {templates.map((template) => (
+              {!isLoading && !error && templates.map((template) => (
                 <tr key={template.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 align-top">{template.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 align-top">{template.description || '-'}</td>

@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
-import { getAllCategories, createCategory, updateCategory, deleteCategory } from '../services/categoryService';
+import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
+import { useCategories } from '../hooks/useCategories';
 
 const colorOptions = [
   { name: 'Blue', value: '#3B82F6',bgColor: 'bg-blue-500', textColor: 'text-blue-700', ringColor: 'ring-blue-500' },
@@ -13,13 +15,14 @@ const colorOptions = [
   { name: 'Purple', value: '#8B5CF6', bgColor: 'bg-purple-500', textColor: 'text-purple-700', ringColor: 'ring-purple-500' },
   { name: 'Pink', value: '#EC4899', bgColor: 'bg-pink-500', textColor: 'text-pink-700', ringColor: 'ring-pink-500' },
   { name: 'Indigo', value: '#6366F1', bgColor: 'bg-indigo-500', textColor: 'text-indigo-700', ringColor: 'ring-indigo-500' },
-  { name: 'Gray', value: '#6B7280', bgColor: 'bg-gray-500', textColor: 'text-gray-700', ringColor: 'ring-gray-500' },
 ];
 
 const CategoriesPage: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: categories = [], isLoading, error } = useCategories();
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryCreateRequest | CategoryUpdateRequest>({
@@ -27,29 +30,6 @@ const CategoriesPage: React.FC = () => {
     description: '',
     color: colorOptions[0].value,
   });
-
-  const fetchCategories = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getAllCategories();
-      setCategories(data);
-    } catch (err) {
-      setError('Failed to fetch categories.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      fetchCategories();
-      hasFetched.current = true;
-    }
-  }, [fetchCategories]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,8 +41,8 @@ const CategoriesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    setIsSubmitting(true);
+    setFormError(null);
     try {
       if (editingCategory) {
         await updateCategory(editingCategory.id, formData as CategoryUpdateRequest);
@@ -72,12 +52,12 @@ const CategoriesPage: React.FC = () => {
       setShowForm(false);
       setEditingCategory(null);
       setFormData({ name: '', description: '', color: colorOptions[0].value });
-      fetchCategories(); // Refresh categories list
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     } catch (err) {
-      setError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
+      setFormError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
       console.error(err);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -89,134 +69,167 @@ const CategoriesPage: React.FC = () => {
       color: category.color || colorOptions[0].value,
     });
     setShowForm(true);
+    setFormError(null);
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      setIsLoading(true);
-      setError(null);
-      try {
-        await deleteCategory(id);
-        fetchCategories(); // Refresh categories list
-      } catch (err) {
-        setError('Failed to delete category.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+    if (!window.confirm('Are you sure you want to delete this category?')) return;
+    try {
+      await deleteCategory(id);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    } catch (err) {
+      console.error('Failed to delete category.', err);
     }
   };
 
-  const openCreateForm = () => {
+  const handleAddCategoryClick = () => {
     setEditingCategory(null);
     setFormData({ name: '', description: '', color: colorOptions[0].value });
     setShowForm(true);
+    setFormError(null);
   };
 
   const closeForm = () => {
-    setShowForm(false);
     setEditingCategory(null);
     setFormData({ name: '', description: '', color: colorOptions[0].value });
+    setShowForm(false);
   };
 
-  const getColorDetails = (colorValue?: string) => {
-    return colorOptions.find(c => c.value === colorValue) || { name: 'Custom', value: colorValue, bgColor: 'bg-gray-500', textColor: 'text-gray-700', ringColor: 'ring-gray-500' };
+  const getColorDetails = (colorValue: string | undefined) => {
+    return colorOptions.find(option => option.value === colorValue) || colorOptions[0];
   };
-
 
   return (
-    <div className="@container">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-        <h2 className="text-slate-900 text-3xl font-bold">Categories</h2>
+    <div className="container mx-auto p-6">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
+        <p className="text-slate-600 mt-1">Manage your task categories.</p>
+      </header>
+
+      <div className="flex justify-end mb-6">
         <button
-          onClick={openCreateForm}
-          className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+          onClick={handleAddCategoryClick}
+          className="flex items-center px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
         >
-          <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-          <span className="truncate">New Category</span>
+          <AddCircleOutlineOutlinedIcon className="mr-2" />
+          Add New Category
         </button>
       </div>
 
-      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
-      {isLoading && <div className="mb-4">Loading...</div>}
+      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
 
       {showForm && (
         <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-xl font-semibold mb-4">{editingCategory ? 'Edit Category' : 'Create New Category'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700">Name</label>
-              <input type="text" name="name" id="name" value={formData.name} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          <h2 className="text-xl font-semibold text-slate-800 mb-4">{editingCategory ? 'Edit Category' : 'Create New Category'}</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500"
+                required
+              />
             </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
-              <textarea name="description" id="description" value={formData.description || ''} onChange={handleInputChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500"
+              ></textarea>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
-                <div className="flex flex-wrap gap-2">
-                  {colorOptions.map(color => (
-                    <button
-                      type="button"
-                      key={color.value}
-                      onClick={() => handleColorChange(color.value)}
-                      className={`size-8 rounded-full ${color.bgColor} ${formData.color === color.value ? `ring-2 ring-offset-2 ${color.ringColor}` : ''}`}
-                      aria-label={color.name}
-                    />
-                  ))}
-                </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
+              <div className="flex flex-wrap gap-2">
+                {colorOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ${option.bgColor} ${formData.color === option.value ? `ring-2 ${option.ringColor} ring-offset-2` : ''}`}
+                    onClick={() => handleColorChange(option.value)}
+                    title={option.name}
+                  >
+                    {formData.color === option.value && (
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={closeForm} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Cancel</button>
-              <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800">{editingCategory ? 'Update' : 'Create'}</button>
+              <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50">{isSubmitting ? 'Saving...' : (editingCategory ? 'Update' : 'Create')}</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider">Color</th>
-              <th className="px-6 py-3 text-slate-600 text-xs font-semibold uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {!isLoading && categories.length === 0 && !showForm && (
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200">
+        <div className="px-6 py-4 border-b border-slate-200">
+          <h2 className="text-xl font-semibold text-slate-800">All Categories</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
-                  No categories found. Add a category to organize your tasks!
-                </td>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Color</th>
+                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
               </tr>
-            )}
-            {categories.map((category) => {
-              const colorDetail = getColorDetails(category.color);
-              return (
-                <tr key={category.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 text-slate-900 text-sm">{category.name}</td>
-                  <td className="px-6 py-4 text-slate-600 text-sm max-w-xs truncate">{category.description}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-2 rounded-full ${colorDetail.bgColor.replace('bg-','bg-').replace('500', '100')} px-3 py-1 text-xs font-medium ${colorDetail.textColor}`}>
-                      <span className={`size-2 rounded-full ${colorDetail.bgColor}`}></span>
-                      {colorDetail.name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button onClick={() => handleEdit(category)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors">
-                      <EditOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-                    </button>
-                    <button onClick={() => handleDelete(category.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
-                      <DeleteOutlinedIcon sx={{ fontSize: '1.125rem' }} />
-                    </button>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {isLoading && (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">Loading categories...</td></tr>
+              )}
+              {!isLoading && !error && categories.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
+                    No categories found. Add a category to organize your tasks!
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {!isLoading && !error && categories.map((category) => {
+                const colorDetail = getColorDetails(category.color);
+                return (
+                  <tr key={category.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{category.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{category.description || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorDetail.bgColor} ${colorDetail.textColor}`}>
+                        {colorDetail.name}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(category)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        title="Edit Category"
+                      >
+                        <EditOutlinedIcon />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(category.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete Category"
+                      >
+                        <DeleteOutlinedIcon />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

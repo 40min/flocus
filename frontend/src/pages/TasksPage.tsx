@@ -32,7 +32,7 @@ const TasksPage: React.FC = () => {
 
   const queryClient = useQueryClient();
   const { data: tasks, isLoading, error: tasksError } = useTasks();
-  const { categories, error: categoriesError } = useCategories();
+  const { data: categories, error: categoriesError } = useCategories();
 
   const initialFormData: TaskCreateRequest = {
     title: '',
@@ -115,7 +115,7 @@ const TasksPage: React.FC = () => {
         onClose={closeCreateModal}
         onSubmitSuccess={handleFormSubmitSuccess}
         editingTask={editingTask}
-        categories={categories}
+        categories={categories || []}
         initialFormData={initialFormData}
         statusOptions={statusOptions}
         priorityOptions={priorityOptions}

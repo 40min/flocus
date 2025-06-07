@@ -1,95 +1,39 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
+import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, TimeWindowAllocation } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
-import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
-import { Task } from '../types/task';
-import { getAllDayTemplates } from '../services/dayTemplateService';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
 import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow } from '../types/timeWindow';
 import { useMessage } from '../context/MessageContext';
-import { Category } from '../types/category';
-import { getAllCategories } from '../services/categoryService';
+import { useTodayDailyPlan, useYesterdayDailyPlan } from '../hooks/useDailyPlan';
+import { useTemplates } from '../hooks/useTemplates';
+import { useCategories } from '../hooks/useCategories';
 
 const MyDayPage: React.FC = () => {
-  const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
-  const [yesterdayPlan, setYesterdayPlan] = useState<DailyPlanResponse | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
-  const [dayTemplates, setDayTemplates] = useState<DayTemplateResponse[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
-  const fetchedPlansRef = useRef(false);
-  const fetchedTemplatesRef = useRef(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const fetchedCategoriesRef = useRef(false);
+  const queryClient = useQueryClient();
   const { showMessage } = useMessage();
 
-  const fetchPlans = useCallback(async () => {
-    if (fetchedPlansRef.current) {
-      return;
-    }
-    fetchedPlansRef.current = true;
-    setIsLoading(true);
-    try {
-      const data = await getTodayDailyPlan();
-      setDailyPlan(data);
+  const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } = useTodayDailyPlan();
+  const { data: yesterdayPlan, isLoading: isLoadingYesterdayPlan } = useYesterdayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
+  const { data: dayTemplates = [] } = useTemplates();
+  const { data: categories = [] } = useCategories();
 
-      if (!data) {
-        const yesterdayData = await getYesterdayDailyPlan();
-        setYesterdayPlan(yesterdayData);
-      }
-    } catch (err: any) {
-      showMessage('Failed to fetch plans.', 'error');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showMessage]);
+  const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
 
   useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
-
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      if (fetchedTemplatesRef.current) {
-        return;
-      }
-      fetchedTemplatesRef.current = true;
-      try {
-        const templates = await getAllDayTemplates();
-        setDayTemplates(templates);
-      } catch (err) {
-        showMessage('Failed to fetch day templates.', 'error');
-        console.error('Failed to fetch day templates:', err);
-      }
-    };
-
-  }, [showMessage]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (fetchedCategoriesRef.current) {
-        return;
-      }
-      fetchedCategoriesRef.current = true;
-      try {
-        const fetchedCategories = await getAllCategories();
-        setCategories(fetchedCategories);
-      } catch (err) {
-        showMessage('Failed to fetch categories.', 'error');
-        console.error('Failed to fetch categories:', err);
-      }
-    };
-
-    fetchCategories();
-  }, [showMessage]);
+    // When the fetched daily plan changes, update the local state.
+    // This allows local modifications before saving.
+    setDailyPlan(fetchedDailyPlan ?? null);
+  }, [fetchedDailyPlan]);
 
   const handleSelectTemplate = (template: DayTemplateResponse) => {
     setSelectedTemplate(template);
@@ -113,9 +57,9 @@ const MyDayPage: React.FC = () => {
         task_ids: [], // Assuming no tasks are allocated yet when saving from a template
       }));
 
-      const savedPlan = await createDailyPlan(timeWindowsForSave);
-      setDailyPlan(savedPlan);
+      await createDailyPlan(timeWindowsForSave);
       setSelectedTemplate(null); // Clear selected template after saving
+      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
     } catch (err) {
       showMessage('Failed to save daily plan.', 'error');
       console.error('Failed to save daily plan:', err);
@@ -173,14 +117,16 @@ const MyDayPage: React.FC = () => {
         task_ids: alloc.tasks.map(task => task.id),
       }));
 
-      const updatedPlan = await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
-      setDailyPlan(updatedPlan);
+      await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
+      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
       showMessage('Daily plan saved successfully!', 'success');
     } catch (err) {
       showMessage('Failed to save daily plan.', 'error');
       console.error('Failed to save daily plan:', err);
     }
   };
+
+  const isLoading = isLoadingTodayPlan || isLoadingYesterdayPlan;
 
   if (isLoading) {
     return (

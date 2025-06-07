@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDueDate, formatDurationFromMinutes } from 'lib/utils';
-// DatePicker is now handled by CreateTaskModal
-// import DatePicker from 'react-datepicker';
-// import 'react-datepicker/dist/react-datepicker.css';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Task, TaskCreateRequest } from 'types/task';
-import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
-import * as categoryService from 'services/categoryService';
-import CreateTaskModal from 'components/modals/CreateTaskModal'; // Import the modal
+import CreateTaskModal from 'components/modals/CreateTaskModal';
+import { useTasks } from 'hooks/useTasks';
+import { useCategories } from 'hooks/useCategories';
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -27,15 +25,14 @@ const priorityOptions = [
 ];
 
 const TasksPage: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Keep for table loading
-  const [error, setError] = useState<string | null>(null);
-  // const [showForm, setShowForm] = useState<boolean>(false); // Replaced by isModalOpen
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<Task | null>(null);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
+
+  const queryClient = useQueryClient();
+  const { data: tasks, isLoading, error: tasksError } = useTasks();
+  const { categories, error: categoriesError } = useCategories();
 
   const initialFormData: TaskCreateRequest = {
     title: '',
@@ -47,53 +44,14 @@ const TasksPage: React.FC = () => {
   };
 
 
-  const fetchTasks = useCallback(async () => {
-    setIsLoading(true); // Keep for table loading
-    setError(null);
-    try {
-      const data = await taskService.getAllTasks();
-      setTasks(data);
-    } catch (err) {
-      setError('Failed to fetch tasks.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const data = await categoryService.getAllCategories();
-      setCategories(data);
-    } catch (err) {
-      setError(prev => prev ? `${prev} Failed to fetch categories.` : 'Failed to fetch categories.');
-      console.error(err);
-    }
-  }, []);
-
-  // useEffect for fetching tasks (runs once on mount)
-  const hasFetchedTasks = useRef(false);
-  useEffect(() => {
-    if (!hasFetchedTasks.current) {
-      fetchTasks();
-      hasFetchedTasks.current = true;
-    }
-  }, [fetchTasks]); // fetchTasks is stable
-
-  // useEffect for fetching categories (runs on mount and when editingTask changes, or fetchCategories itself changes)
-  const hasFetchedCategories = useRef(false);
-  useEffect(() => {
-    if (!hasFetchedCategories.current) {
-      fetchCategories();
-      hasFetchedCategories.current = true;
-    }
-  }, [fetchCategories]);
 
   // handleInputChange, handleDateChange, and handleSubmit are moved to CreateTaskModal
 
   const handleFormSubmitSuccess = () => {
-    fetchTasks(); // Refresh tasks list
-    setEditingTask(null); // Reset editing task
-    setIsModalOpen(false); // Close modal
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    setEditingTask(null);
+    setIsModalOpen(false);
   };
 
 
@@ -116,16 +74,11 @@ const TasksPage: React.FC = () => {
   const TaskStatisticsModal = React.lazy(() => import('../components/modals/TaskStatisticsModal'));
 
   const handleDelete = async (id: string) => {
-    setIsLoading(true); // Keep for table loading
-    setError(null);
     try {
       await taskService.deleteTask(id);
-      fetchTasks();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err) {
-      setError('Failed to delete task.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+      console.error(`Failed to delete task with id ${id}:`, err);
     }
   };
 
@@ -151,9 +104,10 @@ const TasksPage: React.FC = () => {
         </button>
       </div>
 
-      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
+      {tasksError && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{tasksError.message}</div>}
+      {categoriesError && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">Failed to load categories.</div>}
       {/* isLoading for table, not for modal form anymore */}
-      {isLoading && tasks.length === 0 && <div className="mb-4">Loading tasks...</div>}
+      {isLoading && <div className="mb-4">Loading tasks...</div>}
 
 
       <CreateTaskModal
@@ -190,10 +144,16 @@ const TasksPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {!isLoading && tasks.length === 0 && ( // Removed !showForm condition
+            {isLoading && (
+              <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">Loading tasks...</td></tr>
+            )}
+            {!isLoading && tasksError && (
+              <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-red-500">Error: {tasksError.message}</td></tr>
+            )}
+            {!isLoading && !tasksError && tasks?.length === 0 && (
               <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">No tasks found. Add a task to get started!</td></tr>
             )}
-            {tasks.map((task) => (
+            {!isLoading && !tasksError && tasks && tasks.map((task) => (
               <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 text-slate-900 text-sm">{task.title}</td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{statusOptions.find(s => s.value === task.status)?.label || task.status}</td>

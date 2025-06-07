@@ -1,19 +1,22 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, AuthContextType } from 'context/AuthContext';
 import TasksPage from 'pages/TasksPage';
 import * as taskService from 'services/taskService';
-import * as categoryService from 'services/categoryService';
-import { Task, TaskStatistics } from 'types/task';
+import { Task } from 'types/task';
 import { Category } from 'types/category';
 import { User } from 'types/user';
+import { useTasks } from 'hooks/useTasks';
+import { useCategories } from 'hooks/useCategories';
 
 jest.mock('services/taskService');
-jest.mock('services/categoryService');
+jest.mock('services/taskService');
+jest.mock('hooks/useTasks');
+jest.mock('hooks/useCategories');
 
 const mockedTaskService = taskService as jest.Mocked<typeof taskService>;
-const mockedCategoryService = categoryService as jest.Mocked<typeof categoryService>;
 
 const mockUser: User = { id: 'user1', username: 'testuser', email: 'test@example.com', first_name: 'Test', last_name: 'User' };
 const mockAuthContextValue: AuthContextType = {
@@ -50,12 +53,35 @@ jest.mock('components/modals/TaskStatisticsModal', () => ({
   default: jest.fn(({ isOpen, onClose, task }) => isOpen && task ? <div>Mocked TaskStatisticsModal for {task.title}</div> : null),
 }));
 
-const renderTasksPage = () => {
+const queryClient = new QueryClient();
+
+const renderTasksPage = (
+  tasksData: Task[] = mockTasks,
+  tasksLoading: boolean = false,
+  tasksError: Error | null = null,
+  categoriesData: Category[] = mockCategories,
+  categoriesLoading: boolean = false,
+  categoriesError: Error | null = null
+) => {
+  (useTasks as jest.Mock).mockReturnValue({
+    data: tasksData,
+    isLoading: tasksLoading,
+    error: tasksError,
+  });
+
+  (useCategories as jest.Mock).mockReturnValue({
+    categories: categoriesData,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  });
+
   return render(
     <Router>
-      <AuthContext.Provider value={mockAuthContextValue}>
-        <TasksPage />
-      </AuthContext.Provider>
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider value={mockAuthContextValue}>
+          <TasksPage />
+        </AuthContext.Provider>
+      </QueryClientProvider>
     </Router>
   );
 };
@@ -63,53 +89,64 @@ const renderTasksPage = () => {
 describe('TasksPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedTaskService.getAllTasks.mockResolvedValue(mockTasks);
-    mockedCategoryService.getAllCategories.mockResolvedValue(mockCategories);
-    mockedTaskService.createTask.mockImplementation(async (taskData) => ({
-      id: `newTask-${Date.now()}`,
-      ...taskData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: 'user1',
-      status: taskData.status || 'pending',
-      priority: taskData.priority || 'medium',
-      category: taskData.category_id ? mockCategories.find(c => c.id === taskData.category_id) : undefined,
-    } as Task));
-    mockedTaskService.updateTask.mockImplementation(async (id, taskData) => ({
+    mockedTaskService.createTask.mockImplementation(async (taskData) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      return {
+        id: `newTask-${Date.now()}`,
+        ...taskData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: 'user1',
+        status: taskData.status || 'pending',
+        priority: taskData.priority || 'medium',
+        category: taskData.category_id ? mockCategories.find(c => c.id === taskData.category_id) : undefined,
+      } as Task;
+    });
+    mockedTaskService.updateTask.mockImplementation(async (id, taskData) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      return {
         ...mockTasks.find(t => t.id === id)!,
         ...taskData,
         updated_at: new Date().toISOString(),
-      } as Task));
-    mockedTaskService.deleteTask.mockResolvedValue(undefined);
+      } as Task;
+    });
+    mockedTaskService.deleteTask.mockImplementation(async (id) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      return undefined;
+    });
   });
 
   test('renders tasks page with tasks', async () => {
-    renderTasksPage();
+    renderTasksPage(mockTasks);
     expect(screen.getByText('Tasks')).toBeInTheDocument();
-    await screen.findByText('Task 1');
-    await screen.findByText('Task 2');
-    // Check for new Duration column and content
+    expect(await screen.findByText('Task 1')).toBeInTheDocument();
+    expect(screen.getByText('Task 2')).toBeInTheDocument();
     expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('1h')).toBeInTheDocument(); // For Task 1 (60 min)
-    expect(screen.getByText('30min')).toBeInTheDocument(); // For Task 2 (30 min)
+    expect(screen.getByText('1h')).toBeInTheDocument();
+    expect(screen.getByText('30min')).toBeInTheDocument();
   });
 
   test('opens and submits create task form', async () => {
-    renderTasksPage();
-    await waitFor(() => expect(mockedTaskService.getAllTasks).toHaveBeenCalledTimes(1));
+    renderTasksPage([]); // Start with no tasks
 
     fireEvent.click(screen.getByText('New Task'));
-    expect(screen.getByText('Create New Task')).toBeInTheDocument();
 
+    // Wait for the modal to appear and categories to be loaded
+    await screen.findByText('Create New Task');
+    await screen.findByLabelText('Category');
+
+
+    // Fill out the form
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New Test Task' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'New Description' } });
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'in_progress' } });
     fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'high' } });
-    // fireEvent.change(screen.getByLabelText('Due Date'), { target: { value: '2024-12-31' } }); // DatePicker is tricky
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat1' } });
 
+    // Submit the form
     fireEvent.click(screen.getByText('Create Task'));
 
+    // Wait for the async createTask call to be made with the correct data
     await waitFor(() => {
       expect(mockedTaskService.createTask).toHaveBeenCalledWith(expect.objectContaining({
         title: 'New Test Task',
@@ -119,17 +156,16 @@ describe('TasksPage', () => {
         category_id: 'cat1',
       }));
     });
-    expect(mockedTaskService.getAllTasks).toHaveBeenCalledTimes(2); // Called again after create
   });
 
   test('opens and submits edit task form', async () => {
-    renderTasksPage();
-    await screen.findByText('Task 1');
+    renderTasksPage(mockTasks);
+    expect(await screen.findByText('Task 1')).toBeInTheDocument();
 
     const editButtons = screen.getAllByRole('button', { name: /edit/i });
     fireEvent.click(editButtons[0]);
 
-    expect(screen.getByText('Edit Task')).toBeInTheDocument();
+    await screen.findByText('Edit Task');
     expect(screen.getByLabelText('Title')).toHaveValue('Task 1');
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Updated Task 1' } });
@@ -140,12 +176,11 @@ describe('TasksPage', () => {
         title: 'Updated Task 1',
       }));
     });
-    expect(mockedTaskService.getAllTasks).toHaveBeenCalledTimes(2);
   });
 
   test('deletes a task', async () => {
-    renderTasksPage();
-    await screen.findByText('Task 1');
+    renderTasksPage(mockTasks);
+    expect(await screen.findByText('Task 1')).toBeInTheDocument();
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
     fireEvent.click(deleteButtons[0]);
@@ -153,35 +188,38 @@ describe('TasksPage', () => {
     await waitFor(() => {
       expect(mockedTaskService.deleteTask).toHaveBeenCalledWith('task1');
     });
-    expect(mockedTaskService.getAllTasks).toHaveBeenCalledTimes(2);
   });
 
   test('shows loading state', async () => {
-    mockedTaskService.getAllTasks.mockImplementation(() => new Promise(() => {})); // Never resolves
-    renderTasksPage();
-    expect(await screen.findByText('Loading tasks...')).toBeInTheDocument();
+    renderTasksPage([], true);
+    const loadingMessages = screen.getAllByText('Loading tasks...');
+    expect(loadingMessages).toHaveLength(2);
   });
 
   test('shows error state', async () => {
-    mockedTaskService.getAllTasks.mockRejectedValue(new Error('Failed to fetch'));
-    renderTasksPage();
-    expect(await screen.findByText('Failed to fetch tasks.')).toBeInTheDocument();
+    renderTasksPage([], false, new Error('Failed to fetch tasks.'));
+    expect(screen.getByText('Error: Failed to fetch tasks.')).toBeInTheDocument();
+  });
+
+  test('shows error state for categories', async () => {
+    renderTasksPage([], false, null, [], false, new Error('Failed to load categories.'));
+    expect(screen.getByText('Failed to load categories.')).toBeInTheDocument();
   });
 
   test('closes form when cancel button is clicked', async () => {
-    renderTasksPage();
-    await waitFor(() => expect(mockedTaskService.getAllTasks).toHaveBeenCalledTimes(1));
+    renderTasksPage(mockTasks);
 
     fireEvent.click(screen.getByText('New Task'));
     expect(screen.getByText('Create New Task')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Cancel'));
-    expect(screen.queryByText('Create New Task')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Create New Task')).not.toBeInTheDocument();
+    });
   });
 
   test('displays "No tasks found" message when there are no tasks', async () => {
-    mockedTaskService.getAllTasks.mockResolvedValue([]);
-    renderTasksPage();
+    renderTasksPage([]);
 
     await waitFor(() => {
       expect(screen.getByText('No tasks found. Add a task to get started!')).toBeInTheDocument();
@@ -190,8 +228,8 @@ describe('TasksPage', () => {
   });
 
   test('form fields are reset when opening create form after editing', async () => {
-    renderTasksPage();
-    await screen.findByText('Task 1');
+    renderTasksPage(mockTasks);
+    expect(await screen.findByText('Task 1')).toBeInTheDocument();
 
     // Open edit form for Task 1
     const editButtons = screen.getAllByRole('button', { name: /edit/i });
@@ -210,8 +248,8 @@ describe('TasksPage', () => {
   });
 
   test('opens statistics modal when stats icon is clicked', async () => {
-    renderTasksPage();
-    await screen.findByText('Task 1'); // Ensure tasks are loaded
+    renderTasksPage(mockTasks);
+    expect(await screen.findByText('Task 1')).toBeInTheDocument();
 
     const statsButtons = screen.getAllByLabelText('view statistics');
     expect(statsButtons.length).toBe(mockTasks.length);

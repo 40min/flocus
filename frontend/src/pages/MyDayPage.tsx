@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan } from '../services/dailyPlanService';
+import { getYesterdayDailyPlan, getTodayDailyPlan, createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { TimeWindowResponse, DailyPlanResponse } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import { formatMinutesToHHMM, formatDurationFromMinutes } from '../lib/utils';
@@ -100,6 +100,31 @@ const MyDayPage: React.FC = () => {
     }
   };
 
+  const handleSaveDailyPlan = async () => {
+    if (!dailyPlan) {
+      showError('No daily plan to save.');
+      return;
+    }
+
+    try {
+      const timeWindowsForSave = dailyPlan.time_windows.map(alloc => ({
+        id: alloc.time_window.id,
+        name: alloc.time_window.name,
+        start_time: alloc.time_window.start_time,
+        end_time: alloc.time_window.end_time,
+        category_id: alloc.time_window.category?.id || null,
+        task_ids: alloc.tasks.map(task => task.id),
+      }));
+
+      const updatedPlan = await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
+      setDailyPlan(updatedPlan);
+      showError('Daily plan saved successfully!');
+    } catch (err) {
+      showError('Failed to save daily plan.');
+      console.error('Failed to save daily plan:', err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
@@ -121,7 +146,7 @@ const MyDayPage: React.FC = () => {
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
-            </header>
+              </header>
             <main className="flex flex-row gap-2 md:gap-8">
               <section className="flex-1 space-y-4">
                 {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
@@ -139,6 +164,15 @@ const MyDayPage: React.FC = () => {
                 )}
               </section>
             </main>
+            <div className="space-y-2 mt-8 text-right">
+              <button
+                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                onClick={handleSaveDailyPlan}
+              >
+                <SaveOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                Save
+              </button>
+            </div>
           </>
         ) : (
           // Review & Reflect View (when no plan for today)

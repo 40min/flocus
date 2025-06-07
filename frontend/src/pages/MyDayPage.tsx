@@ -349,6 +349,7 @@ const MyDayPage: React.FC = () => {
         onClose={() => setIsTimeWindowModalOpen(false)}
         onSubmitSuccess={handleAddTimeWindow}
         categories={categories}
+        existingTimeWindows={dailyPlan?.time_windows || []}
       />
     </main>
   );

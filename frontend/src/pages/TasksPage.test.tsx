@@ -70,7 +70,7 @@ const renderTasksPage = (
   });
 
   (useCategories as jest.Mock).mockReturnValue({
-    categories: categoriesData,
+    data: categoriesData, // Corrected: use 'data' to match the actual hook
     isLoading: categoriesLoading,
     error: categoriesError,
   });
@@ -133,15 +133,23 @@ describe('TasksPage', () => {
 
     // Wait for the modal to appear and categories to be loaded
     await screen.findByText('Create New Task');
-    await screen.findByLabelText('Category');
+    const categorySelect = await screen.findByLabelText('Category'); // Get the select element
 
+    // Wait for category options to be populated (e.g., 'Work' which is 'cat1')
+    // This ensures the select is ready before we try to change its value.
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Work' })).toBeInTheDocument();
+    });
 
     // Fill out the form
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New Test Task' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'New Description' } });
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'in_progress' } });
     fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'high' } });
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat1' } });
+    fireEvent.change(categorySelect, { target: { value: 'cat1' } }); // Use the obtained select element
+
+    // Ensure React has processed the state update for the category
+    await waitFor(() => expect(categorySelect).toHaveValue('cat1'));
 
     // Submit the form
     fireEvent.click(screen.getByText('Create Task'));

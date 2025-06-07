@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { UserUpdatePayload } from '../types/user';
+import { User, UserUpdatePayload } from '../types/user';
+import { updateUser } from '../services/userService';
 import { AxiosError } from 'axios';
 
 const UserSettingsPage: React.FC = () => {
@@ -11,9 +13,29 @@ const UserSettingsPage: React.FC = () => {
     last_name: '',
     password: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const updateUserMutation = useMutation<User, Error, UserUpdatePayload>({
+    mutationFn: (payload: UserUpdatePayload) => updateUser(user!.id, payload),
+    onSuccess: async () => {
+      setSuccessMessage('Account updated successfully!');
+      setFormData(prev => ({ ...prev, password: '' }));
+      if (token) {
+        await login(token);
+      }
+    },
+    onError: (err) => {
+      let message = 'Failed to update account.';
+      if (err instanceof AxiosError) {
+        message = err.response?.data?.detail || message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
+    },
+  });
+
 
   // Preferences state (UI only for now)
   const [darkMode, setDarkMode] = useState(false);
@@ -42,7 +64,6 @@ const UserSettingsPage: React.FC = () => {
     e.preventDefault();
     if (!user) return;
 
-    setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
 
@@ -82,7 +103,6 @@ const UserSettingsPage: React.FC = () => {
       setError(message);
       console.error(err);
     } finally {
-      setIsLoading(false);
     }
   };
 
@@ -123,8 +143,8 @@ const UserSettingsPage: React.FC = () => {
             <input className="form-input w-full h-12" id="password" name="password" placeholder="Enter new password (optional)" type="password" value={formData.password} onChange={handleChange} />
           </div>
           <div className="pt-2">
-            <button className="btn-primary h-12 px-6 text-base" type="submit" disabled={isLoading}>
-              {isLoading ? 'Updating...' : 'Update Account'}
+            <button className="btn-primary h-12 px-6 text-base" type="submit" disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? 'Updating...' : 'Update Account'}
             </button>
           </div>
         </form>

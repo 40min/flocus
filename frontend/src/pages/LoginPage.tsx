@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import { loginUser, type UserCredentials } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 
 const LoginPage: React.FC = () => {
-  const [credentials, setCredentials] = useState<UserCredentials>({
-    username: '',
-    password: ''
-  });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<UserCredentials>({
+    defaultValues: {
+      username: '',
+      password: ''
+    }
+  });
+
+  const onSubmit: SubmitHandler<UserCredentials> = async (data) => {
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await loginUser(credentials);
+      const response = await loginUser(data);
       await login(response.access_token);
       navigate('/');
     } catch (err: any) {
@@ -33,15 +41,6 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setError(null);
-    setCredentials((prev: UserCredentials) => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   return (
@@ -58,7 +57,7 @@ const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md -space-y-px">
             <div className="mb-4">
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
@@ -66,14 +65,12 @@ const LoginPage: React.FC = () => {
               </label>
               <input
                 id="username"
-                name="username"
                 type="text"
-                required
                 className="form-input-custom"
                 placeholder="Enter your username"
-                value={credentials.username}
-                onChange={handleChange}
+                {...register('username', { required: 'Username is required' })}
               />
+              {errors.username && <p className="mt-2 text-sm text-red-600">{errors.username.message}</p>}
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
@@ -81,14 +78,12 @@ const LoginPage: React.FC = () => {
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
-                required
                 className="form-input-custom"
                 placeholder="Enter your password"
-                value={credentials.password}
-                onChange={handleChange}
+                {...register('password', { required: 'Password is required' })}
               />
+              {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>}
             </div>
           </div>
 

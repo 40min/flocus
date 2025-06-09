@@ -64,7 +64,7 @@ describe('LoginPage', () => {
     expect(screen.getByText(/don't have an account\? register here/i)).toBeInTheDocument();
   });
 
-  test('allows typing in username and password fields', () => {
+  test('allows typing in username and password fields', async () => {
     renderLoginPage();
     const usernameInput = screen.getByLabelText(/username/i) as HTMLInputElement;
     const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
@@ -77,8 +77,10 @@ describe('LoginPage', () => {
   });
 
   test('submits form and calls loginUser and AuthContext.login on successful login, then navigates to home', async () => {
-    mockedLoginUser.mockResolvedValueOnce({ access_token: 'fake_token', token_type: 'bearer' });
-    mockLogin.mockResolvedValueOnce(undefined); // AuthContext's login
+    mockedLoginUser.mockImplementationOnce(() =>
+      new Promise(resolve => setTimeout(() => resolve({ access_token: 'fake_token', token_type: 'bearer' }), 20))
+    );
+    mockLogin.mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 20)));
 
     renderLoginPage();
 
@@ -86,7 +88,8 @@ describe('LoginPage', () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(screen.getByRole('button', { name: /signing in.../i })).toBeDisabled();
+    const signingInButton = await screen.findByRole('button', { name: /signing in.../i });
+    expect(signingInButton).toBeDisabled();
 
     await waitFor(() => {
       expect(mockedLoginUser).toHaveBeenCalledWith({ username: 'testuser', password: 'password123' });
@@ -134,39 +137,42 @@ describe('LoginPage', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('clears error message when user types in input fields', async () => {
-    mockedLoginUser.mockRejectedValueOnce(new Error('Initial error')); // For the first submit
+  test('displays validation errors when fields are empty and form is submitted', async () => {
     renderLoginPage();
 
-    // Trigger initial error
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
     await waitFor(() => {
-      expect(screen.getByText('Initial error')).toBeInTheDocument();
+      expect(screen.getByText('Username is required')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Password is required')).toBeInTheDocument();
+    });
+  });
+
+  test('clears validation errors when user types in input fields after submission', async () => {
+    renderLoginPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Username is required')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Password is required')).toBeInTheDocument();
     });
 
-    // Type in username field
     fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'u' } });
-    expect(screen.queryByText('Initial error')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Username is required')).not.toBeInTheDocument());
 
-    // Trigger error again
-    // Ensure the mock is set up for the second submit as well
-    mockedLoginUser.mockRejectedValueOnce(new Error('Initial error again'));
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Initial error again')).toBeInTheDocument();
-    });
-
-    // Type in password field
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'p' } });
-    expect(screen.queryByText('Initial error again')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Password is required')).not.toBeInTheDocument());
   });
 
   test('navigates to register page when "Register here" link is clicked', () => {
     renderLoginPage();
     const registerLink = screen.getByRole('link', { name: /don't have an account\? register here/i });
     fireEvent.click(registerLink);
-    // We can't directly test navigation with mockNavigate here as it's a Link component
-    // but we can check if the link has the correct href
     expect(registerLink).toHaveAttribute('href', '/register');
   });
 
@@ -182,8 +188,9 @@ describe('LoginPage', () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(screen.getByRole('button', { name: /signing in.../i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /signing in.../i })).toBeDisabled();
+    const signingInButtonDuringLoad = await screen.findByRole('button', { name: /signing in.../i });
+    expect(signingInButtonDuringLoad).toBeInTheDocument();
+    expect(signingInButtonDuringLoad).toBeDisabled();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();

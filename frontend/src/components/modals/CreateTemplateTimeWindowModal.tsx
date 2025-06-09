@@ -250,7 +250,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit(handleInternalSubmit)}
             className="btn-primary text-sm px-4 py-2"
           >
             <AddCircleOutlineIcon sx={{ fontSize: '1.25rem', mr: 1 }} />

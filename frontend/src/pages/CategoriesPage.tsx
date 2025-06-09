@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -25,33 +26,52 @@ const CategoriesPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState<CategoryCreateRequest | CategoryUpdateRequest>({
-    name: '',
-    description: '',
-    color: colorOptions[0].value,
+
+  interface CategoryFormData {
+    name: string;
+    description?: string;
+    color: string;
+  }
+
+  const { register, handleSubmit: handleFormSubmit, formState: { errors }, setValue, reset, watch } = useForm<CategoryFormData>({
+    defaultValues: {
+      name: '',
+      description: '',
+      color: colorOptions[0].value,
+    }
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const watchedColor = watch("color");
 
-  const handleColorChange = (colorValue: string) => {
-    setFormData({ ...formData, color: colorValue });
-  };
+  useEffect(() => {
+    if (editingCategory) {
+      reset({
+        name: editingCategory.name,
+        description: editingCategory.description || '',
+        color: editingCategory.color || colorOptions[0].value,
+      });
+    } else {
+      reset({
+        name: '',
+        description: '',
+        color: colorOptions[0].value,
+      });
+    }
+  }, [editingCategory, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const onSubmit: SubmitHandler<CategoryFormData> = async (data) => {
     setIsSubmitting(true);
     setFormError(null);
     try {
       if (editingCategory) {
-        await updateCategory(editingCategory.id, formData as CategoryUpdateRequest);
+        await updateCategory(editingCategory.id, data as CategoryUpdateRequest);
       } else {
-        await createCategory(formData as CategoryCreateRequest);
+        await createCategory(data as CategoryCreateRequest);
       }
       setShowForm(false);
       setEditingCategory(null);
-      setFormData({ name: '', description: '', color: colorOptions[0].value });
+      reset(); // Reset form to default values
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     } catch (err) {
       setFormError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
@@ -63,11 +83,7 @@ const CategoriesPage: React.FC = () => {
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      description: category.description || '',
-      color: category.color || colorOptions[0].value,
-    });
+    // useEffect will now handle resetting the form with category data
     setShowForm(true);
     setFormError(null);
   };
@@ -84,14 +100,14 @@ const CategoriesPage: React.FC = () => {
 
   const handleAddCategoryClick = () => {
     setEditingCategory(null);
-    setFormData({ name: '', description: '', color: colorOptions[0].value });
+    // useEffect will now handle resetting the form to default
     setShowForm(true);
     setFormError(null);
   };
 
   const closeForm = () => {
     setEditingCategory(null);
-    setFormData({ name: '', description: '', color: colorOptions[0].value });
+    reset(); // Reset form to default values
     setShowForm(false);
   };
 
@@ -121,41 +137,38 @@ const CategoriesPage: React.FC = () => {
       {showForm && (
         <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-xl font-semibold text-slate-800 mb-4">{editingCategory ? 'Edit Category' : 'Create New Category'}</h2>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleFormSubmit(onSubmit)}>
             <div className="mb-4">
               <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
               <input
                 type="text"
                 id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500"
-                required
+                {...register("name", { required: "Name is required" })}
+                className={`w-full px-3 py-2 border ${errors.name ? 'border-red-500' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500`}
               />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
             <div className="mb-4">
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
               <textarea
                 id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
+                {...register("description")}
                 rows={3}
                 className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500"
               ></textarea>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
+              <input type="hidden" {...register("color", { required: "Color is required" })} />
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((option) => (
                   <div
                     key={option.value}
-                    className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ${option.bgColor} ${formData.color === option.value ? `ring-2 ${option.ringColor} ring-offset-2` : ''}`}
-                    onClick={() => handleColorChange(option.value)}
+                    className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ${option.bgColor} ${watchedColor === option.value ? `ring-2 ${option.ringColor} ring-offset-2` : ''}`}
+                    onClick={() => setValue("color", option.value, { shouldValidate: true })}
                     title={option.name}
                   >
-                    {formData.color === option.value && (
+                    {watchedColor === option.value && (
                       <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
@@ -163,7 +176,9 @@ const CategoriesPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+              {errors.color && <p className="mt-1 text-sm text-red-600">{errors.color.message}</p>}
             </div>
+            {formError && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{formError}</div>}
             <div className="flex justify-end gap-3">
               <button type="button" onClick={closeForm} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Cancel</button>
               <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50">{isSubmitting ? 'Saving...' : (editingCategory ? 'Update' : 'Create')}</button>
@@ -197,7 +212,7 @@ const CategoriesPage: React.FC = () => {
                   </td>
                 </tr>
               )}
-              {!isLoading && !error && categories.map((category) => {
+              {!isLoading && !error && categories.map((category: Category) => {
                 const colorDetail = getColorDetails(category.color);
                 return (
                   <tr key={category.id} className="hover:bg-slate-50 transition-colors">

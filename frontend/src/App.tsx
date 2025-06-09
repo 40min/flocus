@@ -2,20 +2,7 @@ import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import flocusLogo from './assets/flocus_logo.png';
-import HomeIcon from '@mui/icons-material/Home';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
-import DescriptionIcon from '@mui/icons-material/Description';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import TodayIcon from '@mui/icons-material/Today';
-import TodayOutlinedIcon from '@mui/icons-material/TodayOutlined';
-import FolderIcon from '@mui/icons-material/Folder';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import SettingsIcon from '@mui/icons-material/Settings';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
-import Home from './pages/Home';
+import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut } from 'lucide-react';
 import MyDayPage from './pages/MyDayPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -73,7 +60,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <HomeIcon sx={{ fontSize: '1.25rem' }} /> : <HomeOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <Home size={20} /> : <Home size={20} />}
                 Dashboard
               </>
             )}
@@ -88,7 +75,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <TodayIcon sx={{ fontSize: '1.25rem' }} /> : <TodayOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <CalendarDays size={20} /> : <CalendarDays size={20} />}
                 My Day
               </>
             )}
@@ -103,7 +90,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <ListAltIcon sx={{ fontSize: '1.25rem' }} /> : <ListAltOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <ListTodo size={20} /> : <ListTodo size={20} />}
                 Tasks
               </>
             )}
@@ -118,7 +105,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <DescriptionIcon sx={{ fontSize: '1.25rem' }} /> : <DescriptionOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <FileText size={20} /> : <FileText size={20} />}
                 Templates
               </>
             )}
@@ -133,7 +120,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <FolderIcon sx={{ fontSize: '1.25rem' }} /> : <FolderOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <Folder size={20} /> : <Folder size={20} />}
                 Categories
               </>
             )}
@@ -148,7 +135,7 @@ const AppLayout: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                {isActive ? <SettingsIcon sx={{ fontSize: '1.25rem' }} /> : <SettingsOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                {isActive ? <Settings size={20} /> : <Settings size={20} />}
                 Settings
               </>
             )}
@@ -157,7 +144,7 @@ const AppLayout: React.FC = () => {
 
         <div className="pt-4 border-t border-slate-200">
           <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors w-full text-sm font-medium">
-            <LogoutOutlinedIcon sx={{ color: 'rgb(71 85 105)' }} />
+            <LogOut size={20} className="text-slate-700" />
             Logout
           </button>
         </div>

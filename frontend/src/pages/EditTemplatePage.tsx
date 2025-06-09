@@ -11,9 +11,7 @@ import { createDayTemplate, updateDayTemplate } from '../services/dayTemplateSer
 import { useTemplateById } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { ChevronRight, Trash2, PlusCircle } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
 
 const templateFormSchema = z.object({
@@ -227,7 +225,7 @@ const EditTemplatePage: React.FC = () => {
               <a href="/templates" className="hover:text-gray-700">Templates</a>
             </li>
             <li className="flex items-center">
-              <ChevronRightIcon sx={{ fontSize: '1.25rem', marginX: '0.25rem' }} />
+              <ChevronRight size={20} className="mx-1" />
               <span className="text-gray-700 font-semibold">
                 {isCreatingNew ? 'Create Template' : 'Edit Template'}
               </span>
@@ -300,7 +298,7 @@ const EditTemplatePage: React.FC = () => {
                     title="Delete time window"
                     disabled={isLoading}
                   >
-                    <DeleteOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
               )) : <p className="text-sm text-gray-500">This template has no time windows yet. Add some below.</p>}
@@ -312,7 +310,7 @@ const EditTemplatePage: React.FC = () => {
                 disabled={isLoading}
                 title={"Add new time window"}
               >
-                <AddCircleOutlineIcon sx={{ fontSize: '1.25rem' }} />
+                <PlusCircle size={20} />
                 Add new time window
               </button>
           </div>

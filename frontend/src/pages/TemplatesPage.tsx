@@ -1,9 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import AddIcon from '@mui/icons-material/Add';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { deleteDayTemplate } from '../services/dayTemplateService';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { TimeWindow } from '../types/timeWindow';
@@ -42,7 +40,7 @@ const TemplatesPage: React.FC = () => {
             onClick={() => navigate('/templates/new')}
             className="btn-standard"
           >
-            <AddIcon sx={{ fontSize: '1.125rem' }} />
+            <Plus size={18} />
             <span className="truncate">Create Template</span>
           </button>
         </div>
@@ -98,10 +96,10 @@ const TemplatesPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button onClick={() => navigate(`/templates/edit/${template.id}`)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <EditOutlinedIcon sx={{ fontSize: '1.125rem' }} /> Edit
+                        <Edit size={18} /> Edit
                       </button>
                       <button onClick={() => handleDelete(template.id)} className="text-red-500 hover:text-red-700 flex items-center gap-1">
-                        <DeleteOutlinedIcon sx={{ fontSize: '1.125rem' }} /> Delete
+                        <Trash2 size={18} /> Delete
                       </button>
                     </div>
                   </td>

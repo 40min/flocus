@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
-import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
+import { Save, PlusCircle } from 'lucide-react';
 import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, TimeWindowAllocation } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
@@ -176,14 +175,14 @@ const MyDayPage: React.FC = () => {
                 className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                 onClick={() => setIsTimeWindowModalOpen(true)}
               >
-                <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                <PlusCircle size={18} />
                 Add Time Window
               </button>
               <button
                 className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                 onClick={handleSaveDailyPlan}
               >
-                <SaveOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                <Save size={18} />
                 Save
               </button>
             </div>
@@ -239,7 +238,7 @@ const MyDayPage: React.FC = () => {
                           className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                           onClick={handleSavePlan}
                         >
-                          <SaveOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                          <Save size={18} />
                           Save Plan
                         </button>
                       </div>
@@ -255,7 +254,7 @@ const MyDayPage: React.FC = () => {
                         className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                         onClick={() => setIsTemplateModalOpen(true)}
                       >
-                        <AddCircleOutlineOutlinedIcon sx={{ fontSize: '1.125rem' }} />
+                        <PlusCircle size={18} />
                         Create Plan
                       </button>
                     </div>

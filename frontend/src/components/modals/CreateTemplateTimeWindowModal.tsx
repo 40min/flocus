@@ -6,7 +6,7 @@ import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { Category } from '../../types/category';
 import { hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
 import { useMessage } from '../../context/MessageContext';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { PlusCircle } from 'lucide-react';
 import Modal from './Modal'; // Assuming Modal component is available
 
 interface CreateTemplateTimeWindowModalProps {
@@ -227,7 +227,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
             onClick={handleSubmit(handleInternalSubmit)}
             className="btn-standard mt-4 text-xs disabled:opacity-50 px-4 py-2 flex items-center disabled:cursor-not-allowed"
           >
-            <AddCircleOutlineIcon sx={{ fontSize: '1.25rem', mr: 1 }} />
+            <PlusCircle size={20} className="mr-1" />
             Add Time Window
           </button>
         </div>

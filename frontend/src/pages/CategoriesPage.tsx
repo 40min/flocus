@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
-import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
 import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 import { useCategories } from '../hooks/useCategories';
@@ -127,7 +125,7 @@ const CategoriesPage: React.FC = () => {
           onClick={handleAddCategoryClick}
           className="flex items-center px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
         >
-          <AddCircleOutlineOutlinedIcon className="mr-2" />
+          <PlusCircle size={20} className="mr-2" />
           Add New Category
         </button>
       </div>
@@ -229,14 +227,14 @@ const CategoriesPage: React.FC = () => {
                         className="text-indigo-600 hover:text-indigo-900 mr-4"
                         title="Edit Category"
                       >
-                        <EditOutlinedIcon />
+                        <Edit size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(category.id)}
                         className="text-red-600 hover:text-red-900"
                         title="Delete Category"
                       >
-                        <DeleteOutlinedIcon />
+                        <Trash2 size={18} />
                       </button>
                     </td>
                   </tr>

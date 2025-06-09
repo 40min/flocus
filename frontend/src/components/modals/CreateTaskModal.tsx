@@ -128,7 +128,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <DatePicker
                   selected={field.value}
                   onChange={(date) => field.onChange(date)}
-                  dateFormat="yyyy-MM-dd"
+                  dateFormat="yyyy-MM-dd HH:mm"
+                  showTimeSelect
+                  timeFormat="HH:mm"
                   className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   wrapperClassName="w-full"
                 />

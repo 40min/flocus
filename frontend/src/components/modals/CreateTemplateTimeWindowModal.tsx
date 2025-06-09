@@ -176,7 +176,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
                   showTimeSelectOnly
                   timeIntervals={15}
                   timeCaption="Time"
-                  dateFormat="h:mm aa"
+                  dateFormat="HH:mm"
+                  timeFormat="HH:mm"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm"
                 />
               )}
@@ -206,7 +207,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
                   showTimeSelectOnly
                   timeIntervals={15}
                   timeCaption="Time"
-                  dateFormat="h:mm aa"
+                  dateFormat="HH:mm"
+                  timeFormat="HH:mm"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm"
                 />
               )}

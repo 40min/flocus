@@ -38,7 +38,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   statusOptions,
   priorityOptions,
 }) => {
-  const { register, handleSubmit, reset, control, setValue, formState: { errors, isSubmitting } } = useForm<CreateTaskFormInputs>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CreateTaskFormInputs>({
     defaultValues: {
       title: initialFormData.title,
       description: initialFormData.description || '',

@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { DayTemplateCreateRequest, DayTemplateUpdateRequest, DayTemplateResponse } from '../types/dayTemplate';
 import { TimeWindow, TimeWindowInput } from '../types/timeWindow';
 import { Category } from '../types/category';
@@ -13,32 +16,43 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
 
+const templateFormSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  description: z.string().optional(),
+});
+
+type TemplateFormData = z.infer<typeof templateFormSchema>;
+
 const EditTemplatePage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { templateId: routeTemplateId } = useParams<{ templateId?: string }>();
-  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(!routeTemplateId);
+  const isCreatingNew = !routeTemplateId;
 
   const { data: template, isLoading: isLoadingTemplate, error: templateError } = useTemplateById(routeTemplateId);
   const { data: availableCategories = [], isLoading: isLoadingCategories } = useCategories();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [templateTimeWindows, setTemplateTimeWindows] = useState<TimeWindow[]>([]);
-  const [initialName, setInitialName] = useState('');
-  const [initialDescription, setInitialDescription] = useState('');
-  const [initialTemplateTimeWindows, setInitialTemplateTimeWindows] = useState<TimeWindow[]>([]);
-  const [hasChangesForSaveButton, setHasChangesForSaveButton] = useState(false);
-  const [hasChangesForBeforeUnload, setHasChangesForBeforeUnload] = useState(false);
-
   const [formError, setFormError] = useState<string | null>(null);
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty, isSubmitting },
+  } = useForm<TemplateFormData>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    },
+  });
 
   const handleCreateTimeWindow = useCallback((newTimeWindowInput: TimeWindowInput) => {
     const startTimeMinutes = newTimeWindowInput.start_time;
     const endTimeMinutes = newTimeWindowInput.end_time;
 
-    // Check for overlaps with existing time windows
     for (const existingTW of templateTimeWindows) {
       if (
         startTimeMinutes < existingTW.end_time &&
@@ -58,85 +72,74 @@ const EditTemplatePage: React.FC = () => {
     }
 
     const newLocalTimeWindow: TimeWindow = {
-      id: `temp-${Date.now()}`, // Temporary client-side ID
+      id: `temp-${Date.now()}`,
       description: newTimeWindowInput.description,
       start_time: startTimeMinutes,
       end_time: endTimeMinutes,
-      category: selectedCategory, // Embed the full category object
-      day_template_id: routeTemplateId || '', // May be empty if template is new
-      user_id: '', // Will be set by backend; not crucial for local display before save
+      category: selectedCategory,
+      day_template_id: routeTemplateId || '',
+      user_id: '',
       is_deleted: false,
     };
 
     setTemplateTimeWindows(prev => [...prev, newLocalTimeWindow]);
     setIsTimeWindowModalOpen(false);
-    setFormError(null); // Clear general page errors if any
+    setFormError(null);
   }, [templateTimeWindows, availableCategories, routeTemplateId]);
 
   useEffect(() => {
     if (template && !isCreatingNew) {
-      setName(template.name);
-      setInitialName(template.name);
-      setDescription(template.description || '');
-      setInitialDescription(template.description || '');
-      const fetchedTimeWindows = template.time_windows || [];
-      setTemplateTimeWindows(fetchedTimeWindows);
-      setInitialTemplateTimeWindows(fetchedTimeWindows);
-      setHasChangesForSaveButton(false);
-      setHasChangesForBeforeUnload(false);
+      reset({
+        name: template.name,
+        description: template.description || '',
+      });
+      setTemplateTimeWindows(template.time_windows || []);
     } else {
-      setName('');
-      setDescription('');
+      reset({
+        name: '',
+        description: '',
+      });
       setTemplateTimeWindows([]);
-      setInitialName('');
-      setInitialDescription('');
-      setInitialTemplateTimeWindows([]);
-      setHasChangesForSaveButton(false);
-      setHasChangesForBeforeUnload(false);
     }
-  }, [template, isCreatingNew]);
+  }, [template, isCreatingNew, reset]);
 
-  useEffect(() => {
-    const checkChanges = () => {
-      const nameChanged = name !== initialName;
-      const descriptionChanged = description !== initialDescription;
+  const hasTimeWindowChanges = useCallback(() => {
+    if (!template) return templateTimeWindows.length > 0; // If new template, any time window is a change
 
-      // Filter out temporary time windows for comparison with initial state
-      const currentPersistedTimeWindows = templateTimeWindows.filter(tw => !tw.id.startsWith('temp-'));
+    const initialTimeWindows = template.time_windows || [];
 
-      // Check for deleted or modified existing time windows
-      const hasDeletedOrModifiedPersistedTimeWindows =
-        initialTemplateTimeWindows.length !== currentPersistedTimeWindows.length ||
-        JSON.stringify(initialTemplateTimeWindows.map(tw => ({ // Simplified for comparison
-          id: tw.id,
-          description: tw.description,
-          start_time: tw.start_time,
-          end_time: tw.end_time,
-          category_id: tw.category.id
-        })).sort((a, b) => a.id.localeCompare(b.id))) !==
-        JSON.stringify(currentPersistedTimeWindows.map(tw => ({
-          id: tw.id,
-          description: tw.description,
-          start_time: tw.start_time,
-          end_time: tw.end_time,
-          category_id: tw.category.id
-        })).sort((a, b) => a.id.localeCompare(b.id)));
-
-      setHasChangesForBeforeUnload(nameChanged || descriptionChanged || hasDeletedOrModifiedPersistedTimeWindows);
-
-      // Logic for hasChangesForSaveButton (includes new temporary time windows)
-      const hasNewTimeWindows = templateTimeWindows.some(tw => tw.id.startsWith('temp-'));
-      setHasChangesForSaveButton(nameChanged || descriptionChanged || hasNewTimeWindows || hasDeletedOrModifiedPersistedTimeWindows);
-    };
-
-    if (!isLoadingTemplate && (routeTemplateId || isCreatingNew)) {
-       checkChanges();
+    // Check for added or removed time windows
+    if (templateTimeWindows.length !== initialTimeWindows.length) {
+      return true;
     }
-  }, [name, description, templateTimeWindows, initialName, initialDescription, initialTemplateTimeWindows, isLoadingTemplate, routeTemplateId, isCreatingNew]);
+
+    // Check for modified time windows (compare by relevant properties)
+    const sortedCurrent = [...templateTimeWindows].sort((a, b) => a.id.localeCompare(b.id));
+    const sortedInitial = [...initialTimeWindows].sort((a, b) => a.id.localeCompare(b.id));
+
+    for (let i = 0; i < sortedCurrent.length; i++) {
+      const current = sortedCurrent[i];
+      const initial = sortedInitial[i];
+
+      // If IDs don't match, or any relevant property differs, there's a change
+      if (
+        current.id !== initial.id ||
+        current.description !== initial.description ||
+        current.start_time !== initial.start_time ||
+        current.end_time !== initial.end_time ||
+        current.category.id !== initial.category.id
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [template, templateTimeWindows]);
+
+  const hasUnsavedChanges = isDirty || hasTimeWindowChanges();
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasChangesForBeforeUnload) {
+      if (hasUnsavedChanges) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -147,7 +150,7 @@ const EditTemplatePage: React.FC = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasChangesForBeforeUnload]);
+  }, [hasUnsavedChanges]);
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
     setTemplateTimeWindows(prev => prev.filter(tw => tw.id !== timeWindowId));
@@ -170,8 +173,8 @@ const EditTemplatePage: React.FC = () => {
     onSuccess: (savedTemplate: DayTemplateResponse) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       queryClient.invalidateQueries({ queryKey: ['template', savedTemplate.id] });
-      setHasChangesForSaveButton(false);
-      setHasChangesForBeforeUnload(false);
+      reset(undefined, { keepValues: true, keepDirty: false }); // Reset dirty state after successful save
+      setTemplateTimeWindows(savedTemplate.time_windows || []); // Update time windows from saved data
       navigate('/templates');
     },
     onError: (err: any) => {
@@ -179,8 +182,7 @@ const EditTemplatePage: React.FC = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: TemplateFormData) => {
     setFormError(null);
 
     const time_windows_payload = templateTimeWindows.map(tw => {
@@ -198,22 +200,22 @@ const EditTemplatePage: React.FC = () => {
 
     if (isCreatingNew) {
       const createPayload: DayTemplateCreateRequest = {
-          name: name,
-          description: description,
+          name: data.name,
+          description: data.description,
           time_windows: time_windows_payload,
       };
       createTemplateMutation.mutate(createPayload);
     } else if (routeTemplateId) {
       const updatePayload: DayTemplateUpdateRequest = {
-          name,
-          description,
+          name: data.name,
+          description: data.description,
           time_windows: time_windows_payload,
       };
       updateTemplateMutation.mutate({ id: routeTemplateId, data: updatePayload });
     }
   };
 
-  const isLoading = isLoadingTemplate || isLoadingCategories || createTemplateMutation.isPending || updateTemplateMutation.isPending;
+  const isLoading = isLoadingTemplate || isLoadingCategories || isSubmitting;
   const error = templateError || formError;
 
   return (
@@ -245,7 +247,7 @@ const EditTemplatePage: React.FC = () => {
 
       {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error instanceof Error ? error.message : error}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
           <h2 className="text-gray-800 text-lg font-semibold mb-4">Template Details</h2>
           <div className="max-w-md space-y-4">
@@ -254,28 +256,26 @@ const EditTemplatePage: React.FC = () => {
               <input
                 type="text"
                 id="templateName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                {...register('name')}
                 className="form-input w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
                 placeholder="e.g., Morning Focus Session"
               />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">Description (Optional)</label>
               <textarea
                 id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...register('description')}
                 rows={3}
                 className="form-input w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
                 placeholder="e.g., A template for deep work sessions in the morning."
               />
+              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
             </div>
           </div>
         </div>
 
-          {/* Time Windows panel is now always visible */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <h2 className="text-gray-800 text-lg font-semibold mb-4">Time Windows</h2>
             <p className="text-sm text-gray-500 mb-4">Manage time windows for this template. Add or remove as needed.</p>
@@ -330,7 +330,7 @@ const EditTemplatePage: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              if (hasChangesForBeforeUnload) { // Use hasChangesForBeforeUnload for the confirmation dialog
+              if (hasUnsavedChanges) {
                 if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
                   navigate('/templates');
                 }
@@ -345,10 +345,10 @@ const EditTemplatePage: React.FC = () => {
           </button>
           <button
             type="submit"
-            className={`btn-standard ${hasChangesForSaveButton ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}`}
-            disabled={isLoading || (!hasChangesForSaveButton && !isCreatingNew) } // Disable if no unsaved changes unless it's a new template (which might be empty but still saveable)
+            className={`btn-standard ${hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}`}
+            disabled={isLoading || (!hasUnsavedChanges && !isCreatingNew) || !!errors.name}
           >
-            {isLoading ? 'Saving...' : (hasChangesForSaveButton || isCreatingNew ? 'Save Changes' : 'Saved')}
+            {isSubmitting ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}
           </button>
         </div>
       </form>

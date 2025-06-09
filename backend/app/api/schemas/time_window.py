@@ -13,7 +13,7 @@ class TimeWindowInputSchema(BaseModel):
     These will be validated to be within the correct range.
     """
 
-    description: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=100)
     category_id: ObjectId
     start_time: int
     end_time: int

@@ -35,7 +35,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
     control,
     register,
     handleSubmit,
-    setValue,
     watch,
     formState: { errors },
     reset,
@@ -49,7 +48,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   });
 
   const { showMessage } = useMessage();
-  const newTimeWindowForm = watch(); // Watch all fields to react to changes
   const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
 

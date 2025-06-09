@@ -303,13 +303,6 @@ async def test_create_day_template_unauthenticated(
         (
             "Valid Name",
             "Valid desc",
-            [{"description": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
-            422,
-            "String should have at least 1 character",
-        ),
-        (
-            "Valid Name",
-            "Valid desc",
             [{"description": "TW", "start_time": 60, "end_time": 0, "category_id": "valid_cat_id"}],
             422,
             "end_time must be greater than start_time",
@@ -920,15 +913,6 @@ async def test_update_day_template_unauthenticated(
             422,
             "Input should be an instance of ObjectId",
         ),  # Adjusted expected detail
-        (
-            {
-                "time_windows": [
-                    {"description": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id_placeholder"}
-                ]
-            },
-            422,
-            "String should have at least 1 character",
-        ),
     ],
 )
 async def test_update_day_template_validation_errors(

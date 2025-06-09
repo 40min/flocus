@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { registerUser, type UserRegistrationData } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 import { AxiosError } from 'axios';
 
 const RegisterPage: React.FC = () => {
-  const [formData, setFormData] = useState<UserRegistrationData>({
-    username: '',
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: ''
-  });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { register, handleSubmit, formState: { errors } } = useForm<UserRegistrationData>({
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      first_name: '',
+      last_name: ''
+    }
+  });
+
+  const onSubmit: SubmitHandler<UserRegistrationData> = async (data) => {
     setError(null);
     setSuccessMessage(null);
     setIsLoading(true);
@@ -26,7 +29,7 @@ const RegisterPage: React.FC = () => {
     interface FastAPIErrorDetail { loc: string[]; msg: string; }
 
     try {
-      await registerUser(formData);
+      await registerUser(data);
       setSuccessMessage('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
@@ -59,14 +62,6 @@ const RegisterPage: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: UserRegistrationData) => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   return (
     <div className="relative flex flex-col flex-grow h-screen w-full items-center justify-center overflow-hidden rounded-lg border bg-background md:shadow-xl">
       <RetroGrid />
@@ -81,7 +76,7 @@ const RegisterPage: React.FC = () => {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
@@ -89,14 +84,12 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 id="username"
-                name="username"
                 type="text"
-                required
+                {...register('username', { required: 'Username is required' })}
                 className="form-input-custom"
                 placeholder="Choose a username"
-                value={formData.username}
-                onChange={handleChange}
               />
+              {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
             </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -104,14 +97,18 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 id="email"
-                name="email"
                 type="email"
-                required
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
+                    message: 'Invalid email address'
+                  }
+                })}
                 className="form-input-custom"
                 placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
               />
+              {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
             </div>
             <div>
               <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,14 +116,12 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 id="first_name"
-                name="first_name"
                 type="text"
-                required
+                {...register('first_name', { required: 'First name is required' })}
                 className="form-input-custom"
                 placeholder="Enter your first name"
-                value={formData.first_name}
-                onChange={handleChange}
               />
+              {errors.first_name && <p className="text-red-500 text-sm">{errors.first_name.message}</p>}
             </div>
             <div>
               <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -134,14 +129,12 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 id="last_name"
-                name="last_name"
                 type="text"
-                required
+                {...register('last_name', { required: 'Last name is required' })}
                 className="form-input-custom"
                 placeholder="Enter your last name"
-                value={formData.last_name}
-                onChange={handleChange}
               />
+              {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name.message}</p>}
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
@@ -149,14 +142,18 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
-                required
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters'
+                  }
+                })}
                 className="form-input-custom"
                 placeholder="Choose a strong password"
-                value={formData.password}
-                onChange={handleChange}
               />
+              {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
             </div>
           </div>
 

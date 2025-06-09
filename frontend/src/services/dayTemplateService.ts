@@ -1,5 +1,5 @@
 import api from './api';
-import { DayTemplateResponse, DayTemplateCreateRequest, DayTemplateUpdateRequest } from '../types/dayTemplate';
+import { DayTemplateCreateRequest, DayTemplateUpdateRequest, DayTemplateResponse } from '../types/dayTemplate';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 export const getAllDayTemplates = async (): Promise<DayTemplateResponse[]> => {

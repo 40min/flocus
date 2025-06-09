@@ -230,7 +230,7 @@ const MyDayPage: React.FC = () => {
                       <div className="space-y-2 mt-8">
                         {selectedTemplate.time_windows
                           .slice()
-                          .sort((a, b) => a.start_time - b.start_time)
+                          .sort((a: TimeWindow, b: TimeWindow) => a.start_time - b.start_time)
                           .map(tw => (
                             <TimeWindowBalloon key={tw.id} timeWindow={tw} tasks={[]} />
                           ))}
@@ -291,7 +291,7 @@ const MyDayPage: React.FC = () => {
       <Modal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} title="Choose a Day Template">
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {dayTemplates.length > 0 ? (
-            dayTemplates.map(template => (
+            dayTemplates.map((template: DayTemplateResponse) => (
               <button
                 key={template.id}
                 onClick={() => handleSelectTemplate(template)}

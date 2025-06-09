@@ -73,21 +73,21 @@ const TemplatesPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 align-top">{template.description || '-'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 align-top">
                     {template.time_windows && template.time_windows.length > 0 ? (
-                      <div className="flex flex-col gap-1">
-                        {template.time_windows.map((tw: TimeWindow) => {
-                          const categoryColor = tw.category?.color;
-                          const chipStyle: React.CSSProperties = categoryColor
-                            ? { backgroundColor: `${categoryColor}33`, color: categoryColor, borderColor: categoryColor }
-                            : {};
-
+                      <div className="flex flex-col gap-2">
+                        {template.time_windows.slice().sort((a, b) => a.start_time - b.start_time).map((tw: TimeWindow) => {
                           return (
-                            <span
+                            <div
                               key={tw.id}
-                              className={`px-2 py-0.5 text-xs rounded-full font-medium border w-fit ${!categoryColor ? 'bg-slate-100 text-slate-700 border-slate-300' : ''}`}
-                              style={chipStyle}
+                              className="text-xs"
                             >
-                              {tw.name} ({formatMinutesToHHMM(tw.start_time)}-{formatMinutesToHHMM(tw.end_time)}) - {tw.category.name}
-                            </span>
+                              <span className="font-semibold" style={{ color: tw.category?.color || 'inherit' }}>
+                                {tw.category.name}
+                              </span>
+                              <span className="text-slate-500"> ({formatMinutesToHHMM(tw.start_time)}-{formatMinutesToHHMM(tw.end_time)})</span>
+                              {tw.description && (
+                                <p className="text-slate-400 italic pl-1">{tw.description}</p>
+                              )}
+                            </div>
                           );
                         })}
                       </div>

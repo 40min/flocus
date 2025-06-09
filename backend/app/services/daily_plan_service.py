@@ -94,7 +94,7 @@ class DailyPlanService:
             # Construct TimeWindowResponse
             time_window_resp = TimeWindowModelResponse(
                 id=ObjectId(),  # Placeholder ID for ad-hoc time window
-                name=time_window_db.name,
+                description=time_window_db.description,
                 start_time=time_window_db.start_time,
                 end_time=time_window_db.end_time,
                 category=category_resp,

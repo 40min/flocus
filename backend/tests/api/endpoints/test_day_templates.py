@@ -28,7 +28,7 @@ async def test_create_day_template_success(
     Test successful creation of a day template.
     """
     embedded_tw_data = {
-        "name": "Morning Focus",
+        "description": "Morning Focus",
         "start_time": 9 * 60,
         "end_time": 12 * 60,
         "category_id": str(user_one_category.id),
@@ -52,7 +52,7 @@ async def test_create_day_template_success(
     retrieved_tw_resp = created_day_template.time_windows[0]
 
     # Assertions for the embedded time window
-    assert retrieved_tw_resp.name == embedded_tw_data["name"]
+    assert retrieved_tw_resp.description == embedded_tw_data["description"]
     assert retrieved_tw_resp.start_time == embedded_tw_data["start_time"]
     assert retrieved_tw_resp.end_time == embedded_tw_data["end_time"]
     assert retrieved_tw_resp.category.id == user_one_category.id
@@ -80,7 +80,7 @@ async def test_create_day_template_name_conflict_same_user(
     """
     template_name = "Existing Template Same User"
     embedded_tw_data = {
-        "name": "TW for Conflict Test",
+        "description": "TW for Conflict Test",
         "start_time": 8 * 60,
         "end_time": 9 * 60,
         "category_id": str(user_one_category.id),
@@ -129,7 +129,7 @@ async def test_create_day_template_name_conflict_different_user(
     """
     template_name = "Shared Name Template Diff User"
     embedded_tw_data_user1 = {
-        "name": "User1 TW Diff User Test",
+        "description": "User1 TW Diff User Test",
         "start_time": 7 * 60,
         "end_time": 8 * 60,
         "category_id": str(user_one_category.id),
@@ -149,7 +149,7 @@ async def test_create_day_template_name_conflict_different_user(
 
     # User 2 creates a template with the same name
     embedded_tw_data_user2 = {
-        "name": "User2 TW Diff User Test",
+        "description": "User2 TW Diff User Test",
         "start_time": 10 * 60,
         "end_time": 11 * 60,
         "category_id": str(user_two_category.id),
@@ -170,7 +170,7 @@ async def test_create_day_template_name_conflict_different_user(
     assert created_template_user2.user_id == test_user_two.id  # Now directly ObjectId
     assert len(created_template_user2.time_windows) == 1
     retrieved_tw_user2_resp = created_template_user2.time_windows[0]
-    assert retrieved_tw_user2_resp.name == embedded_tw_data_user2["name"]
+    assert retrieved_tw_user2_resp.description == embedded_tw_data_user2["description"]
     assert retrieved_tw_user2_resp.start_time == embedded_tw_data_user2["start_time"]
     assert retrieved_tw_user2_resp.end_time == embedded_tw_data_user2["end_time"]
     assert retrieved_tw_user2_resp.category.id == user_two_category.id
@@ -187,7 +187,7 @@ async def test_create_day_template_non_existent_category_in_time_window(
     """
     non_existent_category_id = "605f585dd5a2a60d39f3b3c9"
     embedded_tw_data_invalid_cat = {
-        "name": "TW with Invalid Category",
+        "description": "TW with Invalid Category",
         "start_time": 9 * 60,
         "end_time": 10 * 60,
         "category_id": non_existent_category_id,
@@ -219,7 +219,7 @@ async def test_create_day_template_category_in_time_window_unowned(
     that is owned by another user. Should return a 404 or 403 error.
     """
     embedded_tw_data_unowned_cat = {
-        "name": "TW with Unowned Category",
+        "description": "TW with Unowned Category",
         "start_time": 11 * 60,
         "end_time": 12 * 60,
         "category_id": str(user_two_category.id),
@@ -249,7 +249,7 @@ async def test_create_day_template_unauthenticated(
     Should return a 401 error.
     """
     embedded_tw_data = {
-        "name": "Unauth TW",
+        "description": "Unauth TW",
         "start_time": 9 * 60,
         "end_time": 10 * 60,
         "category_id": str(user_one_category.id),  # Dummy category, won't be checked due to auth fail
@@ -274,21 +274,21 @@ async def test_create_day_template_unauthenticated(
         (
             "",
             "Valid desc",
-            [{"name": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
+            [{"description": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
             422,
             "String should have at least 1 character",
         ),
         (
             "a" * 101,
             "Valid desc",
-            [{"name": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
+            [{"description": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
             422,
             "String should have at most 100 characters",
         ),
         (
             "Valid Name",
             "a" * 256,
-            [{"name": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
+            [{"description": "TW", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
             422,
             "String should have at most 255 characters",
         ),
@@ -296,32 +296,32 @@ async def test_create_day_template_unauthenticated(
         (
             "Valid Name",
             "Valid desc",
-            [{"name": "TW", "start_time": 0, "end_time": 60, "category_id": "invalid-object-id-format"}],
+            [{"description": "TW", "start_time": 0, "end_time": 60, "category_id": "invalid-object-id-format"}],
             422,
             "Input should be an instance of ObjectId",
         ),  # Adjusted
         (
             "Valid Name",
             "Valid desc",
-            [{"name": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
+            [{"description": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id"}],
             422,
             "String should have at least 1 character",
         ),
         (
             "Valid Name",
             "Valid desc",
-            [{"name": "TW", "start_time": 60, "end_time": 0, "category_id": "valid_cat_id"}],
+            [{"description": "TW", "start_time": 60, "end_time": 0, "category_id": "valid_cat_id"}],
             422,
             "end_time must be greater than start_time",
         ),  # Adjusted (Pydantic v2 style from TimeWindowInputSchema)
         (
             "Valid Name",
             "Valid desc",
-            [{"name": "TW", "start_time": -10, "end_time": 60, "category_id": "valid_cat_id"}],
+            [{"description": "TW", "start_time": -10, "end_time": 60, "category_id": "valid_cat_id"}],
             422,
             "Time must be between 0 and 1439 minutes",
         ),  # Adjusted (Pydantic v2 style from TimeWindowInputSchema)
-        ("Valid Name", "Valid desc", [{"name": "TW", "start_time": 0, "end_time": 60}], 422, "Field required"),
+        ("Valid Name", "Valid desc", [{"description": "TW", "start_time": 0, "end_time": 60}], 422, "Field required"),
     ],
 )
 async def test_create_day_template_validation_errors(
@@ -451,7 +451,9 @@ async def test_get_day_template_by_id_success(
     original_embedded_tw_data = user_one_day_template_model.time_windows[0]
 
     # TimeWindowResponse does not have an 'id' field.
-    assert tw_resp.name == original_embedded_tw_data.name  # Accessing attribute of EmbeddedTimeWindowSchema
+    assert (
+        tw_resp.description == original_embedded_tw_data.description
+    )  # Accessing attribute of EmbeddedTimeWindowSchema
     assert tw_resp.start_time == original_embedded_tw_data.start_time
     assert tw_resp.end_time == original_embedded_tw_data.end_time
     assert tw_resp.category.id == original_embedded_tw_data.category_id
@@ -471,7 +473,7 @@ async def test_get_all_day_templates_success(
     # We'll create two more distinct templates.
 
     embedded_tw1_data = {
-        "name": "TW1 for Get All",
+        "description": "TW1 for Get All",
         "start_time": 800,
         "end_time": 900,
         "category_id": str(user_one_category.id),
@@ -479,7 +481,7 @@ async def test_get_all_day_templates_success(
     dt1_data = DayTemplateCreateRequest(name="DT1 for Get All", time_windows=[embedded_tw1_data])
 
     embedded_tw2_data = {
-        "name": "TW2 for Get All",
+        "description": "TW2 for Get All",
         "start_time": 1000,
         "end_time": 1100,
         "category_id": str(user_one_category.id),

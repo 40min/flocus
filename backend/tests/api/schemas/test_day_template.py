@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pytest
 from odmantic import ObjectId
 from pydantic import ValidationError
@@ -6,8 +8,10 @@ from app.api.schemas.day_template import DayTemplateCreateRequest, DayTemplateUp
 from app.api.schemas.time_window import TimeWindowInputSchema
 
 
-def create_time_window(name: str, start_time: int, end_time: int) -> TimeWindowInputSchema:
-    return TimeWindowInputSchema(name=name, start_time=start_time, end_time=end_time, category_id=ObjectId())
+def create_time_window(description: Optional[str], start_time: int, end_time: int) -> TimeWindowInputSchema:
+    return TimeWindowInputSchema(
+        description=description, start_time=start_time, end_time=end_time, category_id=ObjectId()
+    )
 
 
 class TestDayTemplateCreateRequestValidation:

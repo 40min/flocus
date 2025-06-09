@@ -10,7 +10,7 @@ from app.api.schemas.time_window import TimeWindowResponse
 
 class TimeWindowCreate(BaseModel):  # Inherits directly from BaseModel
     # Fields from TimeWindowInputSchema
-    name: str = Field(..., min_length=1, max_length=100, description="Name of the time window.")
+    description: Optional[str] = Field(None, max_length=100, description="Description of the time window.")
     category_id: ObjectId = Field(..., description="Category ID for the time window.")
     start_time: int = Field(..., description="Start time in minutes since midnight.")
     end_time: int = Field(..., description="End time in minutes since midnight.")

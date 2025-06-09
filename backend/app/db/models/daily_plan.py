@@ -5,7 +5,7 @@ from odmantic import EmbeddedModel, Field, Index, Model, ObjectId
 
 
 class TimeWindow(EmbeddedModel):
-    name: str
+    description: Optional[str] = None
     category_id: ObjectId
     start_time: int
     end_time: int

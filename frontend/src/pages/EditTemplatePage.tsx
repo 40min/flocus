@@ -59,7 +59,7 @@ const EditTemplatePage: React.FC = () => {
 
     const newLocalTimeWindow: TimeWindow = {
       id: `temp-${Date.now()}`, // Temporary client-side ID
-      name: newTimeWindowInput.name,
+      description: newTimeWindowInput.description,
       start_time: startTimeMinutes,
       end_time: endTimeMinutes,
       category: selectedCategory, // Embed the full category object
@@ -107,16 +107,16 @@ const EditTemplatePage: React.FC = () => {
       // Check for deleted or modified existing time windows
       const hasDeletedOrModifiedPersistedTimeWindows =
         initialTemplateTimeWindows.length !== currentPersistedTimeWindows.length ||
-        JSON.stringify(initialTemplateTimeWindows.map(tw => ({
+        JSON.stringify(initialTemplateTimeWindows.map(tw => ({ // Simplified for comparison
           id: tw.id,
-          name: tw.name,
+          description: tw.description,
           start_time: tw.start_time,
           end_time: tw.end_time,
           category_id: tw.category.id
         })).sort((a, b) => a.id.localeCompare(b.id))) !==
         JSON.stringify(currentPersistedTimeWindows.map(tw => ({
           id: tw.id,
-          name: tw.name,
+          description: tw.description,
           start_time: tw.start_time,
           end_time: tw.end_time,
           category_id: tw.category.id
@@ -185,7 +185,7 @@ const EditTemplatePage: React.FC = () => {
 
     const time_windows_payload = templateTimeWindows.map(tw => {
       const timeWindowPayload: TimeWindowInput = {
-        name: tw.name,
+        description: tw.description,
         start_time: tw.start_time,
         end_time: tw.end_time,
         category_id: tw.category.id,
@@ -283,20 +283,14 @@ const EditTemplatePage: React.FC = () => {
               {templateTimeWindows.length > 0 ? templateTimeWindows.slice().sort((a, b) => a.start_time - b.start_time).map(tw => (
                 <div key={tw.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50">
                   <div className="flex-grow">
-                    <span className="font-medium text-gray-800">{tw.name}</span>
-                    <span className="text-gray-500 ml-2 text-sm">
-                      ({formatMinutesToHHMM(tw.start_time)} - {formatMinutesToHHMM(tw.end_time)})
-                    </span>
-                    {tw.category && (
-                      <span
-                        className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full`}
-                        style={{
-                          backgroundColor: tw.category.color ? `${tw.category.color}20` : '#E5E7EB',
-                          color: tw.category.color || '#4B5563',
-                        }}
-                      >
-                        {tw.category.name}
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800">{tw.category.name}</span>
+                      <span className="text-gray-400 text-xs">
+                        ({formatMinutesToHHMM(tw.start_time)} - {formatMinutesToHHMM(tw.end_time)})
                       </span>
+                    </div>
+                    {tw.description && (
+                      <p className="text-sm text-gray-500 mt-1">{tw.description}</p>
                     )}
                   </div>
                   <button

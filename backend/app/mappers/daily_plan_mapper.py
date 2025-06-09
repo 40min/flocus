@@ -13,7 +13,7 @@ class DailyPlanMapper:
     def time_windows_request_to_models(time_window_data: List[TimeWindowCreate]) -> List[TimeWindow]:
         return [
             TimeWindow(
-                name=tw.name,
+                description=tw.description,
                 category_id=tw.category_id,
                 start_time=tw.start_time,
                 end_time=tw.end_time,

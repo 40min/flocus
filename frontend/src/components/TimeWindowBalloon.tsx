@@ -34,7 +34,7 @@ const getTextColor = (bgColor: string): string => {
 };
 
 const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks = [], onDelete }) => {
-  const { id, name, start_time, end_time, category } = timeWindow;
+  const { id, description, start_time, end_time, category } = timeWindow;
   const categoryColor = category?.color || '#A0AEC0'; // Default to a neutral gray
   const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
 
@@ -54,15 +54,22 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
     <article
       className="relative group"
       role="article"
-      aria-label={`Time window: ${name} from ${formattedStartTime} to ${formattedEndTime}, duration ${formattedDuration}`}
+      aria-label={`Time window: ${category.name} from ${formattedStartTime} to ${formattedEndTime}, duration ${formattedDuration}`}
     >
       <div
         className={mainDivClasses}
         style={{ borderColor: categoryColor, backgroundColor: lightBgColor }}
       >
-        <header className="mb-6">
-          <div className="flex items-center justify-between">
-            <h4 className={cn('text-base md:text-lg font-bold mb-3', textColorClass)}>{name}</h4>
+        <header className="mb-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h4 className={cn('text-base md:text-lg font-bold', textColorClass)}>
+                {category.name}
+              </h4>
+              {description && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{description}</p>
+              )}
+            </div>
             {onDelete && (
               <button
                 onClick={() => onDelete(id)}
@@ -89,7 +96,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
             </div>
           </div>
         </header>
-        <section className="mb-6">
+        <section>
           <h3 className="sr-only">Tasks for this time window</h3>
           {tasks && tasks.length > 0 && (
             <ul className="space-y-3" role="list" aria-label="Tasks assigned to this time window">

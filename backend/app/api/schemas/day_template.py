@@ -21,8 +21,8 @@ def _ensure_time_windows_do_not_overlap(time_windows_list: List[TimeWindowInputS
         # Check for overlap: next window starts before current one ends
         if next_window.start_time < current_window.end_time:
             raise ValueError(
-                f"Time windows overlap: '{current_window.name}' ({current_window.start_time}-{current_window.end_time})"
-                f" and '{next_window.name}' ({next_window.start_time}-{next_window.end_time})"
+                f"Time windows overlap: ({current_window.start_time}-{current_window.end_time}) and "
+                f"({next_window.start_time}-{next_window.end_time})"
             )
 
 

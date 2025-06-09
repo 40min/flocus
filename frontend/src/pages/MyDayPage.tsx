@@ -50,7 +50,7 @@ const MyDayPage: React.FC = () => {
     try {
       // Map time_windows to the expected format for the backend
       const timeWindowsForSave = selectedTemplate.time_windows.map((tw: TimeWindow) => ({
-        name: tw.name,
+        description: tw.description,
         start_time: tw.start_time,
         end_time: tw.end_time,
         category_id: tw.category?.id || null,
@@ -109,8 +109,7 @@ const MyDayPage: React.FC = () => {
 
     try {
       const timeWindowsForSave = dailyPlan.time_windows.map(alloc => ({
-        id: alloc.time_window.id,
-        name: alloc.time_window.name,
+        description: alloc.time_window.description,
         start_time: alloc.time_window.start_time,
         end_time: alloc.time_window.end_time,
         category_id: alloc.time_window.category?.id || null,

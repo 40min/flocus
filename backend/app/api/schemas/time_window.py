@@ -1,3 +1,5 @@
+from typing import Optional
+
 from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -11,7 +13,7 @@ class TimeWindowInputSchema(BaseModel):
     These will be validated to be within the correct range.
     """
 
-    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=100)
     category_id: ObjectId
     start_time: int
     end_time: int
@@ -44,7 +46,7 @@ class TimeWindowResponse(BaseModel):
     """
 
     id: ObjectId  # Added for frontend identification
-    name: str
+    description: Optional[str]
     start_time: int
     end_time: int
     category: CategoryResponse

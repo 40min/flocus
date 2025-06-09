@@ -1,7 +1,7 @@
 import random
 import uuid
 from datetime import date, datetime, timedelta, timezone  # Added timezone
-from typing import List
+from typing import List, Optional
 
 import pytest
 from httpx import AsyncClient
@@ -81,10 +81,10 @@ async def unique_date() -> datetime:
 
 
 def create_time_window_payload(
-    name: str, category_id: ObjectId, start_time: int, end_time: int, task_ids: List[ObjectId]
+    description: Optional[str], category_id: ObjectId, start_time: int, end_time: int, task_ids: List[ObjectId]
 ) -> TimeWindowCreate:
     return TimeWindowCreate(
-        name=name,
+        description=description,
         category_id=category_id,
         start_time=start_time,
         end_time=end_time,
@@ -103,7 +103,7 @@ async def test_create_daily_plan_success_with_allocations(
     plan_date = unique_date
     time_windows = [
         create_time_window_payload(
-            name="Morning Focus",
+            description="Morning Focus",
             category_id=user_one_category.id,
             start_time=540,
             end_time=720,
@@ -120,7 +120,7 @@ async def test_create_daily_plan_success_with_allocations(
     assert created_plan.user_id == test_user_one.id
     assert len(created_plan.time_windows) == 1
     time_window_resp = created_plan.time_windows[0]
-    assert time_window_resp.time_window.name == "Morning Focus"
+    assert time_window_resp.time_window.description == "Morning Focus"
     assert time_window_resp.time_window.start_time == 540
     assert time_window_resp.time_window.end_time == 720
     assert time_window_resp.time_window.category.id == user_one_category.id
@@ -167,7 +167,7 @@ async def test_create_daily_plan_invalid_embedded_time_window_data_fails(
     # Send raw dict to bypass client-side Pydantic validation and test server-side
     raw_time_windows_payload = [
         {
-            "name": "Invalid TW",
+            "description": "Invalid TW",
             "category_id": str(user_one_category.id),  # Convert ObjectId to str for JSON
             "start_time": 720,  # 12:00
             "end_time": 540,  # 09:00 (invalid)
@@ -192,7 +192,7 @@ async def test_create_daily_plan_non_existent_category_for_tw_fails(
     non_existent_category_id = ObjectId()
     time_windows = [
         create_time_window_payload(
-            name="Test TW",
+            description="Test TW",
             category_id=non_existent_category_id,
             start_time=600,
             end_time=660,
@@ -216,7 +216,7 @@ async def test_create_daily_plan_unowned_category_for_tw_fails(
 ):
     time_windows = [
         create_time_window_payload(
-            name="Unowned Cat TW",
+            description="Unowned Cat TW",
             category_id=user_two_category.id,
             start_time=600,
             end_time=660,
@@ -240,7 +240,7 @@ async def test_create_daily_plan_non_existent_task_fails(
     non_existent_task_id = ObjectId()
     time_windows = [
         create_time_window_payload(
-            name="Valid TW",
+            description="Valid TW",
             category_id=user_one_category.id,
             start_time=600,
             end_time=660,
@@ -266,7 +266,7 @@ async def test_create_daily_plan_unowned_task_fails(
 ):
     time_windows = [
         create_time_window_payload(
-            name="Valid TW",
+            description="Valid TW",
             category_id=user_one_category.id,
             start_time=600,
             end_time=660,
@@ -299,7 +299,7 @@ async def test_get_daily_plan_by_date_success(
     plan_date = unique_date
     time_windows = [
         create_time_window_payload(
-            name="Morning Work",
+            description="Morning Work",
             category_id=user_one_category.id,
             start_time=540,
             end_time=720,
@@ -318,7 +318,7 @@ async def test_get_daily_plan_by_date_success(
     assert fetched_plan.plan_date == plan_date
     assert fetched_plan.user_id == test_user_one.id
     assert len(fetched_plan.time_windows) == 1
-    assert fetched_plan.time_windows[0].time_window.name == "Morning Work"
+    assert fetched_plan.time_windows[0].time_window.description == "Morning Work"
     assert fetched_plan.time_windows[0].time_window.category.id == user_one_category.id
     assert len(fetched_plan.time_windows[0].tasks) == 1
     assert fetched_plan.time_windows[0].tasks[0].id == user_one_task_model.id
@@ -363,7 +363,7 @@ async def test_get_daily_plan_by_id_success(
         plan_date=some_date,  # Use a fixed date for consistency
         time_windows=[
             create_time_window_payload(
-                name="Focus Time",
+                description="Focus Time",
                 category_id=user_one_category.id,
                 start_time=600,
                 end_time=700,
@@ -430,7 +430,7 @@ async def test_update_daily_plan_success(
     plan_date = unique_date
     initial_time_windows = [
         create_time_window_payload(
-            name="Initial Work",
+            description="Initial Work",
             category_id=user_one_category.id,
             start_time=540,
             end_time=600,
@@ -446,7 +446,7 @@ async def test_update_daily_plan_success(
 
     updated_time_windows = [
         create_time_window_payload(
-            name="Updated Work",
+            description="Updated Work",
             category_id=user_one_category.id,
             start_time=660,
             end_time=720,
@@ -463,7 +463,7 @@ async def test_update_daily_plan_success(
     updated_plan = DailyPlanResponse(**response.json())
     assert updated_plan.plan_date == plan_date.replace(tzinfo=timezone.utc)  # Make expected date UTC aware
     assert len(updated_plan.time_windows) == 1
-    assert updated_plan.time_windows[0].time_window.name == "Updated Work"
+    assert updated_plan.time_windows[0].time_window.description == "Updated Work"
     assert updated_plan.time_windows[0].time_window.start_time == 660
     assert len(updated_plan.time_windows[0].tasks) == 1
     assert updated_plan.time_windows[0].tasks[0].id == user_one_task_alt.id

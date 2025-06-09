@@ -31,7 +31,7 @@ class DayTemplateMapper:
             time_window_responses.append(
                 TimeWindowResponse(
                     id=embedded_tw.id,  # Map the ID
-                    name=embedded_tw.name,
+                    description=embedded_tw.description,
                     start_time=embedded_tw.start_time,
                     end_time=embedded_tw.end_time,
                     category=category_resp,
@@ -71,7 +71,7 @@ class DayTemplateMapper:
         for tw_input_schema in schema.time_windows:
             embedded_time_windows.append(
                 EmbeddedTimeWindowSchema(
-                    name=tw_input_schema.name,
+                    description=tw_input_schema.description,
                     start_time=tw_input_schema.start_time,
                     end_time=tw_input_schema.end_time,
                     category_id=tw_input_schema.category_id,

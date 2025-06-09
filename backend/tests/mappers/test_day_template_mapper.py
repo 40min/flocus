@@ -33,13 +33,13 @@ def sample_time_window_input_list(common_category_id: ObjectId) -> List[TimeWind
     # Provides TimeWindowInputSchema objects for DayTemplateCreateRequest
     return [
         TimeWindowInputSchema(
-            name="TW1",  # Harmonized name
+            description="TW1",  # Harmonized name
             start_time=540,
             end_time=600,
             category_id=common_category_id,
         ),
         TimeWindowInputSchema(
-            name="TW2",  # Harmonized name
+            description="TW2",  # Harmonized name
             start_time=660,
             end_time=720,
             category_id=common_category_id,
@@ -54,14 +54,14 @@ def sample_time_window_response_list(common_category_response: CategoryResponse)
     return [
         TimeWindowResponse(
             id=ObjectId(),  # Added dummy ID
-            name="TW1",  # Harmonized name
+            description="TW1",  # Harmonized name
             start_time=540,
             end_time=600,
             category=common_category_response,
         ),
         TimeWindowResponse(
             id=ObjectId(),  # Added dummy ID
-            name="TW2",  # Harmonized name
+            description="TW2",  # Harmonized name
             start_time=660,
             end_time=720,
             category=common_category_response,
@@ -74,13 +74,13 @@ def overlapping_time_window_input_list(sample_user_id: ObjectId) -> List[TimeWin
     category_id_overlap = ObjectId()
     return [
         TimeWindowInputSchema(
-            name="Morning Work",
+            description="Morning Work",
             start_time=540,  # 9:00
             end_time=660,  # 11:00
             category_id=category_id_overlap,
         ),
         TimeWindowInputSchema(
-            name="Late Morning Work",
+            description="Late Morning Work",
             start_time=600,  # 10:00 - overlaps with previous
             end_time=720,  # 12:00
             category_id=category_id_overlap,
@@ -96,7 +96,7 @@ def sample_day_template_model(sample_user_id: ObjectId, sample_time_window_input
     for tw_input in sample_time_window_input_list:
         time_windows_for_db_model.append(
             {
-                "name": tw_input.name,
+                "description": tw_input.description,
                 "start_time": tw_input.start_time,
                 "end_time": tw_input.end_time,
                 "category_id": tw_input.category_id,  # This is already ObjectId from TimeWindowInputSchema
@@ -183,7 +183,7 @@ class TestDayTemplateMapper:
         for i, tw_resp_from_mapper in enumerate(response.time_windows):
             expected_tw_resp = sample_time_window_response_list[i]
             # TimeWindowResponse does not have its own 'id'.
-            assert tw_resp_from_mapper.name == expected_tw_resp.name
+            assert tw_resp_from_mapper.description == expected_tw_resp.description
             assert tw_resp_from_mapper.start_time == expected_tw_resp.start_time
             assert tw_resp_from_mapper.end_time == expected_tw_resp.end_time
             assert tw_resp_from_mapper.category.id == expected_tw_resp.category.id
@@ -287,7 +287,7 @@ class TestDayTemplateMapper:
         assert len(response.time_windows) == len(expected_ordered_tw_responses)
         for i, tw_resp_in_final_response in enumerate(response.time_windows):
             expected_tw_resp_obj = expected_ordered_tw_responses[i]  # Corrected variable name
-            assert tw_resp_in_final_response.name == expected_tw_resp_obj.name
+            assert tw_resp_in_final_response.description == expected_tw_resp_obj.description
             assert tw_resp_in_final_response.start_time == expected_tw_resp_obj.start_time
             assert tw_resp_in_final_response.end_time == expected_tw_resp_obj.end_time
             assert tw_resp_in_final_response.category.id == expected_tw_resp_obj.category.id
@@ -330,9 +330,10 @@ class TestDayTemplateMapper:
         # Test by trying to create DayTemplateCreateRequest with data that would make an invalid TimeWindowInputSchema
         with pytest.raises(ValidationError, match="end_time must be greater than start_time"):
             DayTemplateCreateRequest(
-                name="Test Template",
                 description="Invalid time window test",
-                time_windows=[{"name": "Invalid Time", "start_time": 720, "end_time": 600, "category_id": ObjectId()}],
+                time_windows=[
+                    {"description": "Invalid Time", "start_time": 720, "end_time": 600, "category_id": ObjectId()}
+                ],
             )
 
     def test_time_window_validation_within_24h(
@@ -343,9 +344,10 @@ class TestDayTemplateMapper:
         # Validation for time range (0-1439) is on TimeWindowInputSchema's fields.
         with pytest.raises(ValidationError, match="Time must be between 0 and 1439 minutes"):
             DayTemplateCreateRequest(
-                name="Test Template",
                 description="Invalid time range test",
-                time_windows=[{"name": "Over 24h", "start_time": 0, "end_time": 1440, "category_id": ObjectId()}],
+                time_windows=[
+                    {"description": "Over 24h", "start_time": 0, "end_time": 1440, "category_id": ObjectId()}
+                ],
             )
 
     # Removing tests that call non-existent DayTemplateMapper.to_model_for_update
@@ -370,7 +372,7 @@ class TestDayTemplateMapper:
         # Create a list containing one dict that would fail TimeWindowInputSchema validation
         invalid_tw_dict_list = [
             {
-                "name": "Invalid Time Range TW Dict",
+                "description": "Invalid Time Range TW Dict",
                 "start_time": invalid_start,
                 "end_time": invalid_end,
                 "category_id": ObjectId(),  # This is correct for TimeWindowInputSchema

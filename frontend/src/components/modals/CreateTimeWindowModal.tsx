@@ -23,7 +23,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
 }) => {
   const { showMessage } = useMessage();
   const [formData, setFormData] = useState<TimeWindowCreateRequest>({
-    name: '',
+    description: '',
     start_time: 540, // Default to 9:00 AM
     end_time: 600,   // Default to 10:00 AM
     category_id: '',
@@ -35,7 +35,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     if (isOpen) {
       const defaultCategoryId = categories.length > 0 ? categories[0].id : '';
       setFormData({
-        name: '',
+        description: '',
         start_time: 540,
         end_time: 600,
         category_id: defaultCategoryId,
@@ -44,22 +44,10 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     }
   }, [isOpen, categories]);
 
-  useEffect(() => {
-    if (formData.category_id) {
-      const selectedCategory = categories.find(cat => cat.id === formData.category_id);
-      if (selectedCategory) {
-        let counter = 1;
-        let newName = `${selectedCategory.name}-${counter}`;
-        while (existingTimeWindows.some(tw => tw.time_window.name === newName && tw.time_window.category?.id === selectedCategory.id)) {
-          counter++;
-          newName = `${selectedCategory.name}-${counter}`;
-        }
-        setFormData(prev => ({ ...prev, name: newName }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, name: '' }));
-    }
-  }, [formData.category_id, categories, existingTimeWindows]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -97,7 +85,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
 
       const newTimeWindow: TimeWindow = {
         id: tempId,
-        name: formData.name,
+        description: formData.description,
         start_time: formData.start_time,
         end_time: formData.end_time,
         category: selectedCategory || { id: '', name: 'Uncategorized', user_id: '', is_deleted: false },
@@ -140,14 +128,15 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
           </select>
         </div>
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-slate-700">Name</label>
+          <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description (Optional)</label>
           <input
             type="text"
-            name="name"
-            id="name"
-            value={formData.name}
+            name="description"
+            id="description"
+            value={formData.description}
             onChange={handleInputChange}
             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            placeholder="e.g., Focus on project X"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">

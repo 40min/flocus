@@ -42,7 +42,7 @@ def sample_category_response(sample_category_id: ObjectId, sample_user_id: Objec
 def sample_time_window_response_for_allocation(sample_category_response: CategoryResponse) -> TimeWindowModelResponse:
     return TimeWindowModelResponse(
         id=ObjectId(),
-        name="Morning Focus",
+        description="Morning Focus",
         start_time=540,  # 09:00
         end_time=720,  # 12:00
         category=sample_category_response,
@@ -76,14 +76,14 @@ def sample_daily_plan_model(
         plan_date=sample_plan_date,
         time_windows=[
             TimeWindow(
-                name="Embedded TW 1",
+                description="Embedded TW 1",
                 category_id=sample_category_id,
                 start_time=540,
                 end_time=600,
                 task_ids=[ObjectId()],
             ),
             TimeWindow(
-                name="Embedded TW 2",
+                description="Embedded TW 2",
                 category_id=sample_category_id,
                 start_time=660,
                 end_time=720,
@@ -101,14 +101,14 @@ def sample_daily_plan_create_request(
         plan_date=sample_plan_date,
         time_windows=[
             TimeWindowCreate(
-                name="Morning Session",
+                description="Morning Session",
                 category_id=sample_category_id,
                 start_time=540,
                 end_time=720,
                 task_ids=[ObjectId()],
             ),
             TimeWindowCreate(
-                name="Afternoon Block",
+                description="Afternoon Block",
                 category_id=sample_category_id,
                 start_time=780,
                 end_time=900,
@@ -126,7 +126,7 @@ def test_time_windows_request_to_models(sample_daily_plan_create_request: DailyP
     for i, dto in enumerate(time_window_dtos):
         model = result_models[i]
         assert isinstance(model, TimeWindow)
-        assert model.name == dto.name
+        assert model.description == dto.description
         assert model.category_id == dto.category_id
         assert model.start_time == dto.start_time
         assert model.end_time == dto.end_time
@@ -187,7 +187,7 @@ def test_to_model_for_create(sample_daily_plan_create_request: DailyPlanCreateRe
     for i, tw_schema in enumerate(sample_daily_plan_create_request.time_windows):
         model_tw = result.time_windows[i]
         assert isinstance(model_tw, TimeWindow)
-        assert model_tw.name == tw_schema.name
+        assert model_tw.description == tw_schema.description
         assert model_tw.category_id == tw_schema.category_id
         assert model_tw.start_time == tw_schema.start_time
         assert model_tw.end_time == tw_schema.end_time

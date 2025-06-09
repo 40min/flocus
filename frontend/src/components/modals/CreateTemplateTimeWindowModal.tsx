@@ -4,7 +4,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
 import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { Category } from '../../types/category';
-import { hhMMToMinutes } from '../../lib/utils';
+import { hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
+import { useMessage } from '../../context/MessageContext';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import Modal from './Modal'; // Assuming Modal component is available
 
@@ -43,10 +44,11 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       description: '',
       startTime: null,
       endTime: null,
-      categoryId: availableCategories.length > 0 ? availableCategories[0].id : '',
+      categoryId: '',
     },
   });
 
+  const { showMessage } = useMessage();
   const newTimeWindowForm = watch(); // Watch all fields to react to changes
   const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
@@ -57,7 +59,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
         description: '',
         startTime: null,
         endTime: null,
-        categoryId: availableCategories.length > 0 ? availableCategories[0].id : '',
+        categoryId: '',
       });
       firstModalFocusableElementRef.current?.focus();
     }
@@ -94,14 +96,14 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       return;
     }
 
-    for (const existingTW of existingTimeWindows) {
-      if (
-        startTimeMinutes < existingTW.end_time &&
-        endTimeMinutes > existingTW.start_time
-      ) {
-        // This should be handled by validation rules
-        return;
-      }
+    const newTimeWindowCandidate = {
+      start_time: startTimeMinutes,
+      end_time: endTimeMinutes,
+    };
+
+    if (checkTimeWindowOverlap(newTimeWindowCandidate, existingTimeWindows.map(tw => ({ time_window: tw, tasks: [] })))) {
+      showMessage('New time window overlaps with an existing one.', 'error');
+      return;
     }
 
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
@@ -126,18 +128,26 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       <form onSubmit={handleSubmit(handleInternalSubmit)} className="space-y-4">
         <div>
           <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
-          <select
-            id="twCategory"
-            {...register('categoryId', { required: 'Category is required' })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm"
-            ref={firstModalFocusableElementRef}
-          >
-            {availableCategories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            control={control}
+            name="categoryId"
+            rules={{ required: 'Category is required' }}
+            render={({ field }) => (
+              <select
+                id="twCategory"
+                {...field}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm"
+                ref={firstModalFocusableElementRef}
+              >
+                <option value="">Select a category</option>
+                {availableCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          />
           {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId.message}</p>}
         </div>
         <div>
@@ -212,13 +222,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>
         )}
         <div className="flex justify-end space-x-3 mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-secondary text-sm px-4 py-2"
-          >
-            Cancel
-          </button>
           <button
             type="button"
             onClick={handleSubmit(handleInternalSubmit)}

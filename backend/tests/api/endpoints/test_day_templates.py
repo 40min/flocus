@@ -697,7 +697,7 @@ async def test_update_day_template_full(
     await test_db.save(new_category_for_update)
 
     updated_embedded_tw_data = {
-        "name": "Updated Embedded TW",
+        "description": "Updated Embedded TW",
         "start_time": 14 * 60,
         "end_time": 15 * 60,
         "category_id": str(new_category_for_update.id),
@@ -721,7 +721,7 @@ async def test_update_day_template_full(
 
     updated_tw_resp = updated_template.time_windows[0]
     # TimeWindowResponse does not have an 'id' field.
-    assert updated_tw_resp.name == updated_embedded_tw_data["name"]
+    assert updated_tw_resp.description == updated_embedded_tw_data["description"]
     assert updated_tw_resp.start_time == updated_embedded_tw_data["start_time"]
     assert updated_tw_resp.end_time == updated_embedded_tw_data["end_time"]
     assert updated_tw_resp.category.id == new_category_for_update.id
@@ -916,14 +916,14 @@ async def test_update_day_template_unauthenticated(
         ({"description": "a" * 256}, 422, "String should have at most 255 characters"),
         # Test validation for embedded time_windows in update
         (
-            {"time_windows": [{"name": "TW", "start_time": 0, "end_time": 60, "category_id": "invalid-oid"}]},
+            {"time_windows": [{"description": "TW", "start_time": 0, "end_time": 60, "category_id": "invalid-oid"}]},
             422,
             "Input should be an instance of ObjectId",
         ),  # Adjusted expected detail
         (
             {
                 "time_windows": [
-                    {"name": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id_placeholder"}
+                    {"description": "", "start_time": 0, "end_time": 60, "category_id": "valid_cat_id_placeholder"}
                 ]
             },
             422,
@@ -1069,8 +1069,18 @@ async def test_update_day_template_reorder_time_windows(
 ) -> None:
     """Test updating a day template to reorder its time windows"""
     # Define two embedded time windows
-    embedded_tw1 = {"name": "TW1 Reorder", "start_time": 100, "end_time": 200, "category_id": str(user_one_category.id)}
-    embedded_tw2 = {"name": "TW2 Reorder", "start_time": 300, "end_time": 400, "category_id": str(user_one_category.id)}
+    embedded_tw1 = {
+        "description": "TW1 Reorder",
+        "start_time": 100,
+        "end_time": 200,
+        "category_id": str(user_one_category.id),
+    }
+    embedded_tw2 = {
+        "description": "TW2 Reorder",
+        "start_time": 300,
+        "end_time": 400,
+        "category_id": str(user_one_category.id),
+    }
 
     # First create a template with both time windows in order: tw1, tw2
     template_data = DayTemplateCreateRequest(
@@ -1104,7 +1114,7 @@ async def test_update_day_template_reorder_time_windows(
 
     # First TW in response should match embedded_tw2
     resp_tw1 = updated_template_resp_obj.time_windows[0]
-    assert resp_tw1.name == embedded_tw2["name"]
+    assert resp_tw1.description == embedded_tw2["description"]
     assert resp_tw1.start_time == embedded_tw2["start_time"]
     assert resp_tw1.end_time == embedded_tw2["end_time"]
     assert resp_tw1.category.id == ObjectId(embedded_tw2["category_id"])
@@ -1112,7 +1122,7 @@ async def test_update_day_template_reorder_time_windows(
 
     # Second TW in response should match embedded_tw1
     resp_tw2 = updated_template_resp_obj.time_windows[1]
-    assert resp_tw2.name == embedded_tw1["name"]
+    assert resp_tw2.description == embedded_tw1["description"]
     assert resp_tw2.start_time == embedded_tw1["start_time"]
     assert resp_tw2.end_time == embedded_tw1["end_time"]
     assert resp_tw2.category.id == ObjectId(embedded_tw1["category_id"])
@@ -1128,9 +1138,14 @@ async def test_update_day_template_remove_time_window(
 ) -> None:
 
     # Define two embedded time windows for the request
-    tw_to_keep = {"name": "TW to Keep", "start_time": 100, "end_time": 200, "category_id": str(user_one_category.id)}
+    tw_to_keep = {
+        "description": "TW to Keep",
+        "start_time": 100,
+        "end_time": 200,
+        "category_id": str(user_one_category.id),
+    }
     tw_to_remove = {
-        "name": "TW to Remove",
+        "description": "TW to Remove",
         "start_time": 300,
         "end_time": 400,
         "category_id": str(user_one_category.id),
@@ -1164,7 +1179,7 @@ async def test_update_day_template_remove_time_window(
     # Verify only one time window remains
     assert len(updated_template.time_windows) == 1
     final_tw_in_response = updated_template.time_windows[0]
-    assert final_tw_in_response.name == tw_to_keep["name"]
+    assert final_tw_in_response.description == tw_to_keep["description"]
     assert final_tw_in_response.start_time == tw_to_keep["start_time"]
     assert final_tw_in_response.category.id == ObjectId(tw_to_keep["category_id"])
 

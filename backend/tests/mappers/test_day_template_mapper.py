@@ -240,7 +240,7 @@ class TestDayTemplateMapper:
             model.time_windows
         ):  # Iterating over EmbeddedTimeWindowSchema instances
             input_tw_schema = sample_day_template_create_request.time_windows[i]
-            assert embedded_tw_instance.name == input_tw_schema.name
+            assert embedded_tw_instance.description == input_tw_schema.description
             assert embedded_tw_instance.start_time == input_tw_schema.start_time
             assert embedded_tw_instance.end_time == input_tw_schema.end_time
             assert embedded_tw_instance.category_id == input_tw_schema.category_id

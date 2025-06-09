@@ -699,7 +699,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
 
     updated_time_windows = [
         create_time_window_payload(
-            name="Bad Cat TW",
+            description="Bad Cat TW",
             category_id=user_two_category.id,
             start_time=600,
             end_time=660,
@@ -741,7 +741,7 @@ async def test_update_daily_plan_unowned_task_fails(
 
     updated_time_windows = [
         create_time_window_payload(
-            name="Bad Task TW",
+            description="Bad Task TW",
             category_id=user_one_category.id,
             start_time=600,
             end_time=660,
@@ -821,7 +821,7 @@ async def test_create_daily_plan_fail_task_category_mismatch(
 
     time_windows = [
         create_time_window_payload(
-            name="Mismatch Category Allocation",
+            description="Mismatch Category Allocation",
             category_id=user_one_category.id,  # Allocation's category
             start_time=540,
             end_time=600,
@@ -847,7 +847,7 @@ async def test_create_daily_plan_success_task_no_category(
     plan_date = unique_date
     time_windows = [
         create_time_window_payload(
-            name="Task With No Category Allocation",
+            description="Task With No Category Allocation",
             category_id=user_one_category.id,  # Allocation has a category
             start_time=540,
             end_time=720,
@@ -895,7 +895,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
     # Initial plan with a task that matches its allocation category
     initial_time_windows = [
         create_time_window_payload(
-            name="Initial Allocation",
+            description="Initial Allocation",
             category_id=user_one_category.id,  # Allocation category
             start_time=540,
             end_time=600,
@@ -912,7 +912,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
     # Attempt to update: allocation keeps user_one_category, but task is mismatch_task_instance (user_one_category_alt)
     updated_time_windows = [
         create_time_window_payload(
-            name="Updated Mismatch Allocation",
+            description="Updated Mismatch Allocation",
             category_id=user_one_category.id,  # Allocation category remains user_one_category
             start_time=660,
             end_time=720,

@@ -314,7 +314,7 @@ const EditTemplatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setIsTimeWindowModalOpen(true); }}
-                className="btn-standard mt-4 text-xs disabled:opacity-50"
+                className="btn-standard mt-4 text-xs disabled:opacity-50 px-4 py-2 flex items-center disabled:cursor-not-allowed"
                 disabled={isLoading}
                 title={"Add new time window"}
               >

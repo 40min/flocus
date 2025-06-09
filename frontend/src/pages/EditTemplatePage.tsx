@@ -45,7 +45,7 @@ const EditTemplatePage: React.FC = () => {
         endTimeMinutes > existingTW.start_time
       ) {
         setFormError(
-          `New time window (${formatMinutesToHHMM(startTimeMinutes)} - ${formatMinutesToHHMM(endTimeMinutes)}) overlaps with an existing one: "${existingTW.name}" (${formatMinutesToHHMM(existingTW.start_time)} - ${formatMinutesToHHMM(existingTW.end_time)}).`
+          `New time window (${formatMinutesToHHMM(startTimeMinutes)} - ${formatMinutesToHHMM(endTimeMinutes)}) overlaps with an existing one: "${existingTW.description}" (${formatMinutesToHHMM(existingTW.start_time)} - ${formatMinutesToHHMM(existingTW.end_time)}).`
         );
         return;
       }
@@ -185,7 +185,7 @@ const EditTemplatePage: React.FC = () => {
 
     const time_windows_payload = templateTimeWindows.map(tw => {
       const timeWindowPayload: TimeWindowInput = {
-        description: tw.description,
+        description: tw.description || '',
         start_time: tw.start_time,
         end_time: tw.end_time,
         category_id: tw.category.id,

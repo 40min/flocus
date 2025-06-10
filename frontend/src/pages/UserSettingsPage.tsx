@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import Button from '../components/Button';
+import Input from '../components/Input';
 import { useMutation } from '@tanstack/react-query';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
@@ -90,31 +92,31 @@ const UserSettingsPage: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">Username</label>
-            <input className="form-input w-full h-12 bg-gray-200 text-gray-500 cursor-not-allowed" id="username" name="username" type="text" value={user.username} readOnly />
+            <Input className="bg-gray-200 text-gray-500 cursor-not-allowed" id="username" name="username" type="text" value={user.username} readOnly />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">Email</label>
-            <input className="form-input w-full h-12" id="email" type="email" {...register('email', { required: 'Email is required' })} />
+            <Input id="email" type="email" {...register('email', { required: 'Email is required' })} />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
           </div>
            <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="first_name">First Name</label>
-            <input className="form-input w-full h-12" id="first_name" type="text" {...register('first_name', { required: 'First name is required' })} />
+            <Input id="first_name" type="text" {...register('first_name', { required: 'First name is required' })} />
             {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
           </div>
            <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="last_name">Last Name</label>
-            <input className="form-input w-full h-12" id="last_name" type="text" {...register('last_name', { required: 'Last name is required' })} />
+            <Input id="last_name" type="text" {...register('last_name', { required: 'Last name is required' })} />
             {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">New Password</label>
-            <input className="form-input w-full h-12" id="password" placeholder="Enter new password (optional)" type="password" {...register('password')} />
+            <Input id="password" placeholder="Enter new password (optional)" type="password" {...register('password')} />
           </div>
           <div className="pt-2">
-            <button className="btn-primary h-12 px-6 text-base" type="submit" disabled={updateUserMutation.isPending}>
+            <Button variant="slate" size="medium" type="submit" disabled={updateUserMutation.isPending} className="flex items-center gap-2">
               {updateUserMutation.isPending ? 'Updating...' : 'Update Account'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>
@@ -137,35 +139,35 @@ const UserSettingsPage: React.FC = () => {
               <h3 className="text-base font-medium text-gray-800">Default View</h3>
               <p className="text-sm text-gray-500">Choose the default view for your daily schedule.</p>
             </div>
-            <select className="form-input h-11 text-sm w-40" value={defaultView} onChange={(e) => setDefaultView(e.target.value)}>
+            <Input as="select" className="h-11 text-sm w-40" value={defaultView} onChange={(e) => setDefaultView(e.target.value)}>
               <option>List View</option>
               <option>Calendar View</option>
               <option>Board View</option>
-            </select>
+            </Input>
           </div>
           <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
             <div>
               <h3 className="text-base font-medium text-gray-800">Pomodoro Duration</h3>
               <p className="text-sm text-gray-500">Set the default duration for your Pomodoro sessions.</p>
             </div>
-            <select className="form-input h-11 text-sm w-40" value={pomodoroDuration} onChange={(e) => setPomodoroDuration(e.target.value)}>
+            <Input as="select" className="h-11 text-sm w-40" value={pomodoroDuration} onChange={(e) => setPomodoroDuration(e.target.value)}>
               <option>25 minutes</option>
               <option>30 minutes</option>
               <option>45 minutes</option>
               <option>60 minutes</option>
-            </select>
+            </Input>
           </div>
           <div className="flex items-center justify-between py-3">
             <div>
               <h3 className="text-base font-medium text-gray-800">Notification Sound</h3>
               <p className="text-sm text-gray-500">Choose the default sound for notifications.</p>
             </div>
-            <select className="form-input h-11 text-sm w-40" value={notificationSound} onChange={(e) => setNotificationSound(e.target.value)}>
+            <Input as="select" className="h-11 text-sm w-40" value={notificationSound} onChange={(e) => setNotificationSound(e.target.value)}>
               <option>Default</option>
               <option>Chime</option>
               <option>Alert</option>
               <option>None</option>
-            </select>
+            </Input>
           </div>
         </div>
       </section>

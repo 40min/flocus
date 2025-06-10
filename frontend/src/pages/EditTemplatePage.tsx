@@ -13,6 +13,8 @@ import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { ChevronRight, Trash2, PlusCircle } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
 const templateFormSchema = z.object({
   name: z.string().min(1, "Template name is required"),
@@ -251,22 +253,21 @@ const EditTemplatePage: React.FC = () => {
           <div className="max-w-md space-y-4">
             <div>
               <label htmlFor="templateName" className="block text-sm font-medium text-gray-700 mb-1.5">Template Name</label>
-              <input
+              <Input
                 type="text"
                 id="templateName"
                 {...register('name')}
-                className="form-input w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
                 placeholder="e.g., Morning Focus Session"
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">Description (Optional)</label>
-              <textarea
+              <Input
+                as="textarea"
                 id="description"
                 {...register('description')}
                 rows={3}
-                className="form-input w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm"
                 placeholder="e.g., A template for deep work sessions in the morning."
               />
               {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
@@ -291,28 +292,30 @@ const EditTemplatePage: React.FC = () => {
                       <p className="text-sm text-gray-500 mt-1">{tw.description}</p>
                     )}
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDeleteTimeWindow(tw.id)}
-                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
                     title="Delete time window"
                     disabled={isLoading}
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </Button>
                 </div>
               )) : <p className="text-sm text-gray-500">This template has no time windows yet. Add some below.</p>}
             </div>
-              <button
+              <Button
                 type="button"
+                variant="slate"
+                size="small"
                 onClick={() => { setIsTimeWindowModalOpen(true); }}
-                className="btn-standard mt-4 text-xs disabled:opacity-50 px-4 py-2 flex items-center disabled:cursor-not-allowed"
+                className="mt-4 flex items-center gap-2"
                 disabled={isLoading}
                 title={"Add new time window"}
               >
                 <PlusCircle size={20} />
                 Add new time window
-              </button>
+              </Button>
           </div>
 
         <CreateTemplateTimeWindowModal
@@ -325,8 +328,9 @@ const EditTemplatePage: React.FC = () => {
 
 
         <div className="flex justify-end gap-3 mt-8">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => {
               if (hasUnsavedChanges) {
                 if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
@@ -336,18 +340,18 @@ const EditTemplatePage: React.FC = () => {
                 navigate('/templates');
               }
             }}
-            className="btn-standard bg-gray-200 hover:bg-gray-300 text-gray-700"
             disabled={isLoading}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className={`btn-standard ${hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}`}
+            variant={hasUnsavedChanges || isCreatingNew ? 'primary' : 'secondary'}
+            className={hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}
             disabled={isLoading || (!hasUnsavedChanges && !isCreatingNew) || !!errors.name}
           >
             {isSubmitting ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

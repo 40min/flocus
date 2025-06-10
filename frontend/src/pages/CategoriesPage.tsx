@@ -5,6 +5,8 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
 import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 import { useCategories } from '../hooks/useCategories';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
 const colorOptions = [
   { name: 'Blue', value: '#3B82F6',bgColor: 'bg-blue-500', textColor: 'text-blue-700', ringColor: 'ring-blue-500' },
@@ -121,13 +123,15 @@ const CategoriesPage: React.FC = () => {
       </header>
 
       <div className="flex justify-end mb-6">
-        <button
+        <Button
           onClick={handleAddCategoryClick}
-          className="flex items-center px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+          variant="slate"
+          size="medium"
+          className="flex items-center gap-2"
         >
-          <PlusCircle size={20} className="mr-2" />
+          <PlusCircle size={20} />
           Add New Category
-        </button>
+        </Button>
       </div>
 
       {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
@@ -138,32 +142,33 @@ const CategoriesPage: React.FC = () => {
           <form onSubmit={handleFormSubmit(onSubmit)}>
             <div className="mb-4">
               <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-              <input
+              <Input
                 type="text"
                 id="name"
                 {...register("name", { required: "Name is required" })}
-                className={`w-full px-3 py-2 border ${errors.name ? 'border-red-500' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
             <div className="mb-4">
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
-              <textarea
+              <Input
+                as="textarea"
                 id="description"
                 {...register("description")}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-slate-500 focus:border-slate-500"
-              ></textarea>
+              />
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
               <input type="hidden" {...register("color", { required: "Color is required" })} />
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((option) => (
-                  <div
+                  <Button
                     key={option.value}
-                    className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center ${option.bgColor} ${watchedColor === option.value ? `ring-2 ${option.ringColor} ring-offset-2` : ''}`}
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setValue("color", option.value, { shouldValidate: true })}
+                    className={`rounded-full ${option.bgColor} ${watchedColor === option.value ? `ring-2 ${option.ringColor} ring-offset-2` : ''}`}
                     title={option.name}
                   >
                     {watchedColor === option.value && (
@@ -171,15 +176,15 @@ const CategoriesPage: React.FC = () => {
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     )}
-                  </div>
+                  </Button>
                 ))}
               </div>
               {errors.color && <p className="mt-1 text-sm text-red-600">{errors.color.message}</p>}
             </div>
             {formError && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{formError}</div>}
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={closeForm} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50">{isSubmitting ? 'Saving...' : (editingCategory ? 'Update' : 'Create')}</button>
+              <Button type="button" onClick={closeForm} variant="secondary" size="small">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting} variant="slate" size="small">{isSubmitting ? 'Saving...' : (editingCategory ? 'Update' : 'Create')}</Button>
             </div>
           </form>
         </div>
@@ -222,20 +227,22 @@ const CategoriesPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleEdit(category)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
                         title="Edit Category"
                       >
                         <Edit size={18} />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleDelete(category.id)}
-                        className="text-red-600 hover:text-red-900"
                         title="Delete Category"
                       >
                         <Trash2 size={18} />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );

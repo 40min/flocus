@@ -3,8 +3,8 @@ import { cn } from '../lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'destructive';
-  size?: 'small' | 'medium' | 'large';
+  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'slate';
+  size?: 'small' | 'medium' | 'large' | 'icon';
   isLoading?: boolean;
 }
 
@@ -20,15 +20,18 @@ const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'py-2 px-4 rounded font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantStyles = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+    primary: 'bg-blue-800 text-white hover:bg-blue-900 focus:ring-blue-700',
     secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500',
     destructive: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+    ghost: 'hover:bg-slate-100 text-slate-500 hover:text-slate-700',
+    slate: 'bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500',
   };
 
   const sizeStyles = {
     small: 'text-sm py-1 px-3',
     medium: 'text-base py-2 px-4',
     large: 'text-lg py-3 px-6',
+    icon: 'p-1.5',
   };
 
   return (

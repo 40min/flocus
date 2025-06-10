@@ -6,6 +6,7 @@ import { deleteDayTemplate } from '../services/dayTemplateService';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { TimeWindow } from '../types/timeWindow';
 import { useTemplates } from '../hooks/useTemplates';
+import Button from '../components/Button';
 
 const TemplatesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -36,13 +37,15 @@ const TemplatesPage: React.FC = () => {
       <div className="bg-white shadow-sm rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-800">My Templates</h2>
-          <button
+          <Button
             onClick={() => navigate('/templates/new')}
-            className="btn-standard"
+            variant="slate"
+            size="medium"
+            className="flex items-center gap-2"
           >
             <Plus size={18} />
             <span className="truncate">Create Template</span>
-          </button>
+          </Button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -95,12 +98,22 @@ const TemplatesPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => navigate(`/templates/edit/${template.id}`)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <Edit size={18} /> Edit
-                      </button>
-                      <button onClick={() => handleDelete(template.id)} className="text-red-500 hover:text-red-700 flex items-center gap-1">
-                        <Trash2 size={18} /> Delete
-                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(`/templates/edit/${template.id}`)}
+                        title='Edit Template'
+                      >
+                        <Edit size={18} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(template.id)}
+                        title='Delete Template'
+                      >
+                        <Trash2 size={18} />
+                      </Button>
                     </div>
                   </td>
                 </tr>

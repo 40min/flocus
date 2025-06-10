@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDueDate, formatDurationFromMinutes } from 'lib/utils';
 import { PlusCircle, Edit, Trash2, Info } from 'lucide-react';
+import Button from 'components/Button';
 import { Task, TaskCreateRequest } from 'types/task';
 import * as taskService from 'services/taskService';
 import CreateTaskModal from 'components/modals/CreateTaskModal';
@@ -95,10 +96,10 @@ const TasksPage: React.FC = () => {
     <div className="@container">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <h2 className="text-slate-900 text-3xl font-bold">Tasks</h2>
-        <button onClick={openCreateModal} className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors">
+        <Button onClick={openCreateModal} variant="slate" size="medium" className="flex items-center gap-2">
           <PlusCircle size={18} />
           <span className="truncate">New Task</span>
-        </button>
+        </Button>
       </div>
 
       {tasksError && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{tasksError.message}</div>}
@@ -170,15 +171,15 @@ const TasksPage: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 text-slate-600 text-sm">{formatDurationFromMinutes(task.statistics?.lasts_min)}</td>
                 <td className="px-6 py-4 text-right space-x-2">
-                  <button onClick={() => openStatsModal(task)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" aria-label="view statistics">
+                  <Button variant="ghost" size="icon" onClick={() => openStatsModal(task)} aria-label="view statistics">
                     <Info size={18} />
-                  </button>
-                  <button onClick={() => handleEdit(task)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" aria-label="edit task">
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(task)} aria-label="edit task">
                     <Edit size={18} />
-                  </button>
-                  <button onClick={() => handleDelete(task.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" aria-label="delete task">
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)} aria-label="delete task">
                     <Trash2 size={18} />
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}

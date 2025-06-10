@@ -1,85 +1,147 @@
+import { getAllTasks, getTaskById, createTask, updateTask, deleteTask } from './taskService';
 import api from './api';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { Task, TaskCreateRequest, TaskUpdateRequest } from '../types/task';
-import { getAllTasks, getTaskById, createTask, updateTask, deleteTask } from './taskService';
 
 jest.mock('./api');
-const mockedApi = api as jest.Mocked<typeof api>;
 
 describe('taskService', () => {
-  afterEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  const mockTask: Task = {
-    id: '1',
-    title: 'Test Task',
-    status: 'pending',
-    priority: 'medium',
-    user_id: 'user1',
-  };
+  describe('getAllTasks', () => {
+    it('should fetch all tasks successfully', async () => {
+      const mockTasks: Task[] = [
+        { id: '1', title: 'Task 1', description: 'Desc 1', status: 'pending', priority: 'medium', due_date: null, user_id: 'user1', category_id: undefined, is_deleted: false },
+        { id: '2', title: 'Task 2', description: 'Desc 2', status: 'done', priority: 'low', due_date: null, user_id: 'user1', category_id: undefined, is_deleted: false },
+      ];
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockTasks });
 
-  it('getAllTasks should fetch tasks', async () => {
-    mockedApi.get.mockResolvedValue({ data: [mockTask] });
-    const tasks = await getAllTasks();
-    expect(mockedApi.get).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE);
-    expect(tasks).toEqual([mockTask]);
+      const result = await getAllTasks();
+
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE);
+      expect(result).toEqual(mockTasks);
+    });
+
+    it('should throw an error if fetching tasks fails', async () => {
+      const errorMessage = 'Failed to fetch tasks';
+      (api.get as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      await expect(getAllTasks()).rejects.toThrow(errorMessage);
+    });
   });
 
-  it('getTaskById should fetch a single task', async () => {
-    mockedApi.get.mockResolvedValue({ data: mockTask });
-    const task = await getTaskById('1');
-    expect(mockedApi.get).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID('1'));
-    expect(task).toEqual(mockTask);
+  describe('getTaskById', () => {
+    const taskId = '1';
+    const mockTask: Task = {
+      id: taskId,
+      title: 'Task 1',
+      description: 'Desc 1',
+      status: 'pending',
+      priority: 'medium',
+      due_date: null,
+      user_id: 'user1',
+      category_id: undefined,
+      is_deleted: false,
+    };
+
+    it('should fetch a task by ID successfully', async () => {
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockTask });
+
+      const result = await getTaskById(taskId);
+
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID(taskId));
+      expect(result).toEqual(mockTask);
+    });
+
+    it('should throw an error if fetching a task by ID fails', async () => {
+      const errorMessage = 'Failed to fetch task';
+      (api.get as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      await expect(getTaskById(taskId)).rejects.toThrow(errorMessage);
+    });
   });
 
-  it('createTask should create a task', async () => {
-    const newTaskData: TaskCreateRequest = {
+  describe('createTask', () => {
+    const newTaskData: TaskCreateRequest = { title: 'New Task', description: 'New Desc', status: 'pending', priority: 'high', due_date: null, category_id: undefined };
+    const mockCreatedTask: Task = {
+      id: '3',
       title: 'New Task',
+      description: 'New Desc',
       status: 'pending',
       priority: 'high',
-    };
-    const createdTask: Task = {
-      ...newTaskData,
-      id: '2',
+      due_date: null,
       user_id: 'user1',
-      category_id: newTaskData.category_id ?? undefined,
+      category_id: undefined,
+      is_deleted: false,
     };
-    mockedApi.post.mockResolvedValue({ data: createdTask });
 
-    const result = await createTask(newTaskData);
-    expect(mockedApi.post).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE, newTaskData);
-    expect(result).toEqual(createdTask);
+    it('should create a task successfully', async () => {
+      (api.post as jest.Mock).mockResolvedValueOnce({ data: mockCreatedTask });
+
+      const result = await createTask(newTaskData);
+
+      expect(api.post).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE, newTaskData);
+      expect(result).toEqual(mockCreatedTask);
+    });
+
+    it('should throw an error if creating a task fails', async () => {
+      const errorMessage = 'Failed to create task';
+      (api.post as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      await expect(createTask(newTaskData)).rejects.toThrow(errorMessage);
+    });
   });
 
-  it('updateTask should update a task', async () => {
+  describe('updateTask', () => {
     const taskId = '1';
-    const updates: TaskUpdateRequest = { title: 'Updated Task Title' };
-    const updatedTask: Task = {
-      ...mockTask,
-      ...updates,
-      category_id: updates.hasOwnProperty('category_id')
-        ? (updates.category_id ?? undefined)
-        : mockTask.category_id,
+    const updatedTaskData: TaskUpdateRequest = { title: 'Updated Task 1', status: 'done' };
+    const mockUpdatedTask: Task = {
+      id: taskId,
+      title: 'Updated Task 1',
+      description: 'Desc 1',
+      status: 'done',
+      priority: 'medium',
+      due_date: null,
+      user_id: 'user1',
+      category_id: undefined,
+      is_deleted: false,
     };
-    mockedApi.patch.mockResolvedValue({ data: updatedTask });
 
-    const result = await updateTask(taskId, updates);
-    expect(mockedApi.patch).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID(taskId), updates);
-    expect(result).toEqual(updatedTask);
+    it('should update a task successfully', async () => {
+      (api.patch as jest.Mock).mockResolvedValueOnce({ data: mockUpdatedTask });
+
+      const result = await updateTask(taskId, updatedTaskData);
+
+      expect(api.patch).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID(taskId), updatedTaskData);
+      expect(result).toEqual(mockUpdatedTask);
+    });
+
+    it('should throw an error if updating a task fails', async () => {
+      const errorMessage = 'Failed to update task';
+      (api.patch as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      await expect(updateTask(taskId, updatedTaskData)).rejects.toThrow(errorMessage);
+    });
   });
 
-  it('deleteTask should delete a task', async () => {
+  describe('deleteTask', () => {
     const taskId = '1';
-    mockedApi.delete.mockResolvedValue({});
 
-    await deleteTask(taskId);
-    expect(mockedApi.delete).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID(taskId));
-  });
+    it('should delete a task successfully', async () => {
+      (api.delete as jest.Mock).mockResolvedValueOnce({});
 
-  it('should throw error if API call fails', async () => {
-    const error = new Error('API Error');
-    mockedApi.get.mockRejectedValue(error);
-    await expect(getAllTasks()).rejects.toThrow('API Error');
+      await deleteTask(taskId);
+
+      expect(api.delete).toHaveBeenCalledWith(API_ENDPOINTS.TASK_BY_ID(taskId));
+    });
+
+    it('should throw an error if deleting a task fails', async () => {
+      const errorMessage = 'Failed to delete task';
+      (api.delete as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      await expect(deleteTask(taskId)).rejects.toThrow(errorMessage);
+    });
   });
 });

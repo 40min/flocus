@@ -29,7 +29,7 @@ const Button: React.FC<ButtonProps> = ({
 
   const sizeStyles = {
     small: 'text-sm py-1 px-3',
-    medium: 'text-base py-2 px-4',
+    medium: 'text-base py-1.5 px-4',
     large: 'text-lg py-3 px-6',
     icon: 'p-1.5',
   };

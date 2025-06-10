@@ -53,7 +53,6 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
   return (
     <article
       className="relative group"
-      role="article"
       aria-label={`Time window: ${category.name} from ${formattedStartTime} to ${formattedEndTime}, duration ${formattedDuration}`}
     >
       <div
@@ -99,9 +98,9 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
         <section>
           <h3 className="sr-only">Tasks for this time window</h3>
           {tasks && tasks.length > 0 && (
-            <ul className="space-y-3" role="list" aria-label="Tasks assigned to this time window">
+            <ul className="space-y-3" aria-label="Tasks assigned to this time window">
               {tasks.map(task => (
-                <li key={task.id} className="relative" role="listitem">
+                <li key={task.id} className="relative">
                   <TaskItem
                     task={task}
                     baseBgColor={lightBgColor} // Use the light background color for task items

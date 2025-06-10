@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException, status
 from odmantic import AIOEngine, ObjectId
 
-from app.api.schemas.category import CategoryResponse
 from app.api.schemas.daily_plan import (
     DailyPlanCreateRequest,
     DailyPlanResponse,
@@ -17,6 +16,8 @@ from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelRes
 from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.daily_plan import DailyPlan
+from app.db.models.task import Task
+from app.mappers.category_mapper import CategoryMapper
 from app.mappers.daily_plan_mapper import DailyPlanMapper
 from app.mappers.task_mapper import TaskMapper
 from app.services.category_service import CategoryService
@@ -85,13 +86,51 @@ class DailyPlanService:
                     )
 
     async def _map_plan_to_response(self, plan: DailyPlan, current_user_id: ObjectId) -> DailyPlanResponse:
-        response_time_windows: List[TimeWindowResponse] = []
-        for time_window_db in plan.time_windows:  # These are TimeWindow instances
-            # Fetch CategoryResponse
-            category_resp: CategoryResponse = await self.category_service.get_category_by_id(
-                time_window_db.category_id, current_user_id
+        # 1. Gather all unique IDs from the plan
+        tw_category_ids = set()
+        all_task_ids = set()
+        for tw in plan.time_windows:
+            tw_category_ids.add(tw.category_id)
+            all_task_ids.update(tw.task_ids)
+
+        # 2. Batch fetch all tasks
+        task_models: List[Task] = []
+        if all_task_ids:
+            task_models = await self.engine.find(
+                Task,
+                Task.id.in_(list(all_task_ids)),
+                Task.user_id == current_user_id,
+                Task.is_deleted == False,  # noqa: E712
             )
-            # Construct TimeWindowResponse
+        task_category_ids = {task.category_id for task in task_models if task.category_id}
+
+        # 3. Batch fetch all categories (for time windows and tasks)
+        all_category_ids = tw_category_ids.union(task_category_ids)
+        category_models: List[Category] = []
+        if all_category_ids:
+            category_models = await self.engine.find(
+                Category, Category.id.in_(list(all_category_ids)), Category.user == current_user_id
+            )
+
+        # 4. Create in-memory maps for efficient lookup
+        tasks_map: Dict[ObjectId, Task] = {task.id: task for task in task_models}
+        categories_map: Dict[ObjectId, Category] = {cat.id: cat for cat in category_models}
+
+        # 5. Build the response DTO using the maps
+        response_time_windows: List[TimeWindowResponse] = []
+        for time_window_db in plan.time_windows:
+            category_model = categories_map.get(time_window_db.category_id)
+            if not category_model:
+                # This indicates an orphaned or inaccessible category_id.
+                # The old implementation would raise a 404/403 via get_category_by_id.
+                # We will raise a generic error to signal a data integrity issue.
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Category with ID {time_window_db.category_id} not found or not accessible.",
+                )
+
+            category_resp = CategoryMapper.to_response(category_model)
+
             time_window_resp = TimeWindowModelResponse(
                 id=ObjectId(),  # Placeholder ID for ad-hoc time window
                 description=time_window_db.description,
@@ -101,23 +140,16 @@ class DailyPlanService:
             )
 
             tasks_resp: List[TaskResponse] = []
-            if time_window_db.task_ids:
-                task_models = await self.task_service.get_tasks_by_ids(time_window_db.task_ids, current_user_id)
-                for task_model in task_models:
-                    category_model_for_task: Optional[Category] = None
-                    if task_model.category_id:
-                        # Assuming CategoryService has a method to get Category model by ID
-                        # This might need adjustment based on actual CategoryService implementation
-                        # For now, let's assume it can fetch the model directly or we fetch it here.
-                        category_model_for_task = await self.engine.find_one(
-                            Category, Category.id == task_model.category_id
-                        )
-                    tasks_resp.append(self.task_mapper.to_response(task_model, category_model_for_task))
+            for task_id in time_window_db.task_ids:
+                task_model = tasks_map.get(task_id)
+                if task_model:
+                    task_category_model = categories_map.get(task_model.category_id) if task_model.category_id else None
+                    tasks_resp.append(self.task_mapper.to_response(task_model, task_category_model))
 
-            time_window_resp = self.daily_plan_mapper.to_time_window_response(
+            final_time_window_resp = self.daily_plan_mapper.to_time_window_response(
                 time_window_response=time_window_resp, task_responses=tasks_resp
             )
-            response_time_windows.append(time_window_resp)
+            response_time_windows.append(final_time_window_resp)
 
         # Ensure plan_date is timezone-aware (UTC) before mapping to response
         if plan.plan_date.tzinfo is None or plan.plan_date.tzinfo.utcoffset(plan.plan_date) is None:

@@ -7,7 +7,6 @@ export const getAllTimeWindows = async (): Promise<TimeWindow[]> => {
     const response = await api.get<TimeWindow[]>(API_ENDPOINTS.TIME_WINDOWS_BASE);
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch time windows:', error);
     throw error;
   }
 };
@@ -17,7 +16,6 @@ export const createTimeWindow = async (timeWindowData: TimeWindowCreateRequest):
       const response = await api.post<TimeWindow>(API_ENDPOINTS.TIME_WINDOWS_BASE, timeWindowData);
       return response.data;
     } catch (error) {
-      console.error('Failed to create time window:', error);
       throw error;
     }
   };
@@ -27,7 +25,6 @@ export const createTimeWindow = async (timeWindowData: TimeWindowCreateRequest):
        const response = await api.patch<TimeWindow>(API_ENDPOINTS.TIME_WINDOW_BY_ID(id), timeWindowData);
        return response.data;
      } catch (error) {
-       console.error(`Failed to update time window with id ${id}:`, error);
        throw error;
      }
    };
@@ -36,7 +33,6 @@ export const createTimeWindow = async (timeWindowData: TimeWindowCreateRequest):
     try {
       await api.delete(API_ENDPOINTS.TIME_WINDOW_BY_ID(id));
     } catch (error) {
-      console.error(`Failed to delete time window with id ${id}:`, error);
       throw error;
     }
   }

@@ -5,11 +5,11 @@ from fastapi import Depends, HTTPException, status
 from odmantic import AIOEngine, ObjectId
 
 from app.api.schemas.daily_plan import (
-    DailyPlanCreateRequest,
+    DailyPlanCreateRequest, # Takes TimeWindowCreateRequest
     DailyPlanResponse,
-    DailyPlanUpdateRequest,
-    TimeWindowCreate,
-    TimeWindowResponse,
+    DailyPlanUpdateRequest, # Takes TimeWindowCreateRequest
+    PopulatedTimeWindowResponse, # Wrapper response schema for a time window item
+    TimeWindowCreateRequest,     # Flat input schema for a time window
 )
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
@@ -40,7 +40,7 @@ class DailyPlanService:
 
     async def _validate_time_window_categories(
         self,
-        time_windows_data: List[TimeWindowCreate],
+        time_windows_data: List[TimeWindowCreateRequest],
         current_user_id: ObjectId,
     ):
         """
@@ -55,7 +55,7 @@ class DailyPlanService:
 
     async def _validate_task_categories_for_time_windows(
         self,
-        time_windows_data: List[TimeWindowCreate],
+        time_windows_data: List[TimeWindowCreateRequest],
         current_user_id: ObjectId,
     ):
         for time_window_data in time_windows_data:
@@ -115,7 +115,7 @@ class DailyPlanService:
         categories_map: Dict[ObjectId, Category] = {cat.id: cat for cat in category_models}
 
         # 5. Build the response DTO using the maps
-        response_time_windows: List[TimeWindowResponse] = []
+        response_time_windows: List[PopulatedTimeWindowResponse] = []
         for time_window_db in plan.time_windows:
             category_model = categories_map.get(time_window_db.category_id)
             if not category_model:

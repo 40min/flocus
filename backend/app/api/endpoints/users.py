@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from app.api.schemas.user import UserCreateRequest, UserResponse, UserUpdateRequest
 from app.core.config import settings
-from app.core.dependencies import get_validated_user_id, get_current_active_user_id
+from app.core.dependencies import get_current_active_user_id, get_validated_user_id
 from app.db.models.user import User
 from app.services.user_service import UserService
 
@@ -56,7 +56,7 @@ async def update_user(
     user_service: UserService = Depends(UserService),
 ):
     updated_user: User = await user_service.update_user_by_id(
-        user_id=user_id, user_data=user_data, current_user_id=str(current_user_id)
+        user_id=user_id, user_data=user_data, current_user_id=current_user_id
     )
     return UserResponse.model_validate(updated_user)
 
@@ -67,5 +67,5 @@ async def delete_user(
     current_user_id: ObjectId = Depends(get_current_active_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    await user_service.delete_user_by_id(user_id=user_id, current_user_id=str(current_user_id))
+    await user_service.delete_user_by_id(user_id=user_id, current_user_id=current_user_id)
     return None  # For 204 No Content

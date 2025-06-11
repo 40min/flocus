@@ -77,13 +77,13 @@ class UserService:
         return user
 
     async def update_user_by_id(
-        self, user_id: ObjectId, user_data: UserUpdateRequest, current_user_id: str
+        self, user_id: ObjectId, user_data: UserUpdateRequest, current_user_id: ObjectId
     ) -> User:  # Return type changed to User
         existing_user = await self.db.find_one(User, User.id == user_id)
         if existing_user is None:
             raise UserNotFoundException(detail="User not found for update")
 
-        if str(existing_user.id) != current_user_id:
+        if existing_user.id != current_user_id:
             raise ForbiddenException(detail="Not authorized to update this user")
 
         if user_data.email and user_data.email != existing_user.email:
@@ -105,12 +105,12 @@ class UserService:
         updated_user = await self.db.save(existing_user)
         return updated_user
 
-    async def delete_user_by_id(self, user_id: ObjectId, current_user_id: str) -> None:  # Return type changed to None
+    async def delete_user_by_id(self, user_id: ObjectId, current_user_id: ObjectId) -> None:  # Return type changed to None
         user_to_delete = await self.db.find_one(User, User.id == user_id)
         if user_to_delete is None:
             raise UserNotFoundException(detail="User not found for deletion")
 
-        if str(user_to_delete.id) != current_user_id:
+        if user_to_delete.id != current_user_id:
             raise ForbiddenException(detail="Not authorized to delete this user")
 
         await self.db.delete(user_to_delete)

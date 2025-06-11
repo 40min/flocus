@@ -119,24 +119,15 @@ class TaskService:
         if category_id_filter:
             query_conditions.append(Task.category_id == category_id_filter)
 
-        sort_field_map = {
-            "due_date": Task.due_date,
-            "priority": Task.priority,
+        sort_expression = None
+        sort_field = {
             "created_at": Task.created_at,
             "title": Task.title,
-        }
-        sort_field = sort_field_map.get(sort_by, Task.due_date)  # Default to due_date
+        }.get(sort_by)
 
-        # Apply sorting directly in the database query for all cases
-        sort_expression = query.desc(sort_field) if sort_order == "desc" else query.asc(sort_field)
-
-        # For priority, add secondary sort by ID to ensure stable sort for items with same priority
-        if sort_by == "priority":
-            secondary_sort_field = Task.id  # or Task.created_at for example
-            if sort_order == "desc":
-                sort_expression = (query.desc(sort_field), query.desc(secondary_sort_field))
-            else:
-                sort_expression = (query.asc(sort_field), query.asc(secondary_sort_field))
+        if sort_field:
+            # Apply sorting directly in the database query for certain cases
+            sort_expression = query.desc(sort_field) if sort_order == "desc" else query.asc(sort_field)
 
         tasks_models = await self.engine.find(Task, *query_conditions, sort=sort_expression)
 

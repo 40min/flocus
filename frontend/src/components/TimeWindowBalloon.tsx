@@ -103,27 +103,27 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
                 {formattedDuration}
               </span>
             </div>
+          </div>
+        </header>
+        <section>
+          <h3 className="sr-only">Tasks for this time window</h3>
+          <div className="mt-4 flex flex-wrap gap-2" aria-label="Tasks assigned to this time window">
+            {tasks && tasks.length > 0 && onUnassignTask && (
+              tasks.map(task => (
+                <AssignedTaskBalloon key={task.id} task={task} onUnassign={onUnassignTask} />
+              ))
+            )}
             {onAssignTask && (
               <button
                 type="button"
                 onClick={() => setIsTaskPickerOpen(true)}
-                className="text-slate-500 hover:text-blue-600 transition-colors p-1 rounded-full"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-blue-600 transition-colors"
                 aria-label="Assign task"
               >
                 <PlusCircle className="h-5 w-5" />
               </button>
             )}
           </div>
-        </header>
-        <section>
-          <h3 className="sr-only">Tasks for this time window</h3>
-          {tasks && tasks.length > 0 && onUnassignTask && (
-            <div className="mt-4 flex flex-wrap gap-2" aria-label="Tasks assigned to this time window">
-              {tasks.map(task => (
-                <AssignedTaskBalloon key={task.id} task={task} onUnassign={onUnassignTask} />
-              ))}
-            </div>
-          )}
         </section>
         {isTaskPickerOpen && onAssignTask && (
           <TaskPicker

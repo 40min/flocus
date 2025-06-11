@@ -236,6 +236,21 @@ describe('MyDayPage', () => {
           ]);
         });
       });
+it("hides review section when a template is selected", async () => {
+        mockedUseTemplates.mockReturnValue({ data: mockTemplates, isLoading: false });
+        renderComponent();
+
+        await waitFor(() => {
+          expect(screen.getByText("Review: Yesterday's Tasks")).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Create Plan' }));
+        fireEvent.click(screen.getByText('Work Day')); // Select a template
+
+        await waitFor(() => {
+          expect(screen.queryByText("Review: Yesterday's Tasks")).not.toBeInTheDocument();
+        });
+      });
     });
   });
 

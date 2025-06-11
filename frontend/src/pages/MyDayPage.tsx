@@ -50,8 +50,8 @@ const MyDayPage: React.FC = () => {
   }, [fetchedDailyPlan]);
 
   useEffect(() => {
-    setShowYesterdayReview(!!(yesterdayPlan && !fetchedDailyPlan));
-  }, [yesterdayPlan, fetchedDailyPlan]);
+    setShowYesterdayReview(!!(yesterdayPlan && !fetchedDailyPlan && !selectedTemplate));
+  }, [yesterdayPlan, fetchedDailyPlan, selectedTemplate]);
 
   const handleAssignTask = (timeWindowId: string, task: Task) => {
     setDailyPlan(prevPlan => {

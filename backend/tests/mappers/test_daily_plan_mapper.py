@@ -4,7 +4,12 @@ import pytest
 from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryResponse
-from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, TimeWindowCreate, TimeWindowResponse
+from app.api.schemas.daily_plan import (
+    DailyPlanCreateRequest,
+    DailyPlanResponse,
+    PopulatedTimeWindowResponse, # This is the new wrapper schema
+    TimeWindowCreateRequest,     # This is the new flat/create schema
+)
 from app.api.schemas.task import TaskPriority, TaskResponse, TaskStatus
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
 from app.db.models.daily_plan import DailyPlan, TimeWindow
@@ -100,14 +105,14 @@ def sample_daily_plan_create_request(
     return DailyPlanCreateRequest(
         plan_date=sample_plan_date,
         time_windows=[
-            TimeWindowCreate(
+            TimeWindowCreateRequest( # Changed from PopulatedTimeWindowResponse
                 description="Morning Session",
                 category_id=sample_category_id,
                 start_time=540,
                 end_time=720,
                 task_ids=[ObjectId()],
             ),
-            TimeWindowCreate(
+            TimeWindowCreateRequest( # Changed from PopulatedTimeWindowResponse
                 description="Afternoon Block",
                 category_id=sample_category_id,
                 start_time=780,
@@ -139,7 +144,7 @@ def test_to_time_window_response(
     result = DailyPlanMapper.to_time_window_response(
         time_window_response=sample_time_window_response_for_allocation, task_responses=[sample_task_response]
     )
-    assert isinstance(result, TimeWindowResponse)
+    assert isinstance(result, PopulatedTimeWindowResponse) # Changed from TimeWindowResponse
     assert result.time_window == sample_time_window_response_for_allocation
     assert result.tasks == [sample_task_response]
 
@@ -149,8 +154,9 @@ def test_to_response(
     sample_time_window_response_for_allocation: TimeWindowModelResponse,
     sample_task_response: TaskResponse,
 ):
+    # This list should contain PopulatedTimeWindowResponse objects (the wrapper)
     populated_time_windows = [
-        TimeWindowResponse(time_window=sample_time_window_response_for_allocation, tasks=[sample_task_response])
+        PopulatedTimeWindowResponse(time_window=sample_time_window_response_for_allocation, tasks=[sample_task_response]) # Changed from TimeWindowResponse
     ]
     result = DailyPlanMapper.to_response(
         daily_plan_model=sample_daily_plan_model, populated_time_window_responses=populated_time_windows

@@ -56,7 +56,7 @@ async def update_user(
     user_service: UserService = Depends(UserService),
 ):
     updated_user: User = await user_service.update_user_by_id(
-        user_id=user_id, user_data=user_data, current_user_id=str(current_user_id)
+        user_id=user_id, user_data=user_data, current_user_id=current_user_obj.id
     )
     return UserResponse.model_validate(updated_user)
 
@@ -67,5 +67,8 @@ async def delete_user(
     current_user_id: ObjectId = Depends(get_current_active_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    await user_service.delete_user_by_id(user_id=user_id, current_user_id=str(current_user_id))
+    # The middleware will handle exceptions from get_current_user_from_token
+    current_user_obj: User = await user_service.get_current_user_from_token(token=current_user_token)
+
+    await user_service.delete_user_by_id(user_id=user_id, current_user_id=str(current_user_obj.id))
     return None  # For 204 No Content

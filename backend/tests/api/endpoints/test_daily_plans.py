@@ -11,7 +11,8 @@ from app.api.schemas.daily_plan import (
     DailyPlanCreateRequest,
     DailyPlanResponse,
     DailyPlanUpdateRequest,
-    TimeWindowCreate,
+    PopulatedTimeWindowResponse, # Wrapper for response
+    TimeWindowCreateRequest,     # Flat for request
 )
 from app.api.schemas.task import TaskPriority, TaskStatus
 from app.core.config import settings
@@ -82,8 +83,8 @@ async def unique_date() -> datetime:
 
 def create_time_window_payload(
     description: Optional[str], category_id: ObjectId, start_time: int, end_time: int, task_ids: List[ObjectId]
-) -> TimeWindowCreate:
-    return TimeWindowCreate(
+) -> TimeWindowCreateRequest: # Changed return type
+    return TimeWindowCreateRequest( # Changed instantiation
         description=description,
         category_id=category_id,
         start_time=start_time,

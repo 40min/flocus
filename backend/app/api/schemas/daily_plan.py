@@ -5,16 +5,16 @@ from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.api.schemas.task import TaskResponse
-from app.api.schemas.time_window import TimeWindowResponse
+# Import the TimeWindowResponse from the other module and alias it to avoid name collision
+from app.api.schemas.time_window import TimeWindowResponse as ImportedTimeWindowResponse
 
 
-class TimeWindowCreate(BaseModel):  # Inherits directly from BaseModel
-    # Fields from TimeWindowInputSchema
+# Schema for creating a time window, typically used in request bodies
+class TimeWindowCreateRequest(BaseModel):
     description: Optional[str] = Field(None, max_length=100, description="Description of the time window.")
     category_id: ObjectId = Field(..., description="Category ID for the time window.")
     start_time: int = Field(..., description="Start time in minutes since midnight.")
     end_time: int = Field(..., description="End time in minutes since midnight.")
-    # Original field
     task_ids: List[ObjectId] = Field(
         default_factory=list, description="The IDs of the Tasks allocated to the TimeWindow."
     )
@@ -29,14 +29,15 @@ class TimeWindowCreate(BaseModel):  # Inherits directly from BaseModel
         return value
 
     @model_validator(mode="after")
-    def check_end_time_greater_than_start_time(cls, values: "TimeWindowCreate") -> "TimeWindowCreate":
+    def check_end_time_greater_than_start_time(cls, values: "TimeWindowCreateRequest") -> "TimeWindowCreateRequest":
         if values.start_time is not None and values.end_time is not None and values.end_time <= values.start_time:
             raise ValueError("end_time must be greater than start_time")
         return values
 
 
-class TimeWindowResponse(BaseModel):
-    time_window: TimeWindowResponse
+# Wrapper schema for responses, including the detailed time window and associated tasks
+class PopulatedTimeWindowResponse(BaseModel):
+    time_window: ImportedTimeWindowResponse  # Uses the imported schema
     tasks: List[TaskResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
@@ -59,14 +60,14 @@ class DailyPlanBase(BaseModel):
 
 
 class DailyPlanCreateRequest(DailyPlanBase):
-    time_windows: List[TimeWindowCreate] = Field(
+    time_windows: List[TimeWindowCreateRequest] = Field(
         default_factory=list, description="List of time windows and their allocated tasks."
     )
     # reflection_content and notes_content are optional on creation, inherited from DailyPlanBase
 
 
 class DailyPlanUpdateRequest(BaseModel):
-    time_windows: Optional[List[TimeWindowCreate]] = Field(
+    time_windows: Optional[List[TimeWindowCreateRequest]] = Field(
         None, description="Updated list of time windows and their allocated tasks. Replaces existing time windows."
     )
     reflection_content: Optional[str] = Field(None, description="Updated user's reflection for the day.")
@@ -78,7 +79,7 @@ class DailyPlanUpdateRequest(BaseModel):
 class DailyPlanResponse(DailyPlanBase):
     id: ObjectId
     user_id: ObjectId
-    time_windows: List[TimeWindowResponse] = []
+    time_windows: List[PopulatedTimeWindowResponse] = []
     reviewed: bool
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

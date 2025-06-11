@@ -2,15 +2,20 @@ from typing import List
 
 from odmantic import ObjectId
 
-from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, TimeWindowCreate, TimeWindowResponse
+from app.api.schemas.daily_plan import (
+    DailyPlanCreateRequest,      # Flat input schema for creating a daily plan
+    DailyPlanResponse,           # Response schema for a full daily plan
+    PopulatedTimeWindowResponse, # Wrapper schema for a time window within a daily plan response (contains detailed TW and tasks)
+    TimeWindowCreateRequest,     # Flat input schema for creating a single time window
+)
 from app.api.schemas.task import TaskResponse
-from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
+from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse # Detailed response for a single TW from its own schema file
 from app.db.models.daily_plan import DailyPlan, TimeWindow
 
 
 class DailyPlanMapper:
     @staticmethod
-    def time_windows_request_to_models(time_window_data: List[TimeWindowCreate]) -> List[TimeWindow]:
+    def time_windows_request_to_models(time_window_data: List[TimeWindowCreateRequest]) -> List[TimeWindow]:
         return [
             TimeWindow(
                 description=tw.description,
@@ -25,12 +30,24 @@ class DailyPlanMapper:
     @staticmethod
     def to_time_window_response(
         time_window_response: TimeWindowModelResponse, task_responses: List[TaskResponse]
-    ) -> TimeWindowResponse:
-        return TimeWindowResponse(time_window=time_window_response, tasks=task_responses)
+    ) -> PopulatedTimeWindowResponse:  # Return the wrapper PopulatedTimeWindowResponse
+        # This method constructs the PopulatedTimeWindowResponse (wrapper).
+        # The 'time_window' field of this wrapper expects a TimeWindowModelResponse (ImportedTimeWindowResponse).
+        # The original 'flat_time_window_data' logic was trying to create a *flat* schema
+        # from the TimeWindowModelResponse, which is not what the wrapper PopulatedTimeWindowResponse needs
+        # for its 'time_window' field. It needs the TimeWindowModelResponse directly.
+
+        # The internal structure of PopulatedTimeWindowResponse is:
+        #   time_window: ImportedTimeWindowResponse  (this is TimeWindowModelResponse)
+        #   tasks: List[TaskResponse]
+
+        # Therefore, we directly pass the time_window_response (which is a TimeWindowModelResponse)
+        # to the 'time_window' field of PopulatedTimeWindowResponse.
+        return PopulatedTimeWindowResponse(time_window=time_window_response, tasks=task_responses)
 
     @staticmethod
     def to_response(
-        daily_plan_model: DailyPlan, populated_time_window_responses: List[TimeWindowResponse]
+        daily_plan_model: DailyPlan, populated_time_window_responses: List[PopulatedTimeWindowResponse]
     ) -> DailyPlanResponse:
         return DailyPlanResponse(
             id=daily_plan_model.id,

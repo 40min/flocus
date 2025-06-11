@@ -29,13 +29,11 @@ class DailyPlanService:
         self,
         engine: AIOEngine = Depends(get_database),
         task_service: TaskService = Depends(TaskService),
-        daily_plan_mapper: DailyPlanMapper = Depends(DailyPlanMapper),
         task_mapper: TaskMapper = Depends(TaskMapper),
         category_service: CategoryService = Depends(CategoryService),
     ):
         self.engine = engine
         self.task_service = task_service
-        self.daily_plan_mapper = daily_plan_mapper
         self.task_mapper = task_mapper
         self.category_service = category_service
 
@@ -146,7 +144,7 @@ class DailyPlanService:
                     task_category_model = categories_map.get(task_model.category_id) if task_model.category_id else None
                     tasks_resp.append(self.task_mapper.to_response(task_model, task_category_model))
 
-            final_time_window_resp = self.daily_plan_mapper.to_time_window_response(
+            final_time_window_resp = DailyPlanMapper.to_time_window_response(
                 time_window_response=time_window_resp, task_responses=tasks_resp
             )
             response_time_windows.append(final_time_window_resp)
@@ -155,7 +153,7 @@ class DailyPlanService:
         if plan.plan_date.tzinfo is None or plan.plan_date.tzinfo.utcoffset(plan.plan_date) is None:
             plan.plan_date = plan.plan_date.replace(tzinfo=timezone.utc)
 
-        return self.daily_plan_mapper.to_response(
+        return DailyPlanMapper.to_response(
             daily_plan_model=plan, populated_time_window_responses=response_time_windows
         )
 
@@ -181,7 +179,7 @@ class DailyPlanService:
             await self._validate_time_window_categories(plan_data.time_windows, current_user_id)
             await self._validate_task_categories_for_time_windows(plan_data.time_windows, current_user_id)
 
-        daily_plan_model = self.daily_plan_mapper.to_model_for_create(plan_data, current_user_id)
+        daily_plan_model = DailyPlanMapper.to_model_for_create(plan_data, current_user_id)
         daily_plan_model.plan_date = normalized_date_for_storage  # Ensure stored date is normalized UTC midnight
 
         await self.engine.save(daily_plan_model)
@@ -204,7 +202,7 @@ class DailyPlanService:
                 await self._validate_task_categories_for_time_windows(
                     daily_plan_update_request.time_windows, current_user_id
                 )
-                daily_plan.time_windows = self.daily_plan_mapper.time_windows_request_to_models(
+                daily_plan.time_windows = DailyPlanMapper.time_windows_request_to_models(
                     daily_plan_update_request.time_windows
                 )
             else:

@@ -38,4 +38,9 @@ describe('AssignedTaskBalloon', () => {
     fireEvent.click(unassignButton);
     expect(handleUnassign).toHaveBeenCalledWith('task1');
   });
+
+  it('does not render the unassign button when onUnassign prop is not provided', () => {
+    render(<AssignedTaskBalloon task={mockTask} />);
+    expect(screen.queryByLabelText(`Unassign task: ${mockTask.title}`)).not.toBeInTheDocument();
+  });
 });

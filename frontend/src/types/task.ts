@@ -24,6 +24,7 @@ export interface TaskResponse {
   updated_at?: string; // ISO datetime string
   is_deleted?: boolean;
   statistics?: TaskStatistics;
+  is_completed?: boolean;
 }
 
 export interface Task {
@@ -40,6 +41,7 @@ export interface Task {
   updated_at?: string; // ISO datetime string
   is_deleted?: boolean;
   statistics?: TaskStatistics;
+  is_completed?: boolean;
 }
 
 export interface TaskCreateRequest {

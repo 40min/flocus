@@ -36,10 +36,16 @@ describe('TimeWindowBalloon', () => {
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 
-  it('renders tasks when provided', () => {
-    renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} tasks={mockTasks} onUnassignTask={jest.fn()} />);
+  it('renders tasks when provided, even without onUnassignTask prop', () => {
+    renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} tasks={mockTasks} />);
     expect(screen.getByText('Task 1')).toBeInTheDocument();
     expect(screen.getByText('Task 2')).toBeInTheDocument();
+  });
+
+  it('does not render unassign button when onUnassignTask prop is not provided', () => {
+    renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} tasks={mockTasks} />);
+    expect(screen.queryByLabelText(`Unassign task: ${mockTasks[0].title}`)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(`Unassign task: ${mockTasks[1].title}`)).not.toBeInTheDocument();
   });
 
   it('renders delete button and calls onDelete when clicked', () => {

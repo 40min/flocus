@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query';
 import { Save, PlusCircle } from 'lucide-react';
 import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, TimeWindowAllocation, TimeWindowResponse } from '../types/dailyPlan';
@@ -30,6 +30,18 @@ const MyDayPage: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
   const [showYesterdayReview, setShowYesterdayReview] = useState(false);
 
+  const createPlanMutation = useMutation({
+    mutationFn: createDailyPlan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
+      setShowYesterdayReview(false);
+      showMessage('Daily plan created successfully!', 'success');
+    },
+    onError: (error) => {
+      showMessage('Failed to create daily plan.', 'error');
+      console.error('Failed to create daily plan:', error);
+    },
+  });
 
   useEffect(() => {
     // When the fetched daily plan changes, update the local state.
@@ -99,12 +111,10 @@ const MyDayPage: React.FC = () => {
         task_ids: [], // Assuming no tasks are allocated yet when saving from a template
       }));
 
-      await createDailyPlan(timeWindowsForSave);
+      await createPlanMutation.mutateAsync(timeWindowsForSave);
       setSelectedTemplate(null); // Clear selected template after saving
-      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
     } catch (err) {
-      showMessage('Failed to save daily plan.', 'error');
-      console.error('Failed to save daily plan:', err);
+      // Error handling is done by the mutation's onError callback
     }
   };
 
@@ -144,28 +154,28 @@ const MyDayPage: React.FC = () => {
   };
 
   const handleSaveDailyPlan = async () => {
-    if (!dailyPlan) {
-      showMessage('No daily plan to save.', 'error');
-      return;
-    }
+      if (!dailyPlan) {
+        showMessage('No daily plan to save.', 'error');
+        return;
+      }
 
-    try {
-      const timeWindowsForSave = dailyPlan.time_windows.map(alloc => ({
-        description: alloc.time_window.description,
-        start_time: alloc.time_window.start_time,
-        end_time: alloc.time_window.end_time,
-        category_id: alloc.time_window.category?.id || null,
-        task_ids: alloc.tasks.map(task => task.id),
-      }));
+      try {
+        const timeWindowsForSave = dailyPlan.time_windows.map(alloc => ({
+          description: alloc.time_window.description,
+          start_time: alloc.time_window.start_time,
+          end_time: alloc.time_window.end_time,
+          category_id: alloc.time_window.category?.id || null,
+          task_ids: alloc.tasks.map(task => task.id),
+        }));
 
-      await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
-      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
-      showMessage('Daily plan saved successfully!', 'success');
-    } catch (err) {
-      showMessage('Failed to save daily plan.', 'error');
-      console.error('Failed to save daily plan:', err);
-    }
-  };
+        await updateDailyPlan(dailyPlan.id, { time_windows: timeWindowsForSave });
+        queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
+        showMessage('Daily plan saved successfully!', 'success');
+      } catch (err) {
+        showMessage('Failed to save daily plan.', 'error');
+        console.error('Failed to save daily plan:', err);
+      }
+    };
 
   const isLoading = isLoadingTodayPlan || isLoadingYesterdayPlan;
 
@@ -268,7 +278,21 @@ const MyDayPage: React.FC = () => {
                           ))}
                       </div>
                       <div className="mt-6 flex justify-end">
-                        <button className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors">
+                        <button
+                          className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                          onClick={() => {
+                            if (yesterdayPlan) {
+                              const timeWindowsToCarryOver = yesterdayPlan.time_windows.map(alloc => ({
+                                description: alloc.time_window.description,
+                                start_time: alloc.time_window.start_time,
+                                end_time: alloc.time_window.end_time,
+                                category_id: alloc.time_window.category?.id || null,
+                                task_ids: alloc.tasks.filter(task => !task.is_completed).map(task => task.id),
+                              }));
+                              createPlanMutation.mutate(timeWindowsToCarryOver);
+                            }
+                          }}
+                        >
                           Carry over
                         </button>
                       </div>

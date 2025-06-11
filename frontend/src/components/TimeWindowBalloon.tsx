@@ -108,9 +108,13 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
         <section>
           <h3 className="sr-only">Tasks for this time window</h3>
           <div className="mt-4 flex flex-wrap gap-2" aria-label="Tasks assigned to this time window">
-            {tasks && tasks.length > 0 && onUnassignTask && (
+            {tasks && tasks.length > 0 && (
               tasks.map(task => (
-                <AssignedTaskBalloon key={task.id} task={task} onUnassign={onUnassignTask} />
+                <AssignedTaskBalloon
+                  key={task.id}
+                  task={task}
+                  {...(onUnassignTask && { onUnassign: onUnassignTask })}
+                />
               ))
             )}
             {onAssignTask && (

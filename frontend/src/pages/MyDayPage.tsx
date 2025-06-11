@@ -28,12 +28,18 @@ const MyDayPage: React.FC = () => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
+  const [showYesterdayReview, setShowYesterdayReview] = useState(false);
+
 
   useEffect(() => {
     // When the fetched daily plan changes, update the local state.
     // This allows local modifications before saving.
     setDailyPlan(fetchedDailyPlan ?? null);
   }, [fetchedDailyPlan]);
+
+  useEffect(() => {
+    setShowYesterdayReview(!!(yesterdayPlan && !fetchedDailyPlan));
+  }, [yesterdayPlan, fetchedDailyPlan]);
 
   const handleAssignTask = (timeWindowId: string, task: Task) => {
     setDailyPlan(prevPlan => {
@@ -240,7 +246,7 @@ const MyDayPage: React.FC = () => {
 
             <div className="space-y-16">
               {/* Section 1: Review Unfinished Tasks */}
-              {yesterdayPlan && !yesterdayPlan.reviewed && (
+              {showYesterdayReview && yesterdayPlan && !yesterdayPlan.reviewed && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
@@ -249,7 +255,23 @@ const MyDayPage: React.FC = () => {
                       </h2>
                     </header>
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <p className="text-slate-700">Tasks list will go here.</p>
+                      <div className="space-y-4">
+                        {yesterdayPlan.time_windows
+                          .slice()
+                          .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
+                          .map((alloc) => (
+                            <TimeWindowBalloon
+                              key={alloc.time_window.id}
+                              timeWindow={alloc.time_window}
+                              tasks={alloc.tasks}
+                            />
+                          ))}
+                      </div>
+                      <div className="mt-6 flex justify-end">
+                        <button className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors">
+                          Carry over
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </section>

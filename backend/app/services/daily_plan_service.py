@@ -13,6 +13,7 @@ from app.api.schemas.daily_plan import (
 )
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
+from app.core.exceptions import TaskCategoryMismatchException
 from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.daily_plan import DailyPlan
@@ -80,9 +81,8 @@ class DailyPlanService:
                     )
 
                 if task.category_id is not None and task.category_id != time_window_data.category_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Task category does not match Time Window category.",
+                    raise TaskCategoryMismatchException(
+                        detail="Task category does not match Time Window category."
                     )
 
     async def _map_plan_to_response(self, plan: DailyPlan, current_user_id: ObjectId) -> DailyPlanResponse:

@@ -239,6 +239,12 @@ class DailyPlanExistsException(DailyPlanServiceException):
         )
 
 
+class TaskCategoryMismatchException(ValueError):
+    """Raised when a task's category does not match the category of its assigned time window."""
+    def __init__(self, detail: str = "Task category does not match Time Window category."):
+        super().__init__(detail)
+
+
 # --- Mapper Exceptions ---
 
 

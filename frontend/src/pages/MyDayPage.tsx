@@ -264,7 +264,7 @@ const MyDayPage: React.FC = () => {
                         Review: Yesterday's Tasks
                       </h2>
                     </header>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-70 transition-opacity">
                       <div className="space-y-4">
                         {yesterdayPlan.time_windows
                           .slice()
@@ -277,7 +277,7 @@ const MyDayPage: React.FC = () => {
                             />
                           ))}
                       </div>
-                      <div className="mt-6 flex justify-end">
+                      <div className="mt-6 flex justify-start">
                         <button
                           className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                           onClick={() => {
@@ -355,7 +355,7 @@ const MyDayPage: React.FC = () => {
                       <h2 className="text-2xl font-semibold text-slate-800 mb-2">Self-Reflection</h2>
                       <p className="text-slate-500 text-sm">Take a moment to reflect on your day.</p>
                     </header>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-80 transition-opacity">
                       <p className="text-slate-700">Self-reflection form and tips will go here.</p>
                     </div>
                   </div>

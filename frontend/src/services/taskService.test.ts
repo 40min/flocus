@@ -20,7 +20,20 @@ describe('taskService', () => {
 
       const result = await getAllTasks();
 
-      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE);
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE, {});
+      expect(result).toEqual(mockTasks);
+    });
+
+    it('should fetch tasks by category successfully', async () => {
+      const mockTasks: Task[] = [
+        { id: '1', title: 'Task 1', description: 'Desc 1', status: 'pending', priority: 'medium', due_date: null, user_id: 'user1', category_id: 'cat1', is_deleted: false },
+      ];
+      const categoryId = 'cat1';
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockTasks });
+
+      const result = await getAllTasks(categoryId);
+
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.TASKS_BASE, { params: { categoryId } });
       expect(result).toEqual(mockTasks);
     });
 

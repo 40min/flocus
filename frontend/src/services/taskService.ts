@@ -2,9 +2,10 @@ import api from './api';
 import { Task, TaskCreateRequest, TaskUpdateRequest } from '../types/task';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
-export const getAllTasks = async (): Promise<Task[]> => {
+export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
   try {
-    const response = await api.get<Task[]>(API_ENDPOINTS.TASKS_BASE);
+    const config = categoryId ? { params: { categoryId } } : {};
+    const response = await api.get<Task[]>(API_ENDPOINTS.TASKS_BASE, config);
     return response.data;
   } catch (error) {
     throw error;

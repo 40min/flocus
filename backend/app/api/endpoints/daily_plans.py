@@ -103,12 +103,8 @@ async def update_daily_plan(
 ):
     logger.info(f"Received update request for plan_id: {plan_id}")  # Log incoming plan_id
     logger.info(f"Update payload: {daily_plan_update_request.model_dump_json()}")  # Log update payload
-    try:
-        return await service.update_daily_plan(
-            plan_id=plan_id,
-            daily_plan_update_request=daily_plan_update_request,
-            current_user_id=current_user_id,
-        )
-    except ValueError as e:
-        logger.error(f"ValueError during daily plan update: {e}")  # Log the error
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return await service.update_daily_plan(
+        plan_id=plan_id,
+        daily_plan_update_request=daily_plan_update_request,
+        current_user_id=current_user_id,
+    )

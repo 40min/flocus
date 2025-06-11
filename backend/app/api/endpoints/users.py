@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from app.api.schemas.user import UserCreateRequest, UserResponse, UserUpdateRequest
 from app.core.config import settings
-from app.core.dependencies import get_validated_user_id
+from app.core.dependencies import get_validated_user_id, get_current_active_user_id
 from app.db.models.user import User
 from app.services.user_service import UserService
 
@@ -52,14 +52,11 @@ async def get_user(
 async def update_user(
     user_data: UserUpdateRequest,
     user_id: ObjectId = Depends(get_validated_user_id),
-    current_user_token: str = Depends(oauth2_scheme),  # Renamed for clarity, or get current_user directly
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    # The middleware will handle exceptions from get_current_user_from_token
-    current_user_obj: User = await user_service.get_current_user_from_token(token=current_user_token)
-
     updated_user: User = await user_service.update_user_by_id(
-        user_id=user_id, user_data=user_data, current_user_id=str(current_user_obj.id)
+        user_id=user_id, user_data=user_data, current_user_id=str(current_user_id)
     )
     return UserResponse.model_validate(updated_user)
 
@@ -67,11 +64,8 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: ObjectId = Depends(get_validated_user_id),
-    current_user_token: str = Depends(oauth2_scheme),  # Renamed for clarity
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    # The middleware will handle exceptions from get_current_user_from_token
-    current_user_obj: User = await user_service.get_current_user_from_token(token=current_user_token)
-
-    await user_service.delete_user_by_id(user_id=user_id, current_user_id=str(current_user_obj.id))
+    await user_service.delete_user_by_id(user_id=user_id, current_user_id=str(current_user_id))
     return None  # For 204 No Content

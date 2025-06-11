@@ -9,6 +9,7 @@ from app.core.exceptions import (
     ForbiddenException,
     InvalidCredentialsException,
     InvalidTokenException,
+    TaskCategoryMismatchException,
     UsernameAlreadyExistsException,
     UserNotFoundException,
     UserServiceException,
@@ -43,6 +44,12 @@ async def error_handling_middleware(request: Request, call_next):
         logger.info(f"ForbiddenException: {e.detail}")
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": e.detail},
+        )
+    except TaskCategoryMismatchException as e:
+        logger.info(f"TaskCategoryMismatchException: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": e.detail},
         )
     except UserServiceException as e:

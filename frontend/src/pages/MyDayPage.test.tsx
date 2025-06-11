@@ -12,6 +12,7 @@ import * as dailyPlanService from 'services/dailyPlanService';
 import { DailyPlanResponse } from 'types/dailyPlan';
 import { DayTemplateResponse } from 'types/dayTemplate';
 import { Category } from 'types/category';
+import { Task } from 'types/task';
 
 // Mocks
 jest.mock('hooks/useDailyPlan');
@@ -70,6 +71,8 @@ const mockDailyPlan: DailyPlanResponse = {
     },
   ],
   reviewed: false,
+  reflection_content: null,
+  notes_content: null,
 };
 
 const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -162,12 +165,76 @@ describe('MyDayPage', () => {
       });
     });
 
-    it('shows review section if yesterday plan exists and is not reviewed', async () => {
-      mockedUseYesterdayDailyPlan.mockReturnValue({ data: { ...mockDailyPlan, reviewed: false }, isLoading: false });
-      mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
-      renderComponent();
-      await waitFor(() => {
-        expect(screen.getByText("Review: Yesterday's Tasks")).toBeInTheDocument();
+    describe("when yesterday's plan exists and is not reviewed", () => {
+      const mockYesterdayPlan: DailyPlanResponse = {
+        id: 'yesterday_plan',
+        user_id: 'user1',
+        plan_date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+        time_windows: [
+          {
+            time_window: { id: 'tw_yesterday_1', description: 'Morning session', start_time: 540, end_time: 660, category: mockCategories[0], day_template_id: '', user_id: 'user1', is_deleted: false },
+            tasks: [
+              { id: 'task1', title: 'Completed Task', is_completed: true, status: 'done', priority: 'medium', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
+              { id: 'task2', title: 'Uncompleted Task', is_completed: false, status: 'in_progress', priority: 'high', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
+            ],
+          },
+           {
+            time_window: { id: 'tw_yesterday_2', description: 'Afternoon session', start_time: 840, end_time: 960, category: mockCategories[1], day_template_id: '', user_id: 'user1', is_deleted: false },
+            tasks: [
+              { id: 'task3', title: 'Another Uncompleted Task', is_completed: false, status: 'pending', priority: 'low', description: '', user_id: 'user1', category_id: 'cat2' } as Task,
+            ],
+          },
+        ],
+        reviewed: false,
+        reflection_content: null,
+        notes_content: null,
+      };
+
+      beforeEach(() => {
+        mockedUseYesterdayDailyPlan.mockReturnValue({ data: mockYesterdayPlan, isLoading: false });
+        mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
+        mockedCreateDailyPlan.mockResolvedValue({});
+      });
+
+      it("shows review section with tasks from yesterday", async () => {
+        renderComponent();
+        await waitFor(() => {
+          expect(screen.getByText("Review: Yesterday's Tasks")).toBeInTheDocument();
+        });
+        expect(screen.getByText('Morning session')).toBeInTheDocument();
+        expect(screen.getByText('Completed Task')).toBeInTheDocument();
+        expect(screen.getByText('Uncompleted Task')).toBeInTheDocument();
+        expect(screen.getByText('Afternoon session')).toBeInTheDocument();
+        expect(screen.getByText('Another Uncompleted Task')).toBeInTheDocument();
+      });
+
+      it('carries over uncompleted tasks to a new daily plan on "Carry over" click', async () => {
+        renderComponent();
+
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: 'Carry over' })).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Carry over' }));
+
+        await waitFor(() => {
+          expect(mockedCreateDailyPlan).toHaveBeenCalledWith([
+            {
+              description: 'Morning session',
+              start_time: 540,
+              end_time: 660,
+              category_id: 'cat1',
+              task_ids: ['task2'],
+            },
+            {
+              description: 'Afternoon session',
+              start_time: 840,
+              end_time: 960,
+              category_id: 'cat2',
+              task_ids: ['task3'],
+            },
+          ]);
+        });
       });
     });
   });

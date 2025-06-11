@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TimeWindow as TimeWindowType } from 'types/timeWindow';
 import { Task as TaskType } from 'types/task';
 import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from 'lib/utils';
-import { Clock, XCircle } from 'lucide-react';
-import TaskItem from './TaskItem';
+import { Clock, XCircle, PlusCircle } from 'lucide-react';
+import AssignedTaskBalloon from './AssignedTaskBalloon';
+import TaskPicker from './TaskPicker';
 
 interface TimeWindowBalloonProps {
   timeWindow: TimeWindowType;
   tasks?: TaskType[];
   onDelete?: (timeWindowId: string) => void;
+  onAssignTask?: (task: TaskType) => void;
+  onUnassignTask?: (taskId: string) => void;
 }
 
 const getTextColor = (bgColor: string): string => {
@@ -33,7 +36,14 @@ const getTextColor = (bgColor: string): string => {
   return luminance > 0.3 ? 'text-slate-900' : 'text-white';
 };
 
-const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks = [], onDelete }) => {
+const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
+  timeWindow,
+  tasks = [],
+  onDelete,
+  onAssignTask,
+  onUnassignTask,
+}) => {
+  const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
   const { id, description, start_time, end_time, category } = timeWindow;
   const categoryColor = category?.color || '#A0AEC0'; // Default to a neutral gray
   const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
@@ -79,7 +89,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
               </button>
             )}
           </div>
-          <div className="flex items-center justify-between text-sm md:text-base">
+          <div className="flex items-center justify-between text-sm md:text-base mt-2">
             <div className="flex items-center gap-4">
               <time
                 dateTime={`${formattedStartTime}/${formattedEndTime}`}
@@ -93,28 +103,39 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({ timeWindow, tasks
                 {formattedDuration}
               </span>
             </div>
+            {onAssignTask && (
+              <button
+                type="button"
+                onClick={() => setIsTaskPickerOpen(true)}
+                className="text-slate-500 hover:text-blue-600 transition-colors p-1 rounded-full"
+                aria-label="Assign task"
+              >
+                <PlusCircle className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </header>
         <section>
           <h3 className="sr-only">Tasks for this time window</h3>
-          {tasks && tasks.length > 0 && (
-            <ul className="space-y-3" aria-label="Tasks assigned to this time window">
+          {tasks && tasks.length > 0 && onUnassignTask && (
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Tasks assigned to this time window">
               {tasks.map(task => (
-                <li key={task.id} className="relative">
-                  <TaskItem
-                    task={task}
-                    baseBgColor={lightBgColor} // Use the light background color for task items
-                    baseBorderColor={categoryColor + '40'} // Slightly darker border for task items
-                    baseTextColor={textColorClass}
-                    hoverBgColor={categoryColor + '30'} // Slightly darker hover for task items
-                    hoverBorderColor={categoryColor + '60'}
-                    hoverShadowColor={categoryColor + '20'}
-                  />
-                </li>
+                <AssignedTaskBalloon key={task.id} task={task} onUnassign={onUnassignTask} />
               ))}
-            </ul>
+            </div>
           )}
         </section>
+        {isTaskPickerOpen && onAssignTask && (
+          <TaskPicker
+            categoryId={category.id}
+            assignedTaskIds={tasks.map(t => t.id)}
+            onSelectTask={task => {
+              onAssignTask(task);
+              setIsTaskPickerOpen(false);
+            }}
+            onClose={() => setIsTaskPickerOpen(false)}
+          />
+        )}
       </div>
     </article>
   );

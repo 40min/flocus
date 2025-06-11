@@ -3,12 +3,13 @@ import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { Save, PlusCircle } from 'lucide-react';
 import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
-import { DailyPlanResponse, TimeWindowAllocation } from '../types/dailyPlan';
+import { DailyPlanResponse, TimeWindowAllocation, TimeWindowResponse } from '../types/dailyPlan';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
 import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow } from '../types/timeWindow';
+import { Task } from '../types/task';
 import { useMessage } from '../context/MessageContext';
 import { useTodayDailyPlan, useYesterdayDailyPlan } from '../hooks/useDailyPlan';
 import { useTemplates } from '../hooks/useTemplates';
@@ -33,6 +34,42 @@ const MyDayPage: React.FC = () => {
     // This allows local modifications before saving.
     setDailyPlan(fetchedDailyPlan ?? null);
   }, [fetchedDailyPlan]);
+
+  const handleAssignTask = (timeWindowId: string, task: Task) => {
+    setDailyPlan(prevPlan => {
+      if (!prevPlan) return null;
+
+      const newTimeWindows = prevPlan.time_windows.map(alloc => {
+        if (alloc.time_window.id === timeWindowId) {
+          // Avoid adding duplicates
+          if (alloc.tasks.some(existingTask => existingTask.id === task.id)) {
+            return alloc;
+          }
+          return {
+            ...alloc,
+            tasks: [...alloc.tasks, task],
+          };
+        }
+        return alloc;
+      });
+
+      return { ...prevPlan, time_windows: newTimeWindows as TimeWindowResponse[] };
+    });
+  };
+
+  const handleUnassignTask = (timeWindowId: string, taskId: string) => {
+    setDailyPlan(prevPlan => {
+      if (!prevPlan) return null;
+
+      const newTimeWindows = prevPlan.time_windows.map(alloc => {
+        if (alloc.time_window.id === timeWindowId) {
+          return { ...alloc, tasks: alloc.tasks.filter(task => task.id !== taskId) };
+        }
+        return alloc;
+      });
+      return { ...prevPlan, time_windows: newTimeWindows };
+    });
+  };
 
   const handleSelectTemplate = (template: DayTemplateResponse) => {
     setSelectedTemplate(template);
@@ -160,6 +197,8 @@ const MyDayPage: React.FC = () => {
                         timeWindow={alloc.time_window}
                         tasks={alloc.tasks}
                         onDelete={handleDeleteTimeWindow}
+                        onAssignTask={task => handleAssignTask(alloc.time_window.id, task)}
+                        onUnassignTask={taskId => handleUnassignTask(alloc.time_window.id, taskId)}
                       />
                     ))
                 ) : (

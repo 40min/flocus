@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, AuthContextType } from 'context/AuthContext';
@@ -8,7 +8,7 @@ import * as taskService from 'services/taskService';
 import { Task } from 'types/task';
 import { Category } from 'types/category';
 import { User } from 'types/user';
-import { useTasks } from 'hooks/useTasks';
+import { useTasks, useTasksByCategory } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
 
 jest.mock('services/taskService');
@@ -64,6 +64,11 @@ const renderTasksPage = (
   categoriesError: Error | null = null
 ) => {
   (useTasks as jest.Mock).mockReturnValue({
+    data: tasksData,
+    isLoading: tasksLoading,
+    error: tasksError,
+  });
+(useTasksByCategory as jest.Mock).mockReturnValue({
     data: tasksData,
     isLoading: tasksLoading,
     error: tasksError,
@@ -133,12 +138,13 @@ describe('TasksPage', () => {
 
     // Wait for the modal to appear and categories to be loaded
     await screen.findByText('Create New Task');
-    const categorySelect = await screen.findByLabelText('Category'); // Get the select element
+    const createTaskModal = screen.getByRole('dialog', { name: 'Create New Task' });
+    const categorySelect = await within(createTaskModal!).findByLabelText('Category'); // Get the select element
 
     // Wait for category options to be populated (e.g., 'Work' which is 'cat1')
     // This ensures the select is ready before we try to change its value.
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Work' })).toBeInTheDocument();
+      expect(within(createTaskModal).getByRole('option', { name: 'Work' })).toBeInTheDocument();
     });
 
     // Fill out the form

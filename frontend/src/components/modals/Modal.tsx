@@ -18,6 +18,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       onClick={onClose}
       aria-modal="true"
       role="dialog"
+      aria-labelledby="modal-title"
     >
       <div
         className="relative w-full max-w-lg transform rounded-xl bg-white p-6 shadow-xl transition-all duration-300 ease-in-out"
@@ -25,7 +26,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       >
         {title && (
           <div className="mb-4">
-            <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+            <h3 id="modal-title" className="text-xl font-semibold text-slate-900">{title}</h3>
           </div>
         )}
         <button

@@ -6,7 +6,7 @@ import Button from 'components/Button';
 import { Task, TaskCreateRequest } from 'types/task';
 import * as taskService from 'services/taskService';
 import CreateTaskModal from 'components/modals/CreateTaskModal';
-import { useTasks } from 'hooks/useTasks';
+import { useTasks, useTasksByCategory } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
 
 const statusOptions = [
@@ -27,9 +27,16 @@ const TasksPage: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<Task | null>(null);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
   const queryClient = useQueryClient();
-  const { data: tasks, isLoading, error: tasksError } = useTasks();
+  const { data: allTasks, isLoading: isLoadingAll, error: errorAll } = useTasks();
+  const { data: categoryTasks, isLoading: isLoadingCategory, error: errorCategory } = useTasksByCategory(selectedCategoryId);
+
+  const tasks = selectedCategoryId ? categoryTasks : allTasks;
+  const isLoading = selectedCategoryId ? isLoadingCategory : isLoadingAll;
+  const tasksError = selectedCategoryId ? errorCategory : errorAll;
+
   const { data: categories, error: categoriesError } = useCategories();
 
   const initialFormData: TaskCreateRequest = {
@@ -40,8 +47,6 @@ const TasksPage: React.FC = () => {
     due_date: null,
     category_id: '',
   };
-
-
 
 
   // handleInputChange, handleDateChange, and handleSubmit are moved to CreateTaskModal
@@ -107,6 +112,23 @@ const TasksPage: React.FC = () => {
       {/* isLoading for table, not for modal form anymore */}
       {isLoading && <div className="mb-4">Loading tasks...</div>}
 
+      <div className="mb-4">
+        <label htmlFor="category-filter" className="block text-sm font-medium text-slate-700 mb-1">Filter by Category:</label>
+        <select
+          id="category-filter"
+          name="category-filter"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories?.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <CreateTaskModal
         isOpen={isModalOpen}

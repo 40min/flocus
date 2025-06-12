@@ -14,13 +14,14 @@ interface TimeWindow {
 
 interface TimelineProps {
   timeWindows: TimeWindow[];
+  className?: string;
 }
 
 /**
  * Renders a vertical timeline with markers for each time window.
  * Each marker shows the start time and a color-coded dot.
  */
-const Timeline: React.FC<TimelineProps> = ({ timeWindows }) => {
+const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
   /**
    * Formats an ISO date string into a localized time string (e.g., "9:00 AM").
    * @param dateString - The ISO date string to format.
@@ -37,7 +38,7 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows }) => {
 
   return (
     // The root element is an <aside> tag with relative positioning for its children.
-    <aside className="relative w-28 flex-shrink-0 bg-gray-50 p-4">
+    <aside className={`relative w-28 flex-shrink-0 bg-gray-50 p-4 ${className || ''}`}>
       {/* The central vertical line */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-300"></div>
 

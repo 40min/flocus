@@ -204,6 +204,7 @@ const MyDayPage: React.FC = () => {
               </header>
             <main className="flex flex-row gap-8">
                 <Timeline
+                  className="ml-6"
                   timeWindows={dailyPlan.time_windows
                     .slice()
                     .sort((a, b) => a.time_window.start_time - b.time_window.start_time)

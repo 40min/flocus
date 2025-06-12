@@ -204,21 +204,24 @@ const MyDayPage: React.FC = () => {
               </header>
 <div className="hidden md:flex">
                 <Timeline
-                  timeWindows={dailyPlan.time_windows.map(({ time_window }) => {
-                    const planDate = new Date(dailyPlan.plan_date);
-                    const startDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.start_time);
-                    const endDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.end_time);
+                  timeWindows={dailyPlan.time_windows
+                    .slice()
+                    .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
+                    .map(({ time_window }) => {
+                      const planDate = new Date(dailyPlan.plan_date);
+                      const startDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.start_time);
+                      const endDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.end_time);
 
-                    return {
-                      id: time_window.id,
-                      start_time: startDate.toISOString(),
-                      end_time: endDate.toISOString(),
-                      category: {
-                        ...time_window.category,
-                        color: time_window.category.color || '#A0AEC0',
-                      },
-                    };
-                  })}
+                      return {
+                        id: time_window.id,
+                        start_time: startDate.toISOString(),
+                        end_time: endDate.toISOString(),
+                        category: {
+                          ...time_window.category,
+                          color: time_window.category.color || '#A0AEC0',
+                        },
+                      };
+                    })}
                 />
               </div>
             <main className="flex flex-row gap-8">

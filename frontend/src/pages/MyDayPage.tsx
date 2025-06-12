@@ -321,6 +321,21 @@ const MyDayPage: React.FC = () => {
                 </section>
               )}
 
+              {/* Section 3: Self-Reflection */}
+              {showYesterdayReview && yesterdayPlan && !yesterdayPlan.reviewed && (
+                <section className="w-full">
+                  <div className="max-w-6xl mx-auto">
+                    <header className="mb-6">
+                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">Self-Reflection</h2>
+                      <p className="text-slate-500 text-sm">Take a moment to reflect on your day.</p>
+                    </header>
+                    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-80 transition-opacity">
+                      <p className="text-slate-700">Self-reflection form and tips will go here.</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Section 2: Today's Schedule (Create Plan Prompt) */}
               <section className="w-full">
                 <div className="max-w-7xl mx-auto">
@@ -366,21 +381,6 @@ const MyDayPage: React.FC = () => {
                   )}
                 </div>
               </section>
-
-              {/* Section 3: Self-Reflection */}
-              {yesterdayPlan && !yesterdayPlan.reviewed && (
-                <section className="w-full">
-                  <div className="max-w-4xl mx-auto">
-                    <header className="mb-6">
-                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">Self-Reflection</h2>
-                      <p className="text-slate-500 text-sm">Take a moment to reflect on your day.</p>
-                    </header>
-                    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-80 transition-opacity">
-                      <p className="text-slate-700">Self-reflection form and tips will go here.</p>
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
 
             <footer className="mt-16 pt-8 border-t border-slate-200 text-center">

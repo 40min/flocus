@@ -202,7 +202,7 @@ const MyDayPage: React.FC = () => {
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
               </header>
-<div className="hidden md:flex">
+            <main className="flex flex-row gap-8">
                 <Timeline
                   timeWindows={dailyPlan.time_windows
                     .slice()
@@ -223,8 +223,6 @@ const MyDayPage: React.FC = () => {
                       };
                     })}
                 />
-              </div>
-            <main className="flex flex-row gap-8">
               <section className="flex-1 space-y-4">
                 {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
                   dailyPlan.time_windows

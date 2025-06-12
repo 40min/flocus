@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { updateTask } from '../services/taskService';
+import { TaskUpdateRequest, Task } from '../types/task';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -50,7 +52,12 @@ const loadState = (): TimerState | null => {
   }
 };
 
-const PomodoroTimer: React.FC = () => {
+interface PomodoroTimerProps {
+  currentTaskId?: string;
+  onTaskComplete?: (taskId: string, taskData: TaskUpdateRequest) => Promise<Task>;
+}
+
+const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTaskId, onTaskComplete }) => {
   const initialTimerState = loadState();
 
   const [mode, setMode] = useState<Mode>(initialTimerState?.mode || 'work');
@@ -58,12 +65,20 @@ const PomodoroTimer: React.FC = () => {
   const [isActive, setIsActive] = useState(initialTimerState?.isActive || false);
   const [pomodorosCompleted, setPomodorosCompleted] = useState(initialTimerState?.pomodorosCompleted || 0);
 
-  const switchToNextMode = useCallback(() => {
+  const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
     if (mode === 'work') {
       const nextPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(nextPomodorosCount);
+
+      if (currentTaskId && onTaskComplete) {
+        try {
+          await onTaskComplete(currentTaskId, { status: 'done' });
+        } catch (error) {
+          console.error("Failed to update task status:", error);
+        }
+      }
 
       const nextMode = nextPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
       setMode(nextMode);
@@ -72,7 +87,7 @@ const PomodoroTimer: React.FC = () => {
       setMode('work');
       setTimeRemaining(DURATION_MAP['work']);
     }
-  }, [mode, pomodorosCompleted]);
+  }, [mode, pomodorosCompleted, currentTaskId, onTaskComplete]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import Timeline from './Timeline';
+import Timeline from '../components/Timeline';
 
 describe('Timeline', () => {
   const mockTimeWindows = [

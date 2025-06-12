@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Save, PlusCircle } from 'lucide-react';
 import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, TimeWindowAllocation, TimeWindowResponse } from '../types/dailyPlan';
+import Timeline from '../components/Timeline';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
@@ -201,7 +202,26 @@ const MyDayPage: React.FC = () => {
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
               </header>
-            <main className="flex flex-row gap-2 md:gap-8">
+<div className="hidden md:flex">
+                <Timeline
+                  timeWindows={dailyPlan.time_windows.map(({ time_window }) => {
+                    const planDate = new Date(dailyPlan.plan_date);
+                    const startDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.start_time);
+                    const endDate = new Date(planDate.getFullYear(), planDate.getMonth(), planDate.getDate(), 0, time_window.end_time);
+
+                    return {
+                      id: time_window.id,
+                      start_time: startDate.toISOString(),
+                      end_time: endDate.toISOString(),
+                      category: {
+                        ...time_window.category,
+                        color: time_window.category.color || '#A0AEC0',
+                      },
+                    };
+                  })}
+                />
+              </div>
+            <main className="flex flex-row gap-8">
               <section className="flex-1 space-y-4">
                 {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
                   dailyPlan.time_windows

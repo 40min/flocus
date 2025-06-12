@@ -1,7 +1,10 @@
 import React from 'react';
 import { Clock, GripVertical } from 'lucide-react';
+import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
+import { Task } from '../types/task';
+import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 
-const TaskCard = ({ title, priority, description, pomos }: { title: string, priority: 'high' | 'medium' | 'low', description: string, pomos: number }) => {
+const TaskCard = ({ title, priority, description }: { title: string, priority: 'high' | 'medium' | 'low', description: string }) => {
   const priorityClasses = {
     high: 'bg-red-900/20 text-red-400 border-red-800',
     medium: 'bg-yellow-900/20 text-yellow-400 border-yellow-800',
@@ -32,7 +35,7 @@ const TaskCard = ({ title, priority, description, pomos }: { title: string, prio
                 <p className="text-xs text-gray-400 mb-3 line-clamp-2">{description}</p>
                 <div className="flex items-center gap-1 text-xs text-gray-400">
                   <Clock className="h-3 w-3" />
-                  <span>{pomos} Pomo{pomos > 1 ? 's' : ''}</span>
+                  <span>0 Pomo</span>
                 </div>
               </div>
             </div>
@@ -44,12 +47,8 @@ const TaskCard = ({ title, priority, description, pomos }: { title: string, prio
 };
 
 const CurrentTasks: React.FC = () => {
-  const tasks = [
-    { id: '1', title: 'Review design mockups', priority: 'high' as const, description: 'Check the latest UI designs for the dashboard', pomos: 2 },
-    { id: '2', title: 'Write documentation', priority: 'medium' as const, description: 'Update API documentation for new endpoints', pomos: 3 },
-    { id: '3', title: 'Team standup prep', priority: 'low' as const, description: 'Prepare updates for tomorrow\'s standup', pomos: 1 },
-    { id: '4', title: 'Code review', priority: 'high' as const, description: 'Review pull requests from team members', pomos: 2 },
-  ];
+  const { data: dailyPlan } = useTodayDailyPlan();
+  const { currentTasks } = useCurrentTimeWindow(dailyPlan || null);
 
   return (
     <>
@@ -60,9 +59,18 @@ const CurrentTasks: React.FC = () => {
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
           <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
-            {tasks.map(task => (
-              <TaskCard key={task.id} {...task} />
-            ))}
+            {currentTasks.length === 0 ? (
+              <p className="text-gray-400 text-sm">No tasks for the current time window.</p>
+            ) : (
+              currentTasks.map((task: Task) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  priority={task.priority.toLowerCase() as 'high' | 'medium' | 'low'}
+                  description={task.description || ''}
+                />
+              ))
+            )}
           </ul>
         </div>
       </section>

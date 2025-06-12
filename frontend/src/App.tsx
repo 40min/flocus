@@ -2,8 +2,9 @@ import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import flocusLogo from './assets/flocus_logo.png';
-import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut } from 'lucide-react';
+import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut, Timer } from 'lucide-react';
 import MyDayPage from './pages/MyDayPage';
+import DashboardPage from './pages/DashboardPage'; // New import
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TemplatesPage from './pages/TemplatesPage';
@@ -50,7 +51,7 @@ const AppLayout: React.FC = () => {
 
         <nav className="flex flex-col gap-1 flex-grow">
           <NavLink
-            to="/"
+            to="/dashboard"
             end
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
@@ -181,7 +182,8 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Home />} />
+          <Route index element={<DashboardPage />} /> {/* Changed from MyDayPage to DashboardPage */}
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="my-day" element={<MyDayPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="tasks" element={<TasksPage />} />

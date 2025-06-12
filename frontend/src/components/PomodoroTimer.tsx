@@ -6,6 +6,8 @@ const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
 const LONG_BREAK_DURATION = 15 * 60;
 const CYCLES_BEFORE_LONG_BREAK = 4;
+const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
+const EXPIRATION_THRESHOLD = 60 * 60 * 1000; // 1 hour in milliseconds
 
 type Mode = 'work' | 'shortBreak' | 'longBreak';
 
@@ -15,11 +17,46 @@ const DURATION_MAP: Record<Mode, number> = {
   longBreak: LONG_BREAK_DURATION,
 };
 
+interface TimerState {
+  mode: Mode;
+  timeRemaining: number;
+  isActive: boolean;
+  pomodorosCompleted: number;
+  timestamp: number;
+}
+
+const saveState = (state: TimerState) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error("Failed to save state to localStorage:", error);
+  }
+};
+
+const loadState = (): TimerState | null => {
+  try {
+    const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!serializedState) return null;
+
+    const state: TimerState = JSON.parse(serializedState);
+    if (Date.now() - state.timestamp > EXPIRATION_THRESHOLD) {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      return null;
+    }
+    return state;
+  } catch (error) {
+    console.error("Failed to load state from localStorage:", error);
+    return null;
+  }
+};
+
 const PomodoroTimer: React.FC = () => {
-  const [mode, setMode] = useState<Mode>('work');
-  const [timeRemaining, setTimeRemaining] = useState(WORK_DURATION);
-  const [isActive, setIsActive] = useState(false);
-  const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
+  const initialTimerState = loadState();
+
+  const [mode, setMode] = useState<Mode>(initialTimerState?.mode || 'work');
+  const [timeRemaining, setTimeRemaining] = useState(initialTimerState?.timeRemaining || WORK_DURATION);
+  const [isActive, setIsActive] = useState(initialTimerState?.isActive || false);
+  const [pomodorosCompleted, setPomodorosCompleted] = useState(initialTimerState?.pomodorosCompleted || 0);
 
   const switchToNextMode = useCallback(() => {
     setIsActive(false);
@@ -39,23 +76,32 @@ const PomodoroTimer: React.FC = () => {
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isActive && timeRemaining > 0) {
+
+    if (isActive) {
       interval = setInterval(() => {
-        setTimeRemaining(time => time - 1);
+        setTimeRemaining(prevTime => {
+          if (prevTime <= 1) {
+            switchToNextMode();
+            return 0;
+          }
+          return prevTime - 1;
+        });
       }, 1000);
-    } else if (timeRemaining === 0) {
-      // TODO: Play sound
-      switchToNextMode();
     }
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, timeRemaining, switchToNextMode]);
+  }, [isActive, switchToNextMode]);
 
+useEffect(() => {
+    saveState({ mode, timeRemaining, isActive, pomodorosCompleted, timestamp: Date.now() });
+  }, [mode, timeRemaining, isActive, pomodorosCompleted]);
   const handleStartPause = () => setIsActive(prev => !prev);
   const handleReset = () => {
     setIsActive(false);
     setTimeRemaining(DURATION_MAP[mode]);
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
   };
   const handleSkip = () => switchToNextMode();
 

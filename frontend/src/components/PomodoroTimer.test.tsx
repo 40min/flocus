@@ -5,10 +5,12 @@ import PomodoroTimer from './PomodoroTimer';
 describe('PomodoroTimer', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    localStorage.clear(); // Clear localStorage before each test
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks(); // Restore all mocks after each test
   });
 
   it('renders initial state correctly', () => {

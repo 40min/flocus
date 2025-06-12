@@ -1,8 +1,35 @@
 import React from 'react';
 import CurrentTasks from '../components/CurrentTasks';
 import PomodoroTimer from '../components/PomodoroTimer';
+import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 
 const DashboardPage: React.FC = () => {
+  const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-slate-700">Loading daily plan...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-red-500">Error loading daily plan.</p>
+      </div>
+    );
+  }
+
+  if (!dailyPlan) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-slate-700">No daily plan found for today.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <header className="w-full px-6 py-8 md:px-12 md:py-12">

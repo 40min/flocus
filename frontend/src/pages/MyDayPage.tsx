@@ -201,7 +201,7 @@ const MyDayPage: React.FC = () => {
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
-              </header>
+            </header>
             <main className="flex flex-row gap-8">
                 <Timeline
                   className="ml-6"
@@ -245,24 +245,24 @@ const MyDayPage: React.FC = () => {
                     <p className="text-sm text-slate-500">You can add time windows to your plan by editing it.</p>
                   </div>
                 )}
+                <div className="flex justify-start gap-4 mt-8">
+                  <button
+                    className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                    onClick={() => setIsTimeWindowModalOpen(true)}
+                  >
+                    <PlusCircle size={18} />
+                    Add Time Window
+                  </button>
+                  <button
+                    className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                    onClick={handleSaveDailyPlan}
+                  >
+                    <Save size={18} />
+                    Save
+                  </button>
+                </div>
               </section>
             </main>
-            <div className="flex justify-start gap-4 mt-8">
-              <button
-                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
-                onClick={() => setIsTimeWindowModalOpen(true)}
-              >
-                <PlusCircle size={18} />
-                Add Time Window
-              </button>
-              <button
-                className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
-                onClick={handleSaveDailyPlan}
-              >
-                <Save size={18} />
-                Save
-              </button>
-            </div>
           </>
         ) : (
           // Review & Reflect View (when no plan for today)

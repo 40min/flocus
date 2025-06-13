@@ -14,8 +14,7 @@ import CategoriesPage from './pages/CategoriesPage';
 import TasksPage from './pages/TasksPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import MessageBalloon from './components/MessageBalloon';
-import { SharedDataProvider } from './context/SharedDataContext';
-
+// import { MessageProvider } from './context/MessageContext'; // Removed as it's in index.tsx
 
 // Simple component to protect routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -167,7 +166,7 @@ function App() {
   }
 
   return (
-    <SharedDataProvider>
+    <> {/* Removed MessageProvider wrapping */}
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -196,7 +195,7 @@ function App() {
         </Route>
       </Routes>
       <MessageBalloon />
-    </SharedDataProvider>
+    </>
   );
 }
 export default App;

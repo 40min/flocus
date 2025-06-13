@@ -1,36 +1,47 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import PomodoroTimer from './PomodoroTimer';
-import { useSharedDataContext } from '../context/SharedDataContext';
-import { Task, TaskUpdateRequest } from '../types/task';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
 
-// Mock the context to control its values
-jest.mock('../context/SharedDataContext', () => {
-  const originalModule = jest.requireActual('../context/SharedDataContext');
-  return {
-    ...originalModule,
-    useSharedDataContext: jest.fn(),
-  };
-});
+// Mock the useSharedTimerContext hook
+jest.mock('../context/SharedTimerContext', () => ({
+  useSharedTimerContext: jest.fn(),
+}));
 
-const mockedUseSharedDataContext = useSharedDataContext as jest.Mock;
+const mockUseSharedTimerContext = useSharedTimerContext as jest.Mock;
 
 describe('PomodoroTimer', () => {
   const mockContextValue = {
-    mode: 'work' as const,
-    timeRemaining: 1500, // 25:00
+    mode: 'work',
+    timeRemaining: 25 * 60,
     isActive: false,
     pomodorosCompleted: 0,
     handleStartPause: jest.fn(),
     handleReset: jest.fn(),
     handleSkip: jest.fn(),
-    registerOnWorkComplete: jest.fn(),
-    unregisterOnWorkComplete: jest.fn(),
+    formatTime: (seconds: number) => {
+      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
+    },
+    isBreak: false,
+    timerColor: 'border-gray-700',
+    buttonBgColor: 'bg-white hover:bg-gray-200',
+    buttonTextColor: 'text-gray-900',
+    modeText: {
+      work: 'Focus',
+      shortBreak: 'Short Break',
+      longBreak: 'Long Break',
+    },
+    currentTaskId: undefined,
+    onTaskComplete: undefined,
+    setCurrentTaskId: jest.fn(),
+    setOnTaskComplete: jest.fn(),
   };
 
   beforeEach(() => {
+    mockUseSharedTimerContext.mockReturnValue(mockContextValue);
     jest.clearAllMocks();
-    mockedUseSharedDataContext.mockReturnValue(mockContextValue);
   });
 
   it('renders initial state from context', () => {
@@ -41,42 +52,43 @@ describe('PomodoroTimer', () => {
     expect(screen.getByText('Completed: 0')).toBeInTheDocument();
   });
 
-  it('displays pause button when timer is active', () => {
-    mockedUseSharedDataContext.mockReturnValue({ ...mockContextValue, isActive: true });
-    render(<PomodoroTimer />);
-    expect(screen.getByRole('button', { name: /pause/i })).toBeInTheDocument();
-  });
-
-  it('calls handleStartPause on start/pause button click', () => {
+  it('calls handleStartPause when start/pause button is clicked', () => {
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByRole('button', { name: /start/i }));
     expect(mockContextValue.handleStartPause).toHaveBeenCalledTimes(1);
   });
 
-  it('calls handleReset on reset button click', () => {
+  it('calls handleReset when reset button is clicked', () => {
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByLabelText('Reset timer'));
     expect(mockContextValue.handleReset).toHaveBeenCalledTimes(1);
   });
 
-  it('calls handleSkip on skip button click', () => {
+  it('calls handleSkip when skip button is clicked', () => {
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByLabelText('Skip break'));
     expect(mockContextValue.handleSkip).toHaveBeenCalledTimes(1);
   });
 
-  it('registers and unregisters onWorkComplete callback', () => {
-    const onTaskComplete = jest.fn(
-      (taskId: string, taskData: TaskUpdateRequest): Promise<Task> => Promise.resolve({} as Task)
-    );
-    const { unmount } = render(
-      <PomodoroTimer currentTaskId="task-123" onTaskComplete={onTaskComplete} />
-    );
+  it('displays pause button when timer is active from context', () => {
+    mockUseSharedTimerContext.mockReturnValue({
+      ...mockContextValue,
+      isActive: true,
+    });
+    render(<PomodoroTimer />);
+    expect(screen.getByRole('button', { name: /pause/i })).toBeInTheDocument();
+  });
 
-    expect(mockContextValue.registerOnWorkComplete).toHaveBeenCalledTimes(1);
-    expect(mockContextValue.registerOnWorkComplete).toHaveBeenCalledWith(expect.any(Function));
-
-    unmount();
-    expect(mockContextValue.unregisterOnWorkComplete).toHaveBeenCalledTimes(1);
+  it('displays correct time and mode based on context', () => {
+    mockUseSharedTimerContext.mockReturnValue({
+      ...mockContextValue,
+      mode: 'shortBreak',
+      timeRemaining: 5 * 60,
+      pomodorosCompleted: 1,
+    });
+    render(<PomodoroTimer />);
+    expect(screen.getByText('05:00')).toBeInTheDocument();
+    expect(screen.getByText('Short Break')).toBeInTheDocument();
+    expect(screen.getByText('Completed: 1')).toBeInTheDocument();
   });
 });

@@ -1,15 +1,9 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { TaskUpdateRequest, Task } from '../types/task';
-import { useSharedDataContext } from '../context/SharedDataContext';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
 
-interface PomodoroTimerProps {
-  currentTaskId?: string;
-  onTaskComplete?: (taskId: string, taskData: TaskUpdateRequest) => Promise<Task>;
-}
-
-const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTaskId, onTaskComplete }) => {
+const PomodoroTimer: React.FC = () => {
   const {
     mode,
     timeRemaining,
@@ -18,41 +12,15 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTaskId, onTaskComp
     handleStartPause,
     handleReset,
     handleSkip,
-    registerOnWorkComplete,
-    unregisterOnWorkComplete,
-  } = useSharedDataContext();
-
-  const handleTaskCompletion = useCallback(async () => {
-    if (currentTaskId && onTaskComplete) {
-      await onTaskComplete(currentTaskId, { status: 'done' });
-    }
-  }, [currentTaskId, onTaskComplete]);
-
-  useEffect(() => {
-    if (mode === 'work') {
-      registerOnWorkComplete(handleTaskCompletion);
-    }
-    return () => {
-      unregisterOnWorkComplete();
-    };
-  }, [mode, registerOnWorkComplete, unregisterOnWorkComplete, handleTaskCompletion]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const secs = (seconds % 60).toString().padStart(2, '0');
-    return `${mins}:${secs}`;
-  };
-
-  const isBreak = mode !== 'work';
-  const timerColor = isBreak ? 'border-green-500' : 'border-gray-700';
-  const buttonBgColor = isBreak ? 'bg-green-500 hover:bg-green-600' : 'bg-white hover:bg-gray-200';
-  const buttonTextColor = isBreak ? 'text-white' : 'text-gray-900';
-
-  const modeText = {
-    work: 'Focus',
-    shortBreak: 'Short Break',
-    longBreak: 'Long Break',
-  };
+    formatTime,
+    isBreak,
+    timerColor,
+    buttonBgColor,
+    buttonTextColor,
+    modeText,
+    setCurrentTaskId,
+    setOnTaskComplete,
+  } = useSharedTimerContext();
 
   return (
     <section className="w-full max-w-lg mx-auto" role="main" aria-label="Pomodoro Timer">
@@ -121,9 +89,9 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ currentTaskId, onTaskComp
               </p>
             </div>
           </div>
-          <div className={cn("absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none", isBreak && 'from-green-500/10 to-teal-500/10')}></div>
-          <div className={cn("absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl pointer-events-none transition-all", isBreak ? 'bg-green-500/10' : 'bg-blue-500/10')}></div>
-          <div className={cn("absolute -bottom-24 -left-24 w-48 h-48 rounded-full blur-3xl pointer-events-none transition-all", isBreak ? 'bg-teal-500/10' : 'bg-purple-500/10')}></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none"></div>
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full blur-3xl pointer-events-none"></div>
         </div>
       </div>
     </section>

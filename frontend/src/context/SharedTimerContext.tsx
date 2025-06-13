@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { TaskUpdateRequest, Task } from '../types/task';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -15,7 +16,7 @@ const DURATION_MAP: Record<Mode, number> = {
   longBreak: LONG_BREAK_DURATION,
 };
 
-export interface TimerState {
+interface TimerState {
   mode: Mode;
   timeRemaining: number;
   isActive: boolean;
@@ -23,9 +24,7 @@ export interface TimerState {
   timestamp?: number;
 }
 
-type OnWorkCompleteCallback = () => Promise<void>;
-
-interface SharedDataContextType {
+interface SharedTimerContextType {
   mode: Mode;
   timeRemaining: number;
   isActive: boolean;
@@ -33,31 +32,39 @@ interface SharedDataContextType {
   handleStartPause: () => void;
   handleReset: () => void;
   handleSkip: () => void;
-  registerOnWorkComplete: (cb: OnWorkCompleteCallback) => void;
-  unregisterOnWorkComplete: () => void;
+  formatTime: (seconds: number) => string;
+  isBreak: boolean;
+  timerColor: string;
+  buttonBgColor: string;
+  buttonTextColor: string;
+  modeText: Record<Mode, string>;
+  currentTaskId: string | undefined;
+  onTaskComplete: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
+  setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setOnTaskComplete: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
 }
 
-const SharedDataContext = createContext<SharedDataContextType | undefined>(undefined);
+const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
 
-export const SharedDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [mode, setMode] = useState<Mode>('work');
   const [timeRemaining, setTimeRemaining] = useState(WORK_DURATION);
   const [isActive, setIsActive] = useState(false);
   const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
+  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
+  const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
-  const onWorkCompleteCallback = useRef<OnWorkCompleteCallback | null>(null);
+  const handleTaskCompletion = useCallback(async () => {
+    if (currentTaskId && onTaskComplete) {
+      await onTaskComplete(currentTaskId, { status: 'done' });
+    }
+  }, [currentTaskId, onTaskComplete]);
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
     if (mode === 'work') {
-      if (onWorkCompleteCallback.current) {
-        try {
-          await onWorkCompleteCallback.current();
-        } catch (error) {
-          console.error("onWorkCompleteCallback failed:", error);
-        }
-      }
+      await handleTaskCompletion();
       const newPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(newPomodorosCount);
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
@@ -67,7 +74,7 @@ export const SharedDataProvider: React.FC<{ children: ReactNode }> = ({ children
       setMode('work');
       setTimeRemaining(WORK_DURATION);
     }
-  }, [mode, pomodorosCompleted]);
+  }, [mode, pomodorosCompleted, handleTaskCompletion]);
 
   useEffect(() => {
     try {
@@ -120,22 +127,55 @@ export const SharedDataProvider: React.FC<{ children: ReactNode }> = ({ children
   const handleStartPause = () => setIsActive(prev => !prev);
   const handleReset = () => { setIsActive(false); setTimeRemaining(DURATION_MAP[mode]); };
   const handleSkip = () => switchToNextMode();
-  const registerOnWorkComplete = useCallback((cb: OnWorkCompleteCallback) => { onWorkCompleteCallback.current = cb; }, []);
-  const unregisterOnWorkComplete = useCallback(() => { onWorkCompleteCallback.current = null; }, []);
 
-  const value = { mode, timeRemaining, isActive, pomodorosCompleted, handleStartPause, handleReset, handleSkip, registerOnWorkComplete, unregisterOnWorkComplete };
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
+  const isBreak = mode !== 'work';
+  const timerColor = isBreak ? 'border-green-500' : 'border-gray-700';
+  const buttonBgColor = isBreak ? 'bg-green-500 hover:bg-green-600' : 'bg-white hover:bg-gray-200';
+  const buttonTextColor = isBreak ? 'text-white' : 'text-gray-900';
+
+  const modeText = {
+    work: 'Focus',
+    shortBreak: 'Short Break',
+    longBreak: 'Long Break',
+  };
+
+  const value = {
+    mode,
+    timeRemaining,
+    isActive,
+    pomodorosCompleted,
+    handleStartPause,
+    handleReset,
+    handleSkip,
+    formatTime,
+    isBreak,
+    timerColor,
+    buttonBgColor,
+    buttonTextColor,
+    modeText,
+    currentTaskId,
+    onTaskComplete,
+    setCurrentTaskId,
+    setOnTaskComplete,
+  };
 
   return (
-    <SharedDataContext.Provider value={value}>
+    <SharedTimerContext.Provider value={value}>
       {children}
-    </SharedDataContext.Provider>
+    </SharedTimerContext.Provider>
   );
 };
 
-export const useSharedDataContext = () => {
-  const context = useContext(SharedDataContext);
+export const useSharedTimerContext = () => {
+  const context = useContext(SharedTimerContext);
   if (!context) {
-    throw new Error('useSharedDataContext must be used within a SharedDataProvider');
+    throw new Error('useSharedTimerContext must be used within a SharedTimerProvider');
   }
   return context;
 };

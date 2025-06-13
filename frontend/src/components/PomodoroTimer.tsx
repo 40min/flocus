@@ -21,6 +21,7 @@ const PomodoroTimer: React.FC = () => {
     modeText,
     setCurrentTaskId,
     setOnTaskComplete,
+    currentTaskName,
   } = useSharedTimerContext();
 
   const { setNodeRef, isOver } = useDroppable({
@@ -50,9 +51,14 @@ const PomodoroTimer: React.FC = () => {
                       {isOver ? (
                         <p className="text-2xl font-bold text-sky-300">Drop Task to Begin</p>
                       ) : (
-                        <div className="text-5xl md:text-6xl font-bold font-mono text-white">
-                          {formatTime(timeRemaining)}
-                        </div>
+                        <>
+                          {currentTaskName && (
+                            <p className="text-xl font-semibold text-white mb-2">{currentTaskName}</p>
+                          )}
+                          <div className="text-5xl md:text-6xl font-bold font-mono text-white">
+                            {formatTime(timeRemaining)}
+                          </div>
+                        </>
                       )}
                       <p className="text-sm text-gray-400 mt-2 max-w-32">
                         {modeText[mode]}

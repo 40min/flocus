@@ -39,8 +39,10 @@ interface SharedTimerContextType {
   buttonTextColor: string;
   modeText: Record<Mode, string>;
   currentTaskId: string | undefined;
+  currentTaskName: string | undefined;
   onTaskComplete: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
   setOnTaskComplete: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
 }
 
@@ -52,6 +54,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [isActive, setIsActive] = useState(false);
   const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
+  const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
   const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
   const handleTaskCompletion = useCallback(async () => {
@@ -160,8 +163,10 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     buttonTextColor,
     modeText,
     currentTaskId,
+    currentTaskName,
     onTaskComplete,
     setCurrentTaskId,
+    setCurrentTaskName,
     setOnTaskComplete,
   };
 

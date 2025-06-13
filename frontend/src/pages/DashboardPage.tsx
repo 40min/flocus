@@ -4,11 +4,12 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
-import { useUpdateTask } from '../hooks/useTasks';
+import { useTasks, useUpdateTask } from '../hooks/useTasks';
+
 import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskComplete, isActive, handleStartPause } = useSharedTimerContext();
+  const { setCurrentTaskId, setOnTaskComplete, isActive, handleStartPause, setCurrentTaskName } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -40,10 +41,27 @@ const DashboardPage: React.FC = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id === 'pomodoro-drop-zone') {
       const taskId = event.active.id as string;
-      setCurrentTaskId(taskId);
-      setOnTaskComplete(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
-      if (!isActive) {
-        handleStartPause();
+      let draggedTask;
+
+      for (const timeWindow of dailyPlan.time_windows) {
+        const foundTask = timeWindow.tasks.find(task => task.id === taskId);
+        if (foundTask) {
+          draggedTask = foundTask;
+          break;
+        }
+      }
+
+      if (draggedTask) {
+        setCurrentTaskId(taskId);
+        setCurrentTaskName(draggedTask.title);
+        setOnTaskComplete(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
+
+        // Update task status to "In Progress" immediately
+        updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
+
+        if (!isActive) {
+          handleStartPause();
+        }
       }
     }
   };

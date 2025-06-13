@@ -3,8 +3,14 @@ import CurrentTasks from '../components/CurrentTasks';
 import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
+import { useUpdateTask } from '../hooks/useTasks';
+import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
+  const { setCurrentTaskId, setOnTaskComplete, isActive, handleStartPause } = useSharedTimerContext();
+  const { mutateAsync: updateTask } = useUpdateTask();
+
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
   if (isLoading) {
@@ -30,9 +36,15 @@ const DashboardPage: React.FC = () => {
       </div>
     );
   }
+
   const handleDragEnd = (event: DragEndEvent) => {
-    if (event.over) {
-      console.log('Dragged', event.active.id, 'over', event.over.id);
+    if (event.over?.id === 'pomodoro-drop-zone') {
+      const taskId = event.active.id as string;
+      setCurrentTaskId(taskId);
+      setOnTaskComplete(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
+      if (!isActive) {
+        handleStartPause();
+      }
     }
   };
 

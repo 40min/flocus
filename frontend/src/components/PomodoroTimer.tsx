@@ -28,7 +28,7 @@ const PomodoroTimer: React.FC = () => {
   return (
     <section className="w-full max-w-lg mx-auto" role="main" aria-label="Pomodoro Timer">
       <div className="transition-all duration-300">
-        <div className={cn("text-card-foreground flex flex-col gap-6 rounded-xl border py-6 relative overflow-hidden bg-white shadow-lg transition-all", isBreak ? 'border-green-500/50' : 'border-gray-700/50')}>
+        <div className={cn("text-card-foreground flex flex-col gap-6 rounded-xl border py-6 relative overflow-hidden bg-background-card shadow-lg transition-all", isBreak ? 'border-accent-DEFAULT/50' : 'border-border-DEFAULT')}>
           <div className="p-8 md:p-12 flex flex-col items-center space-y-8">
             <div className="relative w-full flex justify-center">
               <figure className="relative flex flex-col items-center" role="timer" aria-label="Pomodoro Timer">
@@ -36,9 +36,9 @@ const PomodoroTimer: React.FC = () => {
                   <div
                     ref={setNodeRef}
                     className={cn(
-                      "relative w-60 h-60 md:w-72 md:h-72 rounded-full bg-white border-2 shadow-lg transition-all duration-300 flex items-center justify-center",
+                      "relative w-60 h-60 md:w-72 md:h-72 rounded-full bg-background-card border-2 shadow-lg transition-all duration-300 flex items-center justify-center",
                       timerColor,
-                      isOver && 'border-sky-400 ring-4 ring-sky-400/20',
+                      isOver && 'border-primary-light ring-4 ring-primary-light/20',
                     )}
                     tabIndex={0}
                     role="button"
@@ -46,13 +46,13 @@ const PomodoroTimer: React.FC = () => {
                   >
                     <div className="text-center">
                       {isOver ? (
-                        <p className="text-2xl font-bold text-sky-300">Drop Task to Begin</p>
+                        <p className="text-2xl font-bold text-primary-light">Drop Task to Begin</p>
                       ) : (
                         <>
                           {currentTaskName && (
-                            <p className="text-xl font-semibold text-gray-800 mb-2">{currentTaskName}</p>
+                            <p className="text-xl font-semibold text-text-DEFAULT mb-2">{currentTaskName}</p>
                           )}
-                          <div className="text-5xl md:text-6xl font-bold font-mono text-gray-800">
+                          <div className="text-5xl md:text-6xl font-bold font-mono text-text-DEFAULT">
                             {formatTime(timeRemaining)}
                           </div>
                         </>
@@ -60,14 +60,14 @@ const PomodoroTimer: React.FC = () => {
                       <div className="flex gap-2 justify-center mt-4">
                         <button
                           onClick={handleReset}
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 text-gray-800"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-background-DEFAULT hover:bg-border-DEFAULT border border-border-DEFAULT hover:border-border-dark shadow-sm hover:shadow-md transition-all duration-200 text-text-secondary"
                           aria-label="Reset timer"
                         >
                           <RotateCcw className="h-4 w-4" />
                         </button>
                         <button
                           onClick={handleSkip}
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 text-gray-800"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-background-DEFAULT hover:bg-border-DEFAULT border border-border-DEFAULT hover:border-border-dark shadow-sm hover:shadow-md transition-all duration-200 text-text-secondary"
                           aria-label="Skip break"
                         >
                           <SkipForward className="h-4 w-4" />
@@ -95,7 +95,7 @@ const PomodoroTimer: React.FC = () => {
               </button>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-gray-600 text-sm md:text-base font-medium">
+              <p className="text-text-light text-sm md:text-base font-medium">
                 Completed: {pomodorosCompleted}
               </p>
             </div>

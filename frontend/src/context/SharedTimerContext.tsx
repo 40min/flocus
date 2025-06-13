@@ -138,9 +138,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   };
 
   const isBreak = mode !== 'work';
-  const timerColor = isBreak ? 'border-green-500' : 'border-gray-700';
-  const buttonBgColor = isBreak ? 'bg-green-500 hover:bg-green-600' : 'bg-white hover:bg-gray-200';
-  const buttonTextColor = isBreak ? 'text-white' : 'text-gray-900';
+  const timerColor = isBreak ? 'border-accent-DEFAULT' : 'border-primary-DEFAULT';
+  const buttonBgColor = isBreak ? 'bg-accent-DEFAULT hover:bg-accent-dark' : 'bg-primary-DEFAULT hover:bg-primary-dark';
+  const buttonTextColor = 'text-white';
 
   const modeText = {
     work: 'Focus',

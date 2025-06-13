@@ -16,7 +16,7 @@ const DashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
         <p className="text-white">Loading daily plan...</p>
       </div>
     );
@@ -24,7 +24,7 @@ const DashboardPage: React.FC = () => {
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
         <p className="text-red-500">Error loading daily plan.</p>
       </div>
     );
@@ -32,7 +32,7 @@ const DashboardPage: React.FC = () => {
 
   if (!dailyPlan) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
         <p className="text-white">No daily plan found for today.</p>
       </div>
     );
@@ -67,10 +67,10 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="bg-background-DEFAULT min-h-screen">
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex items-center justify-center md:justify-start">
-          <h1 className="text-2xl md:text-3xl font-semibold text-white flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-semibold text-text-DEFAULT flex items-center gap-2">
 
           </h1>
         </div>

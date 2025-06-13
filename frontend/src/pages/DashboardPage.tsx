@@ -2,6 +2,7 @@ import React from 'react';
 import CurrentTasks from '../components/CurrentTasks';
 import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
+import { DndContext, DragEndEvent } from '@dnd-kit/core';
 
 const DashboardPage: React.FC = () => {
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -29,6 +30,11 @@ const DashboardPage: React.FC = () => {
       </div>
     );
   }
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (event.over) {
+      console.log('Dragged', event.active.id, 'over', event.over.id);
+    }
+  };
 
   return (
     <div>
@@ -40,20 +46,22 @@ const DashboardPage: React.FC = () => {
         </div>
       </header>
       <main className="flex-1 px-6 md:px-12 pb-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-            <section className="lg:col-span-7 xl:col-span-8 flex justify-center">
-              <div className="w-full max-w-lg">
-                <PomodoroTimer />
-              </div>
-            </section>
-            <aside className="lg:col-span-5 xl:col-span-4">
-              <div className="sticky top-8">
-                <CurrentTasks />
-              </div>
-            </aside>
+        <DndContext onDragEnd={handleDragEnd}>
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+              <section className="lg:col-span-7 xl:col-span-8 flex justify-center">
+                <div className="w-full max-w-lg">
+                  <PomodoroTimer />
+                </div>
+              </section>
+              <aside className="lg:col-span-5 xl:col-span-4">
+                <div className="sticky top-8">
+                  <CurrentTasks />
+                </div>
+              </aside>
+            </div>
           </div>
-        </div>
+        </DndContext>
       </main>
     </div>
   );

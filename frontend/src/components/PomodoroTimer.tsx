@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useDroppable } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 
 const PomodoroTimer: React.FC = () => {
@@ -22,6 +23,10 @@ const PomodoroTimer: React.FC = () => {
     setOnTaskComplete,
   } = useSharedTimerContext();
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'pomodoro-drop-zone',
+  });
+
   return (
     <section className="w-full max-w-lg mx-auto" role="main" aria-label="Pomodoro Timer">
       <div className="transition-all duration-300">
@@ -31,18 +36,24 @@ const PomodoroTimer: React.FC = () => {
               <figure className="relative flex flex-col items-center" role="timer" aria-label="Pomodoro Timer">
                 <div className="relative">
                   <div
+                    ref={setNodeRef}
                     className={cn(
                       "relative w-72 h-72 md:w-80 md:h-80 rounded-full bg-gray-800 border-2 shadow-lg transition-all duration-300 flex items-center justify-center",
-                      timerColor
+                      timerColor,
+                      isOver && 'border-sky-400 ring-4 ring-sky-400/20',
                     )}
                     tabIndex={0}
                     role="button"
                     aria-label="Timer drop zone - drag tasks here to focus"
                   >
                     <div className="text-center">
-                      <div className="text-5xl md:text-6xl font-bold font-mono text-white">
-                        {formatTime(timeRemaining)}
-                      </div>
+                      {isOver ? (
+                        <p className="text-2xl font-bold text-sky-300">Drop Task to Begin</p>
+                      ) : (
+                        <div className="text-5xl md:text-6xl font-bold font-mono text-white">
+                          {formatTime(timeRemaining)}
+                        </div>
+                      )}
                       <p className="text-sm text-gray-400 mt-2 max-w-32">
                         {modeText[mode]}
                       </p>

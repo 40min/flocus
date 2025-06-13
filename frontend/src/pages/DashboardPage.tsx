@@ -17,7 +17,7 @@ const DashboardPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-slate-700">Loading daily plan...</p>
+        <p className="text-white">Loading daily plan...</p>
       </div>
     );
   }
@@ -33,7 +33,7 @@ const DashboardPage: React.FC = () => {
   if (!dailyPlan) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-slate-700">No daily plan found for today.</p>
+        <p className="text-white">No daily plan found for today.</p>
       </div>
     );
   }
@@ -70,8 +70,8 @@ const DashboardPage: React.FC = () => {
     <div>
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex items-center justify-center md:justify-start">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-            <span>Focus</span>
+          <h1 className="text-2xl md:text-3xl font-semibold text-white flex items-center gap-2">
+
           </h1>
         </div>
       </header>
@@ -85,7 +85,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </section>
               <aside className="lg:col-span-5 xl:col-span-4">
-                <div className="sticky top-8">
+                <div className="sticky top-8 h-[450px] flex flex-col">
                   <CurrentTasks />
                 </div>
               </aside>

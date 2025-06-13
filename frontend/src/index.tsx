@@ -6,6 +6,7 @@ import './styles/index.css';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { MessageProvider } from './context/MessageContext';
+import { SharedDataProvider } from './context/SharedDataContext';
 
 const queryClient = new QueryClient();
 
@@ -17,9 +18,11 @@ root.render(
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <MessageProvider>
-            <App />
-          </MessageProvider>
+          <SharedDataProvider>
+            <MessageProvider>
+              <App />
+            </MessageProvider>
+          </SharedDataProvider>
         </AuthProvider>
       </QueryClientProvider>
     </Router>

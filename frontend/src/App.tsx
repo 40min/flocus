@@ -14,7 +14,7 @@ import CategoriesPage from './pages/CategoriesPage';
 import TasksPage from './pages/TasksPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import MessageBalloon from './components/MessageBalloon';
-import { MessageProvider } from './context/MessageContext';
+import { SharedDataProvider } from './context/SharedDataContext';
 
 
 // Simple component to protect routes
@@ -167,7 +167,7 @@ function App() {
   }
 
   return (
-    <MessageProvider>
+    <SharedDataProvider>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -196,7 +196,7 @@ function App() {
         </Route>
       </Routes>
       <MessageBalloon />
-    </MessageProvider>
+    </SharedDataProvider>
   );
 }
 export default App;

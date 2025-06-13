@@ -49,7 +49,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                 <p className="text-xs text-gray-700 mb-3 line-clamp-2">{task.description || ''}</p>
                 <div className="flex items-center gap-1 text-xs text-gray-700">
                   <Clock className="h-3 w-3" />
-                  <span>0 Pomo</span>
+                  <span>{task.statistics?.lasts_min ? `${Math.floor(task.statistics.lasts_min / 60)}h ${task.statistics.lasts_min % 60}m` : '0h 0m'}</span>
                 </div>
               </div>
             </div>

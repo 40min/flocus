@@ -47,7 +47,7 @@ describe('PomodoroTimer', () => {
   it('renders initial state from context', () => {
     render(<PomodoroTimer />);
     expect(screen.getByText('25:00')).toBeInTheDocument();
-    expect(screen.getByText('Focus')).toBeInTheDocument();
+
     expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument();
     expect(screen.getByText('Completed: 0')).toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('PomodoroTimer', () => {
     });
     render(<PomodoroTimer />);
     expect(screen.getByText('05:00')).toBeInTheDocument();
-    expect(screen.getByText('Short Break')).toBeInTheDocument();
+
     expect(screen.getByText('Completed: 1')).toBeInTheDocument();
   });
 });

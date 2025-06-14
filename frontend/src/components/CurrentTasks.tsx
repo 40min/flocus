@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { Clock, GripVertical } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
 import { Task } from '../types/task';
-import { useTodayDailyPlan } from '../hooks/useDailyPlan';
+import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
 
 const TaskCard = ({ task }: { task: Task }) => {
@@ -60,20 +60,27 @@ const TaskCard = ({ task }: { task: Task }) => {
   );
 };
 
-const CurrentTasks: React.FC = () => {
-  const { data: dailyPlan } = useTodayDailyPlan();
-  const { currentTasks } = useCurrentTimeWindow(dailyPlan || null);
+interface CurrentTasksProps {
+  dailyPlan: DailyPlanResponse | null | undefined;
+}
+
+const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan }) => {
+  const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(dailyPlan || null);
 
   return (
     <>
       <div className="mb-6">
         <h2 className="text-lg font-medium text-text-DEFAULT mb-2">Today's Tasks</h2>
-        <p className="text-sm text-text-secondary">Drag tasks to the timer to start focusing</p>
+        {currentTimeWindow !== null && (
+          <p className="text-sm text-text-secondary">Drag tasks to the timer to start focusing</p>
+        )}
       </div>
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
           <ul className="space-y-3 h-full overflow-y-auto pr-2">
-            {currentTasks.length === 0 ? (
+            {currentTimeWindow === null ? (
+              <p className="text-text-secondary text-sm">No works planned for this time.</p>
+            ) : currentTasks.length === 0 ? (
               <p className="text-text-secondary text-sm">No tasks for the current time window.</p>
             ) : (
               currentTasks.map((task: Task) => (

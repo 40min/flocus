@@ -4,7 +4,7 @@ import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
-import { useTasks, useUpdateTask } from '../hooks/useTasks';
+import { useUpdateTask } from '../hooks/useTasks';
 
 import { TaskUpdateRequest } from '../types/task';
 
@@ -14,40 +14,18 @@ const DashboardPage: React.FC = () => {
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
-        <p className="text-white">Loading daily plan...</p>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
-        <p className="text-red-500">Error loading daily plan.</p>
-      </div>
-    );
-  }
-
-  if (!dailyPlan) {
-    return (
-      <div className="flex items-center justify-center h-full bg-background-DEFAULT">
-        <p className="text-white">No daily plan found for today.</p>
-      </div>
-    );
-  }
-
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id === 'pomodoro-drop-zone') {
       const taskId = event.active.id as string;
       let draggedTask;
 
-      for (const timeWindow of dailyPlan.time_windows) {
-        const foundTask = timeWindow.tasks.find(task => task.id === taskId);
-        if (foundTask) {
-          draggedTask = foundTask;
-          break;
+      if (dailyPlan) {
+        for (const timeWindow of dailyPlan.time_windows) {
+          const foundTask = timeWindow.tasks.find(task => task.id === taskId);
+          if (foundTask) {
+            draggedTask = foundTask;
+            break;
+          }
         }
       }
 
@@ -86,7 +64,13 @@ const DashboardPage: React.FC = () => {
               </section>
               <aside className="lg:col-span-5 xl:col-span-4">
                 <div className="sticky top-8 h-[450px] flex flex-col">
-                  <CurrentTasks />
+                  {isLoading ? (
+                    <p className="text-white">Loading daily plan...</p>
+                  ) : isError ? (
+                    <p className="text-red-500">Error loading daily plan.</p>
+                  ) : (
+                    <CurrentTasks dailyPlan={dailyPlan} />
+                  )}
                 </div>
               </aside>
             </div>

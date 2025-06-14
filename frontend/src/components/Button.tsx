@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'slate';
-  size?: 'small' | 'medium' | 'large' | 'icon';
+  size?: 'small' | 'medium' | 'large' | 'fat' | 'icon';
   isLoading?: boolean;
 }
 
@@ -31,6 +31,7 @@ const Button: React.FC<ButtonProps> = ({
     small: 'text-sm py-1 px-3',
     medium: 'text-base py-1.5 px-4',
     large: 'text-lg py-3 px-6',
+    fat: 'text-lg py-2 px-10',
     icon: 'p-1.5',
   };
 

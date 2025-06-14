@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
+import Button from './Button'; // Import the Button component
 
 const PomodoroTimer: React.FC = () => {
   const {
@@ -16,8 +17,6 @@ const PomodoroTimer: React.FC = () => {
     formatTime,
     isBreak,
     timerColor,
-    buttonBgColor,
-    buttonTextColor,
     currentTaskName,
   } = useSharedTimerContext();
 
@@ -78,21 +77,19 @@ const PomodoroTimer: React.FC = () => {
                 </div>
               </figure>
             </div>
-            <div className="w-full max-w-xs" tabIndex={0}>
-              <button
+            <div className="flex justify-center" tabIndex={0}>
+              <Button
                 onClick={handleStartPause}
-                className={cn(
-                  "inline-flex items-center justify-center gap-2 whitespace-nowrap px-6 w-full h-10 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 focus:ring-4 focus:ring-primary/20 focus:outline-none",
-                  buttonBgColor,
-                  buttonTextColor
-                )}
+                variant="slate"
+                size="fat"
+                className="rounded-full"
                 aria-label="Start/Pause timer"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center">
                   {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                   <span>{isActive ? 'Pause' : 'Start'}</span>
                 </div>
-              </button>
+              </Button>
             </div>
             <div className="text-center space-y-2">
               <p className="text-text-light text-sm md:text-base font-medium">

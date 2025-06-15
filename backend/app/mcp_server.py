@@ -27,10 +27,11 @@ engine = AIOEngine(client=motor_client, database=settings.MONGODB_DATABASE_NAME)
 async def create_category(
     name: str = Field(..., description="Name of the category"),
     description: Optional[str] = Field(None, description="Description of the category"),
+    color: Optional[str] = Field(None, description="Color of the category (e.g., #RRGGBB or color name)"),
 ) -> CategoryResponse:
     """Create a new category."""
     service = CategoryService(engine)
-    category_data = CategoryCreateRequest(name=name, description=description)
+    category_data = CategoryCreateRequest(name=name, description=description, color=color)
     return await service.create_category(category_data=category_data, current_user_id=USER_ID)
 
 

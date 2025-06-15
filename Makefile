@@ -13,22 +13,22 @@ help:
 	@echo "  make test-backend    - Runs backend tests (pytest)"
 	@echo "  make test-frontend   - Runs frontend tests (npm test)"
 	@echo "  make test            - Runs all tests (backend and frontend)"
-	@echo "  make install-backend - Installs backend dependencies (poetry install)"
+	@echo "  make install-backend - Installs backend dependencies (uv sync)"
 	@echo "  make install-frontend - Installs frontend dependencies (npm install)"
 	@echo "  make install         - Installs all dependencies"
 
 # Backend commands
 start-backend:
 	@echo "Starting backend server..."
-	@cd backend && source venv/bin/activate && poetry run uvicorn app.main:app --reload --app-dir .
+	@cd backend && uv run uvicorn app.main:app --reload --app-dir .
 
 test-backend:
 	@echo "Running backend tests..."
-	@cd backend && source venv/bin/activate && poetry run pytest
+	@cd backend && uv run pytest
 
 install-backend:
 	@echo "Installing backend dependencies..."
-	@cd backend && poetry install
+	@cd backend && uv sync
 
 # Frontend commands
 start-frontend:

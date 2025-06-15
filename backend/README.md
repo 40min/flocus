@@ -36,7 +36,7 @@ For an overview of the entire project, please see the main [README.md](../README
 1.  **Install dependencies using Poetry:**
 
     ```bash
-    poetry install
+    uv sync
     ```
 
 ## Running the Server
@@ -44,7 +44,7 @@ For an overview of the entire project, please see the main [README.md](../README
 1.  **Run the FastAPI server:**
 
     ```bash
-    poetry run uvicorn app.main:app --reload
+    uv run uvicorn app.main:app --reload
     ```
 
 ## Accessing the API Documentation

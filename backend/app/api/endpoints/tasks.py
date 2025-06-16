@@ -1,10 +1,26 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Path, Query, status
+from odmantic import AIOEngine  # For direct task fetching
 from odmantic import ObjectId
 
-from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
-from app.core.dependencies import get_current_active_user_id
+from app.api.schemas.task import (
+    LLMSuggestionResponse,
+    TaskCreateRequest,
+    TaskPriority,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdateRequest,
+)
+from app.core.dependencies import (  # get_current_active_user_id for other endpoints
+    get_current_active_user_id,
+    get_current_user,
+)
+from app.core.enums import LLMActionType  # Added
+from app.core.exceptions import NotOwnerException, TaskNotFoundException  # For direct task fetching
+from app.db.connection import get_database  # For direct task fetching
+from app.db.models.task import Task as TaskModel  # Added Task model import
+from app.db.models.user import User
 from app.services.task_service import TaskService
 
 router = APIRouter()
@@ -61,6 +77,32 @@ async def get_task_by_id(
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     return await service.get_task_by_id(task_id=task_id, current_user_id=current_user_id)
+
+
+@router.get(
+    "/{task_id}/llm-suggestions",
+    response_model=LLMSuggestionResponse,
+    summary="Get LLM suggestions for a task field",
+)
+async def get_llm_suggestion_for_task(
+    action: LLMActionType,
+    task_id: ObjectId = Path(..., description="The ID of the task"),
+    current_user: User = Depends(get_current_user),
+    task_service: TaskService = Depends(TaskService),
+    engine: AIOEngine = Depends(get_database),  # Inject engine for direct Task model fetching
+):
+    # Fetch the Task model directly, not TaskResponse schema
+    task_model = await engine.find_one(TaskModel, TaskModel.id == task_id)
+
+    if not task_model:
+        raise TaskNotFoundException(task_id=str(task_id))
+    if task_model.user_id != current_user.id:
+        raise NotOwnerException(resource="task")
+    if task_model.is_deleted:
+        raise TaskNotFoundException(task_id=str(task_id), detail="Task has been deleted.")
+
+    suggestion_response = await task_service.prepare_llm_suggestion(task=task_model, action=action)
+    return suggestion_response
 
 
 @router.get(

@@ -9,7 +9,11 @@ from app.core.exceptions import (
     ForbiddenException,
     InvalidCredentialsException,
     InvalidTokenException,
+    LLMAPIKeyNotConfiguredError,
+    LLMGenerationError,
+    LLMServiceError,
     TaskCategoryMismatchException,
+    TaskDataMissingError,
     UsernameAlreadyExistsException,
     UserNotFoundException,
     UserServiceException,
@@ -57,6 +61,30 @@ async def error_handling_middleware(request: Request, call_next):
         logger.error(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.detail},
+        )
+    except TaskDataMissingError as e:
+        logger.error(f"TaskDataMissingError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.detail},
+        )
+    except LLMAPIKeyNotConfiguredError as e:
+        logger.error(f"LLMAPIKeyNotConfiguredError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": e.detail},
+        )
+    except LLMGenerationError as e:
+        logger.error(f"LLMGenerationError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": e.detail},
+        )
+    except LLMServiceError as e:
+        logger.error(f"LLMServiceError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": e.detail},
         )
     except Exception as e:

@@ -12,6 +12,26 @@ export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
   }
 };
 
+
+export interface LlmSuggestionResponse {
+  suggestion: string;
+  original_text?: string;
+  field_to_update: 'title' | 'description';
+}
+
+export type LlmAction = 'improve_title' | 'improve_description' | 'generate_description_from_title';
+
+export const getLlmSuggestion = async (taskId: string, action: LlmAction): Promise<LlmSuggestionResponse> => {
+  try {
+    const url = `${API_ENDPOINTS.TASK_BY_ID(taskId)}/llm-suggestions`;
+    const response = await api.get<LlmSuggestionResponse>(url, { params: { action } });
+    return response.data;
+  } catch (error) {
+    // Consider more specific error handling or logging here
+    throw error;
+  }
+};
+
 export const getTaskById = async (id: string): Promise<Task> => {
   try {
     const response = await api.get<Task>(API_ENDPOINTS.TASK_BY_ID(id));

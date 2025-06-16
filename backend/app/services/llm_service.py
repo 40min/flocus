@@ -5,7 +5,7 @@ import openai
 from fastapi import Depends
 
 from app.core.config import Settings
-from backend.app.core.enums import LLMProvider
+from app.core.enums import LLMProvider
 
 
 class LLMService:

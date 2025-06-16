@@ -15,12 +15,12 @@ from app.api.schemas.task import (
     TaskUpdateRequest,
 )
 from app.core.config import settings
+from app.core.enums import LLMActionType
+from app.core.exceptions import LLMGenerationError, TaskDataMissingError
 from app.db.models.category import Category as CategoryModel
 from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
-from backend.app.core.enums import LLMActionType
-from backend.app.core.exceptions import LLMGenerationError, TaskDataMissingError
-from backend.app.services.llm_service import LLMService
+from app.services.llm_service import LLMService
 
 API_V1_STR = settings.API_V1_STR
 TASKS_ENDPOINT = f"{API_V1_STR}/tasks"

@@ -12,19 +12,6 @@ export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
   }
 };
 
-// Old function, replaced by getLlmSuggestion and applyLlmSuggestion
-// export const improveTaskText = async (taskId: string, fieldToImprove: string): Promise<Task> => {
-//   try {
-//     const response = await api.post<Task>(
-//       API_ENDPOINTS.TASK_BY_ID(taskId) + '/improve-text',
-//       { field_to_improve: fieldToImprove }
-//     );
-//     return response.data;
-//   } catch (error) {
-//     // TODO: Consider more specific error handling or logging here
-//     throw error;
-//   }
-// };
 
 export interface LlmSuggestionResponse {
   suggestion: string;
@@ -44,25 +31,6 @@ export const getLlmSuggestion = async (taskId: string, action: LlmAction): Promi
     throw error;
   }
 };
-
-// export const applyLlmSuggestion = async (
-//   taskId: string,
-//   fieldToUpdate: 'title' | 'description',
-//   approvedText: string
-// ): Promise<Task> => {
-//   try {
-//     const url = `${API_ENDPOINTS.TASK_BY_ID(taskId)}/apply-suggestion`;
-//     const payload = {
-//       approved_text: approvedText,
-//       field_to_update: fieldToUpdate,
-//     };
-//     const response = await api.post<Task>(url, payload);
-//     return response.data;
-//   } catch (error) {
-//     // Consider more specific error handling or logging here
-//     throw error;
-//   }
-// };
 
 export const getTaskById = async (id: string): Promise<Task> => {
   try {

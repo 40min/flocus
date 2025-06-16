@@ -1,6 +1,8 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.enums import LLMProvider
+
 
 class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
@@ -17,11 +19,11 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "OpenAI"
     LLM_API_KEY: str = ""
     LLM_TEXT_IMPROVEMENT_PROMPT: str = "Improve the following text:"
-    LLM_MODEL_NAME: str = "" # Optional: Specify a model name, e.g., "gpt-4", "gemini-1.5-pro-latest"
+    LLM_MODEL_NAME: str = ""  # Optional: Specify a model name, e.g., "gpt-4", "gemini-1.5-pro-latest"
 
     @field_validator("LLM_PROVIDER")
     def validate_llm_provider(cls, v: str) -> str:
-        if v not in ["OpenAI", "GoogleGemini"]:
+        if v not in [provider.value for provider in LLMProvider]:
             raise ValueError("LLM_PROVIDER must be 'OpenAI' or 'GoogleGemini'")
         return v
 

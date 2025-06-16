@@ -1,11 +1,12 @@
 import datetime
-from unittest.mock import patch, AsyncMock  # For mocking datetime & async methods
+from unittest.mock import AsyncMock, patch  # For mocking datetime & async methods
 
 import pytest
 from httpx import AsyncClient
 from odmantic import ObjectId
 
 from app.api.schemas.task import (
+    LLMSuggestionResponse,
     TaskCreateRequest,
     TaskPriority,
     TaskResponse,
@@ -17,6 +18,9 @@ from app.core.config import settings
 from app.db.models.category import Category as CategoryModel
 from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
+from backend.app.core.enums import LLMActionType
+from backend.app.core.exceptions import LLMGenerationError, TaskDataMissingError
+from backend.app.services.llm_service import LLMService
 
 API_V1_STR = settings.API_V1_STR
 TASKS_ENDPOINT = f"{API_V1_STR}/tasks"
@@ -891,6 +895,7 @@ async def test_update_task_no_status_change_no_stat_change_via_api(
 
 # Tests for the old "/improve-text" endpoint are already commented out or removed.
 
+
 # Updated tests for GET /llm-suggestions
 @patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
 async def test_get_llm_suggestion_improve_title_success(
@@ -902,7 +907,7 @@ async def test_get_llm_suggestion_improve_title_success(
     expected_response_data = {
         "suggestion": "LLM Suggested Title",
         "original_text": user_one_task_model.title,
-        "field_to_update": "title"
+        "field_to_update": "title",
     }
     mock_prepare_suggestion.return_value = LLMSuggestionResponse(**expected_response_data)
 
@@ -915,18 +920,20 @@ async def test_get_llm_suggestion_improve_title_success(
     # Check that prepare_llm_suggestion was called correctly by the endpoint
     # The endpoint fetches the task model and passes it to the service.
     # We are mocking the service method, so we check its arguments.
-    # The actual TaskModel passed would be checked if we were testing the service method itself (done in test_task_service.py)
+    # The actual TaskModel passed would be checked if we were testing the service method
+    # itself (done in test_task_service.py)
     # Here, we trust the endpoint fetches the task and passes it.
     # The first argument to prepare_llm_suggestion is 'self' (the TaskService instance),
     # the second is the 'task' model, third is 'action', fourth is 'llm_service'.
     # We can check the 'action' and that 'llm_service' was passed.
-    # Accessing call_args: args = mock_prepare_suggestion.call_args[0], kwargs = mock_prepare_suggestion.call_args[1]
+    # Accessing call_args:
+    # args = mock_prepare_suggestion.call_args[0], kwargs = mock_prepare_suggestion.call_args[1]
     # Or using call_args.args and call_args.kwargs for Python 3.8+
     called_args = mock_prepare_suggestion.call_args.kwargs
-    assert called_args['action'] == LLMActionType.IMPROVE_TITLE
-    assert isinstance(called_args['task'], TaskModel)
-    assert called_args['task'].id == user_one_task_model.id
-    assert isinstance(called_args['llm_service'], LLMService)
+    assert called_args["action"] == LLMActionType.IMPROVE_TITLE
+    assert isinstance(called_args["task"], TaskModel)
+    assert called_args["task"].id == user_one_task_model.id
+    assert isinstance(called_args["llm_service"], LLMService)
 
 
 @patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
@@ -938,8 +945,8 @@ async def test_get_llm_suggestion_generate_description_success(
 ):
     expected_response_data = {
         "suggestion": "Generated Description",
-        "original_text": None, # No original for generation
-        "field_to_update": "description"
+        "original_text": None,  # No original for generation
+        "field_to_update": "description",
     }
     mock_prepare_suggestion.return_value = LLMSuggestionResponse(**expected_response_data)
 
@@ -950,11 +957,11 @@ async def test_get_llm_suggestion_generate_description_success(
     assert response.status_code == 200
     assert response.json() == expected_response_data
     called_args = mock_prepare_suggestion.call_args.kwargs
-    assert called_args['action'] == LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE
-    assert called_args['task'].id == user_one_task_model.id
+    assert called_args["action"] == LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE
+    assert called_args["task"].id == user_one_task_model.id
 
 
-async def test_get_llm_suggestion_endpoint_task_not_found( # Renamed to be more specific to endpoint test
+async def test_get_llm_suggestion_endpoint_task_not_found(  # Renamed to be more specific to endpoint test
     async_client: AsyncClient, auth_headers_user_one: dict[str, str]
 ):
     non_existent_id = ObjectId()
@@ -964,12 +971,15 @@ async def test_get_llm_suggestion_endpoint_task_not_found( # Renamed to be more 
         f"{TASKS_ENDPOINT}/{non_existent_id}/llm-suggestions?action=improve_title",
         headers=auth_headers_user_one,
     )
-    assert response.status_code == 404 # From TaskNotFoundException raised in endpoint
+    assert response.status_code == 404  # From TaskNotFoundException raised in endpoint
 
 
 @patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
 async def test_get_llm_suggestion_task_data_missing_error_from_service(
-    mock_prepare_suggestion, async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel
+    mock_prepare_suggestion,
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_task_model: TaskModel,
 ):
     mock_prepare_suggestion.side_effect = TaskDataMissingError(detail="Test title is missing.")
     response = await async_client.get(
@@ -982,7 +992,10 @@ async def test_get_llm_suggestion_task_data_missing_error_from_service(
 
 @patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
 async def test_get_llm_suggestion_llm_generation_error_from_service(
-    mock_prepare_suggestion, async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel
+    mock_prepare_suggestion,
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_task_model: TaskModel,
 ):
     mock_prepare_suggestion.side_effect = LLMGenerationError(detail="LLM provider failed.")
     response = await async_client.get(
@@ -991,14 +1004,6 @@ async def test_get_llm_suggestion_llm_generation_error_from_service(
     )
     assert response.status_code == 500
     assert response.json()["detail"] == "LLM provider failed."
-
-
-# Remove tests for POST /apply-suggestion as endpoint is removed
-# async def test_apply_suggestion_title_success(...): ...
-# async def test_apply_suggestion_description_success(...): ...
-# async def test_apply_suggestion_task_not_found(...): ...
-# async def test_apply_suggestion_invalid_field_payload(...): ...
-# async def test_apply_suggestion_empty_approved_text(...): ...
 
 
 # Verify/Augment Tests for PATCH /tasks/{task_id}
@@ -1012,13 +1017,13 @@ async def test_update_task_only_title(
     response = await async_client.patch(
         f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
         headers=auth_headers_user_one,
-        json=update_data, # No need for TaskUpdateRequest.model_dump here
+        json=update_data,  # No need for TaskUpdateRequest.model_dump here
     )
     assert response.status_code == 200
     updated_task_resp = TaskResponse(**response.json())
     assert updated_task_resp.title == "Updated Title Only By Patch"
-    assert updated_task_resp.description == original_description # Ensure description is unchanged
-    assert updated_task_resp.status == original_status # Ensure status is unchanged
+    assert updated_task_resp.description == original_description  # Ensure description is unchanged
+    assert updated_task_resp.status == original_status  # Ensure status is unchanged
 
     db_task = await test_db.find_one(TaskModel, TaskModel.id == user_one_task_model.id)
     assert db_task.title == "Updated Title Only By Patch"
@@ -1035,7 +1040,6 @@ async def test_update_task_only_description(
         user_one_task_model.description = "Initial description"
         await test_db.save(user_one_task_model)
 
-
     update_data = {"description": "Updated Description Only By Patch"}
     response = await async_client.patch(
         f"{TASKS_ENDPOINT}/{user_one_task_model.id}",
@@ -1045,8 +1049,8 @@ async def test_update_task_only_description(
     assert response.status_code == 200
     updated_task_resp = TaskResponse(**response.json())
     assert updated_task_resp.description == "Updated Description Only By Patch"
-    assert updated_task_resp.title == original_title # Ensure title is unchanged
-    assert updated_task_resp.status == original_status # Ensure status is unchanged
+    assert updated_task_resp.title == original_title  # Ensure title is unchanged
+    assert updated_task_resp.status == original_status  # Ensure status is unchanged
 
     db_task = await test_db.find_one(TaskModel, TaskModel.id == user_one_task_model.id)
     assert db_task.description == "Updated Description Only By Patch"

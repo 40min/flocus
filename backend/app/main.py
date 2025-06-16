@@ -9,9 +9,6 @@ from app.api.endpoints import categories, daily_plans, day_templates, tasks, use
 from app.core.config import settings  # Import settings
 from app.core.logging_config import setup_logging
 from app.core.middleware import error_handling_middleware
-from app.core.exceptions import TaskDataMissingError, LLMGenerationError, LLMServiceError # Added
-from fastapi import Request # Added
-from fastapi.responses import JSONResponse # Added
 
 
 @asynccontextmanager
@@ -28,29 +25,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-# Exception Handlers for LLM Service
-@app.exception_handler(TaskDataMissingError)
-async def task_data_missing_exception_handler(request: Request, exc: TaskDataMissingError):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}, # Matching FastAPI's default error schema
-    )
-
-@app.exception_handler(LLMGenerationError)
-async def llm_generation_exception_handler(request: Request, exc: LLMGenerationError):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}, # Matching FastAPI's default error schema
-    )
-
-# Optional: Generic handler for other LLMServiceErrors if not caught by more specific handlers
-@app.exception_handler(LLMServiceError)
-async def llm_service_exception_handler(request: Request, exc: LLMServiceError):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}, # Matching FastAPI's default error schema
-    )
 
 app.add_middleware(
     CORSMiddleware,

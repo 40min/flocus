@@ -28,7 +28,10 @@ class LLMService:
                         model=openai_model_name, messages=[{"role": "user", "content": full_prompt_for_llm}]
                     )
                     if response.choices and response.choices[0].message and response.choices[0].message.content:
-                        return response.choices[0].message.content.strip()
+                        suggestion = response.choices[0].message.content.strip()
+                        if suggestion.startswith("Error:"):
+                            raise LLMGenerationError(detail=suggestion)
+                        return suggestion
                     else:
                         raise LLMGenerationError(detail="OpenAI API call failed to return a valid response.")
                 case str(LLMProvider.GOOGLE_GEMINI):
@@ -38,12 +41,18 @@ class LLMService:
                     response = await model.generate_content_async(full_prompt_for_llm)
                     # Ensure response.text is not None before stripping
                     if response.text:
-                        return response.text.strip()
+                        suggestion = response.text.strip()
+                        if suggestion.startswith("Error:"):
+                            raise LLMGenerationError(detail=suggestion)
+                        return suggestion
                     else:
                         raise LLMGenerationError(detail="GoogleGemini API call failed to return valid text.")
                 case _:
                     raise LLMServiceError(status_code=500, detail=f"Unknown LLM_PROVIDER: {settings.LLM_PROVIDER}")
 
+        except (LLMGenerationError, LLMAPIKeyNotConfiguredError, LLMServiceError) as e:
+            # Re-raise known exceptions directly
+            raise e
         except (openai.APIError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
             raise LLMGenerationError(detail=f"LLM provider API error: {str(e)}")
         except Exception as e:

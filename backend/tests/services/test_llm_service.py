@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import google.generativeai as genai
+import openai
 import pytest
 
 from app.core.config import Settings
@@ -60,6 +61,52 @@ class TestLLMService:
 
     @patch("openai.AsyncOpenAI")
     @patch("app.services.llm_service.settings", spec=Settings)
+    async def test_improve_text_openai_provider_returns_error_string_raises_llm_generation_error(
+        self, mock_settings, mock_async_openai_client
+    ):
+        mock_settings.LLM_PROVIDER = "OpenAI"
+        mock_settings.LLM_API_KEY = "fake_openai_key"
+        mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = "Improve this:"
+        mock_settings.LLM_MODEL_NAME = ""
+
+        mock_openai_instance = AsyncMock()
+        mock_chat_completions_create = AsyncMock()
+        mock_chat_completions_create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Error: API key missing"))]
+        )
+        mock_openai_instance.chat.completions.create = mock_chat_completions_create
+        mock_async_openai_client.return_value = mock_openai_instance
+
+        service = LLMService()
+        service.settings = mock_settings
+
+        with pytest.raises(LLMGenerationError, match="Error: API key missing"):
+            await service.improve_text(text_to_process="test input")
+
+    @patch("openai.AsyncOpenAI")
+    @patch("app.services.llm_service.settings", spec=Settings)
+    async def test_improve_text_openai_provider_no_content_raises_llm_generation_error(
+        self, mock_settings, mock_async_openai_client
+    ):
+        mock_settings.LLM_PROVIDER = "OpenAI"
+        mock_settings.LLM_API_KEY = "fake_openai_key"
+        mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = "Improve this:"
+        mock_settings.LLM_MODEL_NAME = ""
+
+        mock_openai_instance = AsyncMock()
+        mock_chat_completions_create = AsyncMock()
+        mock_chat_completions_create.return_value = MagicMock(choices=[MagicMock(message=MagicMock(content=None))])
+        mock_openai_instance.chat.completions.create = mock_chat_completions_create
+        mock_async_openai_client.return_value = mock_openai_instance
+
+        service = LLMService()
+        service.settings = mock_settings
+
+        with pytest.raises(LLMGenerationError, match="OpenAI API call failed to return a valid response."):
+            await service.improve_text(text_to_process="test input")
+
+    @patch("openai.AsyncOpenAI")
+    @patch("app.services.llm_service.settings", spec=Settings)
     async def test_improve_text_openai_provider_custom_prompt_and_model(self, mock_settings, mock_async_openai_client):
         mock_settings.LLM_PROVIDER = "OpenAI"
         mock_settings.LLM_API_KEY = "fake_openai_key"
@@ -116,12 +163,54 @@ class TestLLMService:
         mock_gemini_instance.generate_content_async.assert_called_once_with(expected_full_prompt)
         assert result == "Improved by Gemini"
 
+    @patch("google.generativeai.GenerativeModel")
+    @patch("google.generativeai.configure")
+    @patch("app.services.llm_service.settings", spec=Settings)
+    async def test_improve_text_google_gemini_provider_returns_error_string_raises_llm_generation_error(
+        self, mock_settings, mock_genai_configure, mock_genai_model
+    ):
+        mock_settings.LLM_PROVIDER = "GoogleGemini"
+        mock_settings.LLM_API_KEY = "fake_gemini_key"
+        mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = "Improve this gem:"
+        mock_settings.LLM_MODEL_NAME = ""
+
+        mock_gemini_instance = AsyncMock()
+        mock_gemini_instance.generate_content_async.return_value = MagicMock(text="Error: Gemini API Error")
+        mock_genai_model.return_value = mock_gemini_instance
+
+        service = LLMService()
+        service.settings = mock_settings
+
+        with pytest.raises(LLMGenerationError, match="Error: Gemini API Error"):
+            await service.improve_text(text_to_process="gemini test")
+
+    @patch("google.generativeai.GenerativeModel")
+    @patch("google.generativeai.configure")
+    @patch("app.services.llm_service.settings", spec=Settings)
+    async def test_improve_text_google_gemini_provider_no_content_raises_llm_generation_error(
+        self, mock_settings, mock_genai_configure, mock_genai_model
+    ):
+        mock_settings.LLM_PROVIDER = "GoogleGemini"
+        mock_settings.LLM_API_KEY = "fake_gemini_key"
+        mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = "Improve this gem:"
+        mock_settings.LLM_MODEL_NAME = ""
+
+        mock_gemini_instance = AsyncMock()
+        mock_gemini_instance.generate_content_async.return_value = MagicMock(text=None)
+        mock_genai_model.return_value = mock_gemini_instance
+
+        service = LLMService()
+        service.settings = mock_settings
+
+        with pytest.raises(LLMGenerationError, match="GoogleGemini API call failed to return valid text."):
+            await service.improve_text(text_to_process="gemini test")
+
     @patch("app.services.llm_service.settings", spec=Settings)
     async def test_improve_text_unknown_provider(self, mock_settings):
         mock_settings.LLM_PROVIDER = "UnknownProvider"
         mock_settings.LLM_API_KEY = "fake_key"
         mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = "This prompt does not matter for this test"
-        mock_settings.LLM_MODEL_NAME = ""  # Does not matter here
+        mock_settings.LLM_MODEL_NAME = ""
 
         service = LLMService()
         service.settings = mock_settings
@@ -139,17 +228,17 @@ class TestLLMService:
         mock_settings.LLM_MODEL_NAME = ""
 
         mock_openai_instance = AsyncMock()
-        mock_openai_instance.chat.completions.create.side_effect = Exception("OpenAI API Error")
+        mock_openai_instance.chat.completions.create.side_effect = openai.APIError(
+            "OpenAI API Error", request=MagicMock(), body=MagicMock()
+        )
         mock_async_openai_client.return_value = mock_openai_instance
 
         service = LLMService()
         service.settings = mock_settings
 
-        with pytest.raises(LLMServiceError) as excinfo:
+        with pytest.raises(LLMGenerationError) as excinfo:
             await service.improve_text(text_to_process="test input")
-        assert "An unexpected error occurred while contacting the LLM provider: OpenAI API Error" in str(
-            excinfo.value.detail
-        )
+        assert "LLM provider API error: OpenAI API Error" in str(excinfo.value.detail)
 
     @patch("google.generativeai.GenerativeModel")
     @patch("google.generativeai.configure")

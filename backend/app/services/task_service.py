@@ -15,8 +15,6 @@ from app.api.schemas.task import (
 from app.core.enums import LLMActionType
 from app.core.exceptions import (
     CategoryNotFoundException,
-    LLMGenerationError,
-    LLMServiceError,
     NotOwnerException,
     TaskDataMissingError,
     TaskNotFoundException,
@@ -335,21 +333,10 @@ class TaskService:
             # No default case needed if LLMActionType enum is exhaustive and validated at API layer
             # However, defensively, one could raise ValueError for an unexpected action.
 
-        try:
-            suggestion = await self.llm_service.improve_text(
-                text_to_process=text_for_llm, base_prompt_override=base_prompt_override
-            )
-            # Check if the llm_service returned an error string (its current way of signaling some errors)
-            if suggestion.startswith("Error:"):
-                # We can map specific known "Error:" messages from LLMService to more specific exceptions if needed
-                # For now, treat them as a general LLM generation failure.
-                raise LLMGenerationError(detail=suggestion)
-        except LLMServiceError:  # Re-raise if LLMService already raised a specific HTTP-based error
-            raise
-        except Exception as e:  # Catch any other unexpected errors during the LLM call
-            # Log the original exception e here for debugging
-            # For example: import logging; logging.exception("Unexpected error in LLM suggestion")
-            raise LLMGenerationError(detail=f"An unexpected error occurred while generating LLM suggestion: {str(e)}")
+        suggestion = await self.llm_service.improve_text(
+            text_to_process=text_for_llm,
+            base_prompt_override=base_prompt_override,
+        )
 
         return LLMSuggestionResponse(
             suggestion=suggestion, original_text=original_text, field_to_update=field_to_update

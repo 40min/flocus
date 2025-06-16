@@ -5,7 +5,7 @@ from odmantic import ObjectId
 
 from app.api.schemas.task import LLMSuggestionResponse
 from app.core.enums import LLMActionType
-from app.core.exceptions import LLMGenerationError, LLMServiceError, TaskDataMissingError
+from app.core.exceptions import LLMServiceError, TaskDataMissingError
 from app.db.models.task import Task as TaskModel  # Renamed to TaskModel to avoid conflict
 from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
@@ -127,16 +127,6 @@ class TestTaskServicePrepareLLMSuggestion:
                 action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE,
             )
 
-    async def test_llm_service_returns_error_string_raises_llm_generation_error(
-        self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
-    ):
-        mock_llm_service.improve_text.return_value = "Error: API key missing"
-        with pytest.raises(LLMGenerationError, match="Error: API key missing"):
-            await task_service.prepare_llm_suggestion(
-                task=sample_task,
-                action=LLMActionType.IMPROVE_TITLE,
-            )
-
     async def test_llm_service_raises_llmserviceerror_propagates(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
     ):
@@ -150,12 +140,15 @@ class TestTaskServicePrepareLLMSuggestion:
             )
         assert exc_info.value.status_code == 503
 
-    async def test_llm_service_raises_unexpected_exception_raises_llm_generation_error(
+    async def test_llm_service_raises_unexpected_exception_propagates_as_llm_service_error(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
     ):
-        mock_llm_service.improve_text.side_effect = Exception("Unexpected crash")
-        expected_error_detail = "An unexpected error occurred while generating LLM suggestion: Unexpected crash"
-        with pytest.raises(LLMGenerationError, match=expected_error_detail):
+        mock_llm_service.improve_text.side_effect = LLMServiceError(
+            status_code=500, detail="An unexpected error occurred while contacting the LLM provider: Unexpected crash"
+        )
+        with pytest.raises(
+            LLMServiceError, match="An unexpected error occurred while contacting the LLM provider: Unexpected crash"
+        ):
             await task_service.prepare_llm_suggestion(
                 task=sample_task,
                 action=LLMActionType.IMPROVE_TITLE,

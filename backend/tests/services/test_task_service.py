@@ -1,17 +1,17 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Optional
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from odmantic import ObjectId
 
-from app.core.enums import LLMActionType
-from app.core.exceptions import TaskDataMissingError, LLMGenerationError, LLMServiceError
-from app.services.task_service import TaskService
-from app.services.llm_service import LLMService
-from app.db.models.task import Task as TaskModel # Renamed to TaskModel to avoid conflict
 from app.api.schemas.task import LLMSuggestionResponse
+from app.core.enums import LLMActionType
+from app.core.exceptions import LLMGenerationError, LLMServiceError, TaskDataMissingError
+from app.db.models.task import Task as TaskModel  # Renamed to TaskModel to avoid conflict
+from app.services.llm_service import LLMService
+from app.services.task_service import TaskService
 
 pytestmark = pytest.mark.asyncio
+
 
 class TestTaskServicePrepareLLMSuggestion:
 
@@ -22,20 +22,13 @@ class TestTaskServicePrepareLLMSuggestion:
         return service
 
     @pytest.fixture
-    def task_service(self) -> TaskService:
-        # TaskService normally gets AIOEngine via Depends. For unit testing methods
-        # that don't directly use self.engine, we can instantiate it without AIOEngine.
-        # If a method under test did use self.engine, we'd need to mock AIOEngine too.
-        # For prepare_llm_suggestion, engine is not directly used.
-        return TaskService(engine=MagicMock()) # Mock engine if not used by method
+    def task_service(self, mock_llm_service: LLMService) -> TaskService:
+        return TaskService(engine=MagicMock(), llm_service=mock_llm_service)
 
     @pytest.fixture
     def sample_task(self) -> TaskModel:
         return TaskModel(
-            id=ObjectId(),
-            title="Original Task Title",
-            description="Original task description.",
-            user_id=ObjectId()
+            id=ObjectId(), title="Original Task Title", description="Original task description.", user_id=ObjectId()
         )
 
     async def test_prepare_llm_suggestion_improve_title_success(
@@ -46,7 +39,6 @@ class TestTaskServicePrepareLLMSuggestion:
         response = await task_service.prepare_llm_suggestion(
             task=sample_task,
             action=LLMActionType.IMPROVE_TITLE,
-            llm_service=mock_llm_service
         )
 
         assert isinstance(response, LLMSuggestionResponse)
@@ -55,7 +47,7 @@ class TestTaskServicePrepareLLMSuggestion:
         assert response.field_to_update == "title"
         mock_llm_service.improve_text.assert_called_once_with(
             text_to_process=sample_task.title,
-            base_prompt_override=None
+            base_prompt_override="Improve the following task title to make it more concise and informative:",
         )
 
     async def test_prepare_llm_suggestion_improve_description_success(
@@ -66,7 +58,6 @@ class TestTaskServicePrepareLLMSuggestion:
         response = await task_service.prepare_llm_suggestion(
             task=sample_task,
             action=LLMActionType.IMPROVE_DESCRIPTION,
-            llm_service=mock_llm_service
         )
 
         assert response.suggestion == "Improved Description"
@@ -74,26 +65,25 @@ class TestTaskServicePrepareLLMSuggestion:
         assert response.field_to_update == "description"
         mock_llm_service.improve_text.assert_called_once_with(
             text_to_process=sample_task.description,
-            base_prompt_override=None
+            base_prompt_override="Improve the following task description to make it more concise and informative:",
         )
 
     async def test_prepare_llm_suggestion_improve_empty_description(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
     ):
-        sample_task.description = None # Test with empty description
+        sample_task.description = None  # Test with empty description
         mock_llm_service.improve_text.return_value = "Generated based on empty input"
 
         response = await task_service.prepare_llm_suggestion(
             task=sample_task,
             action=LLMActionType.IMPROVE_DESCRIPTION,
-            llm_service=mock_llm_service
         )
         assert response.suggestion == "Generated based on empty input"
         assert response.original_text is None
         assert response.field_to_update == "description"
         mock_llm_service.improve_text.assert_called_once_with(
-            text_to_process="", # Should pass empty string
-            base_prompt_override=None
+            text_to_process="",  # Should pass empty string
+            base_prompt_override="Improve the following task description to make it more concise and informative:",
         )
 
     async def test_prepare_llm_suggestion_generate_description_success(
@@ -106,33 +96,35 @@ class TestTaskServicePrepareLLMSuggestion:
         response = await task_service.prepare_llm_suggestion(
             task=sample_task,
             action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE,
-            llm_service=mock_llm_service
         )
 
         assert response.suggestion == "Generated Description"
         assert response.original_text is None
         assert response.field_to_update == "description"
         mock_llm_service.improve_text.assert_called_once_with(
-            text_to_process=expected_text_for_llm,
-            base_prompt_override=expected_base_prompt
+            text_to_process=expected_text_for_llm, base_prompt_override=expected_base_prompt
         )
 
     async def test_improve_title_missing_title_raises_error(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
     ):
-        sample_task.title = "" # Empty title
+        sample_task.title = ""  # Empty title
         with pytest.raises(TaskDataMissingError, match="Task title is missing for 'improve_title' action."):
             await task_service.prepare_llm_suggestion(
-                task=sample_task, action=LLMActionType.IMPROVE_TITLE, llm_service=mock_llm_service
+                task=sample_task,
+                action=LLMActionType.IMPROVE_TITLE,
             )
 
     async def test_generate_description_missing_title_raises_error(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
     ):
-        sample_task.title = "" # Empty title
-        with pytest.raises(TaskDataMissingError, match="Task title is missing for 'generate_description_from_title' action."):
+        sample_task.title = ""  # Empty title
+        with pytest.raises(
+            TaskDataMissingError, match="Task title is missing for 'generate_description_from_title' action."
+        ):
             await task_service.prepare_llm_suggestion(
-                task=sample_task, action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE, llm_service=mock_llm_service
+                task=sample_task,
+                action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE,
             )
 
     async def test_llm_service_returns_error_string_raises_llm_generation_error(
@@ -141,7 +133,8 @@ class TestTaskServicePrepareLLMSuggestion:
         mock_llm_service.improve_text.return_value = "Error: API key missing"
         with pytest.raises(LLMGenerationError, match="Error: API key missing"):
             await task_service.prepare_llm_suggestion(
-                task=sample_task, action=LLMActionType.IMPROVE_TITLE, llm_service=mock_llm_service
+                task=sample_task,
+                action=LLMActionType.IMPROVE_TITLE,
             )
 
     async def test_llm_service_raises_llmserviceerror_propagates(
@@ -152,10 +145,10 @@ class TestTaskServicePrepareLLMSuggestion:
         mock_llm_service.improve_text.side_effect = LLMServiceError(status_code=503, detail=custom_detail)
         with pytest.raises(LLMServiceError, match=custom_detail) as exc_info:
             await task_service.prepare_llm_suggestion(
-                task=sample_task, action=LLMActionType.IMPROVE_TITLE, llm_service=mock_llm_service
+                task=sample_task,
+                action=LLMActionType.IMPROVE_TITLE,
             )
         assert exc_info.value.status_code == 503
-
 
     async def test_llm_service_raises_unexpected_exception_raises_llm_generation_error(
         self, task_service: TaskService, mock_llm_service: LLMService, sample_task: TaskModel
@@ -164,5 +157,6 @@ class TestTaskServicePrepareLLMSuggestion:
         expected_error_detail = "An unexpected error occurred while generating LLM suggestion: Unexpected crash"
         with pytest.raises(LLMGenerationError, match=expected_error_detail):
             await task_service.prepare_llm_suggestion(
-                task=sample_task, action=LLMActionType.IMPROVE_TITLE, llm_service=mock_llm_service
+                task=sample_task,
+                action=LLMActionType.IMPROVE_TITLE,
             )

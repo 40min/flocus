@@ -20,7 +20,6 @@ from app.core.exceptions import LLMGenerationError, TaskDataMissingError
 from app.db.models.category import Category as CategoryModel
 from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
-from app.services.llm_service import LLMService
 
 API_V1_STR = settings.API_V1_STR
 TASKS_ENDPOINT = f"{API_V1_STR}/tasks"
@@ -933,7 +932,6 @@ async def test_get_llm_suggestion_improve_title_success(
     assert called_args["action"] == LLMActionType.IMPROVE_TITLE
     assert isinstance(called_args["task"], TaskModel)
     assert called_args["task"].id == user_one_task_model.id
-    assert isinstance(called_args["llm_service"], LLMService)
 
 
 @patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)

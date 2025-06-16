@@ -4,23 +4,29 @@ from typing import Dict, List, Optional
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId, query
 
-from app.api.schemas.task import LLMSuggestionResponse  # Added
-from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
-from app.core.enums import LLMActionType  # Added
-from app.core.exceptions import LLMGenerationError  # Added
-from app.core.exceptions import LLMServiceError  # Added
-from app.core.exceptions import TaskDataMissingError  # Added
+from app.api.schemas.task import (
+    LLMSuggestionResponse,
+    TaskCreateRequest,
+    TaskPriority,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdateRequest,
+)
+from app.core.enums import LLMActionType
 from app.core.exceptions import (
     CategoryNotFoundException,
+    LLMGenerationError,
+    LLMServiceError,
     NotOwnerException,
+    TaskDataMissingError,
     TaskNotFoundException,
     TaskTitleExistsException,
 )
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.task import Task, TaskStatistics  # Task already imported
+from app.db.models.task import Task, TaskStatistics
 from app.mappers.task_mapper import TaskMapper
-from app.services.llm_service import LLMService  # Added
+from app.services.llm_service import LLMService
 
 UTC = timezone.utc
 

@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, Literal # Added Literal
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.api.schemas.category import CategoryResponse
 
@@ -63,6 +63,38 @@ class TaskStatisticsSchema(BaseModel):
         if dt:
             return _serialize_datetime_to_iso_z(dt)
         return None
+
+
+# This schema was for the old /improve-text endpoint, which is now removed.
+# class TaskImproveRequest(BaseModel):
+#     field_to_improve: str = Field(..., description="The field of the task to improve, either 'title' or 'description'.")
+
+#     @field_validator("field_to_improve")
+#     def validate_field_to_improve(cls, v: str) -> str:
+#         if v not in ["title", "description"]:
+#             raise ValueError("field_to_improve must be 'title' or 'description'")
+#         return v
+
+# Being replaced by LLMSuggestionResponse and TaskApplySuggestionRequest (TaskApplySuggestionRequest is now also removed)
+# class TaskImproveRequest(BaseModel):
+#     field_to_improve: str = Field(..., description="The field of the task to improve, either 'title' or 'description'.")
+
+#     @field_validator("field_to_improve")
+#     def validate_field_to_improve(cls, v: str) -> str:
+#         if v not in ["title", "description"]:
+#             raise ValueError("field_to_improve must be 'title' or 'description'")
+#         return v
+
+
+class LLMSuggestionResponse(BaseModel):
+    suggestion: str
+    original_text: Optional[str] = None
+    field_to_update: str # Should be 'title' or 'description', validated by endpoint logic
+
+
+class TaskApplySuggestionRequest(BaseModel):
+    approved_text: str = Field(..., min_length=1) # Ensure approved text is not empty
+    field_to_update: Literal["title", "description"]
 
 
 class TaskUpdateRequest(BaseModel):

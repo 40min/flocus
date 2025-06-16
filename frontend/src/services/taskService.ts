@@ -12,6 +12,58 @@ export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
   }
 };
 
+// Old function, replaced by getLlmSuggestion and applyLlmSuggestion
+// export const improveTaskText = async (taskId: string, fieldToImprove: string): Promise<Task> => {
+//   try {
+//     const response = await api.post<Task>(
+//       API_ENDPOINTS.TASK_BY_ID(taskId) + '/improve-text',
+//       { field_to_improve: fieldToImprove }
+//     );
+//     return response.data;
+//   } catch (error) {
+//     // TODO: Consider more specific error handling or logging here
+//     throw error;
+//   }
+// };
+
+export interface LlmSuggestionResponse {
+  suggestion: string;
+  original_text?: string;
+  field_to_update: 'title' | 'description';
+}
+
+export type LlmAction = 'improve_title' | 'improve_description' | 'generate_description_from_title';
+
+export const getLlmSuggestion = async (taskId: string, action: LlmAction): Promise<LlmSuggestionResponse> => {
+  try {
+    const url = `${API_ENDPOINTS.TASK_BY_ID(taskId)}/llm-suggestions`;
+    const response = await api.get<LlmSuggestionResponse>(url, { params: { action } });
+    return response.data;
+  } catch (error) {
+    // Consider more specific error handling or logging here
+    throw error;
+  }
+};
+
+// export const applyLlmSuggestion = async (
+//   taskId: string,
+//   fieldToUpdate: 'title' | 'description',
+//   approvedText: string
+// ): Promise<Task> => {
+//   try {
+//     const url = `${API_ENDPOINTS.TASK_BY_ID(taskId)}/apply-suggestion`;
+//     const payload = {
+//       approved_text: approvedText,
+//       field_to_update: fieldToUpdate,
+//     };
+//     const response = await api.post<Task>(url, payload);
+//     return response.data;
+//   } catch (error) {
+//     // Consider more specific error handling or logging here
+//     throw error;
+//   }
+// };
+
 export const getTaskById = async (id: string): Promise<Task> => {
   try {
     const response = await api.get<Task>(API_ENDPOINTS.TASK_BY_ID(id));

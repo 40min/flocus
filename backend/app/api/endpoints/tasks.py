@@ -1,11 +1,28 @@
-from typing import List, Optional
+from typing import List, Optional, Literal # Added Literal
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from odmantic import ObjectId
 
-from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
-from app.core.dependencies import get_current_active_user_id
+from app.api.schemas.task import (
+    TaskCreateRequest,
+    # TaskImproveRequest, # Commented out old schema
+    LLMSuggestionResponse,    # Added import
+    # TaskApplySuggestionRequest, # Commented out as the endpoint is being removed
+    TaskPriority,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdateRequest,
+)
+from app.core.dependencies import get_current_user, get_current_active_user_id # get_current_active_user_id for other endpoints
+from app.core.enums import LLMActionType # Added
+from app.db.models.user import User
+from app.db.models.task import Task as TaskModel # Added Task model import
+from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
+from app.core.exceptions import NotOwnerException, TaskNotFoundException # For direct task fetching
+from odmantic import AIOEngine # For direct task fetching
+from app.db.connection import get_database # For direct task fetching
+
 
 router = APIRouter()
 
@@ -60,7 +77,80 @@ async def get_task_by_id(
     service: TaskService = Depends(TaskService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
+    current_user_id: ObjectId = Depends(get_current_active_user_id), # Original: Uses get_current_active_user_id
+):
     return await service.get_task_by_id(task_id=task_id, current_user_id=current_user_id)
+
+
+# Old endpoint - to be removed or commented out
+# @router.post(
+#     "/{task_id}/improve-text",
+#     response_model=TaskResponse,
+#     summary="Improve Task Title or Description using LLM",
+# )
+# async def improve_task_text(
+#     payload: TaskImproveRequest,
+#     task_id: ObjectId = Path(..., description="The ID of the task to improve"),
+#     current_user: User = Depends(get_current_user),
+#     service: TaskService = Depends(TaskService),
+#     llm_service: LLMService = Depends(lambda: LLMService()),
+# ):
+#     task = await service.get_task_by_id(task_id=task_id, current_user_id=current_user.id)
+#     if not task:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+#     # ... (rest of the old logic)
+
+
+@router.get(
+    "/{task_id}/llm-suggestions",
+    response_model=LLMSuggestionResponse,
+    summary="Get LLM suggestions for a task field",
+)
+async def get_llm_suggestion_for_task(
+    task_id: ObjectId = Path(..., description="The ID of the task"),
+    action: LLMActionType, # Use the Enum for validation
+    current_user: User = Depends(get_current_user),
+    task_service: TaskService = Depends(TaskService),
+    llm_service: LLMService = Depends(lambda: LLMService()), # LLMService instance
+    engine: AIOEngine = Depends(get_database), # Inject engine for direct Task model fetching
+):
+    # Fetch the Task model directly, not TaskResponse schema
+    task_model = await engine.find_one(TaskModel, TaskModel.id == task_id)
+
+    if not task_model:
+        # This will be caught by FastAPI's default 404 handler if not overridden by a custom one for TaskNotFoundException
+        raise TaskNotFoundException(task_id=str(task_id))
+    if task_model.user_id != current_user.id:
+        # This will be caught by FastAPI's default 403 handler if not overridden
+        raise NotOwnerException(resource="task")
+    if task_model.is_deleted:
+        raise TaskNotFoundException(task_id=str(task_id), detail="Task has been deleted.")
+
+    # Delegate the logic to the TaskService
+    # TaskDataMissingError and LLMGenerationError (and other LLMServiceError)
+    # will be caught by their respective global handlers in main.py
+    suggestion_response = await task_service.prepare_llm_suggestion(
+        task=task_model, action=action, llm_service=llm_service
+    )
+    return suggestion_response
+
+
+# @router.post(
+#     "/{task_id}/apply-suggestion",
+#     response_model=TaskResponse,
+#     summary="Apply an LLM suggestion to a task field",
+# )
+# async def apply_llm_suggestion_to_task(
+#     payload: TaskApplySuggestionRequest,
+#     task_id: ObjectId = Path(..., description="The ID of the task to update"),
+#     current_user: User = Depends(get_current_user),
+#     task_service: TaskService = Depends(TaskService),
+# ):
+#     # Logic for applying suggestion has been removed.
+#     # The frontend will now use the standard PATCH /tasks/{task_id} endpoint
+#     # with a TaskUpdateRequest payload containing the approved_text for title or description.
+#     # Example: {"title": "New approved title"} or {"description": "New approved description"}
+#     pass # Endpoint removed
 
 
 @router.get(

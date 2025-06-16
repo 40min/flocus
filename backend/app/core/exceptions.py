@@ -262,3 +262,27 @@ class MissingCategoryInMappingError(MapperException):
             f"during mapping for DayTemplate ID '{template_id}'. "
             "This indicates an internal inconsistency, as the service layer should pre-fetch all necessary categories."
         )
+
+
+# --- LLM Service Exceptions ---
+
+
+class LLMServiceError(HTTPException):
+    """Base exception for LLM service related errors"""
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(status_code=status_code, detail=detail)
+
+
+class TaskDataMissingError(LLMServiceError):
+    """Raised when required task data (e.g., title for generation) is missing for an LLM action."""
+    def __init__(self, detail: str = "Required task data is missing for LLM action."):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+class LLMGenerationError(LLMServiceError):
+    """Raised when an error occurs during the LLM text generation/improvement process itself."""
+    def __init__(self, detail: str = "Error during LLM text generation."):
+        # This could be a 500 if it's an unexpected LLM provider error,
+        # or a 502/503 if it's a gateway/service unavailable issue from the LLM provider.
+        # For simplicity, using 500 for now, but can be refined.
+        super().__init__(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)

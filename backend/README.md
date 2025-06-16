@@ -20,6 +20,16 @@ For an overview of the entire project, please see the main [README.md](../README
     cp .env.example .env
     ```
 3.  **Update the `.env` file with your actual configuration values.**
+    This includes settings for MongoDB connection, and optionally for LLM text improvement features.
+
+    **LLM Configuration (Optional):**
+    If you plan to use the LLM-based text improvement feature, configure the following:
+    -   `LLM_PROVIDER`: Set to `"OpenAI"` or `"GoogleGemini"` (defaults to `"OpenAI"`). Determines which LLM service to use.
+    -   `LLM_API_KEY`: Your API key for the chosen provider. This is required to use the feature.
+    -   `LLM_TEXT_IMPROVEMENT_PROMPT`: (Optional) The default base prompt for text improvement actions. A default is provided in the application.
+    -   `LLM_MODEL_NAME`: (Optional) Specify an exact model name for the chosen provider (e.g., "gpt-4", "gemini-1.5-pro"). If empty, a default model for the provider is used.
+
+    Refer to the main project [README.md](../README.md#llm-text-improvement) for more details on these settings and the feature itself.
 
 4.  **Set the `SECRET_KEY` environment variable:**
     The `SECRET_KEY` is crucial for securing the application and is a mandatory setting. The application will not start if it's not provided.

@@ -10,10 +10,16 @@ from app.core.exceptions import (
     NotOwnerException,
     TaskNotFoundException,
     TaskTitleExistsException,
+    TaskDataMissingError, # Added
+    LLMGenerationError,   # Added
+    LLMServiceError,      # Added
 )
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.task import Task, TaskStatistics
+from app.db.models.task import Task, TaskStatistics # Task already imported
+from app.core.enums import LLMActionType # Added
+from app.services.llm_service import LLMService # Added
+from app.api.schemas.task import LLMSuggestionResponse # Added
 from app.mappers.task_mapper import TaskMapper
 
 UTC = timezone.utc
@@ -284,3 +290,58 @@ class TaskService:
             task.updated_at = datetime.now(UTC)
             await self.engine.save(task)
         return True
+
+    async def prepare_llm_suggestion(
+        self,
+        task: Task, # Takes the Task model instance
+        action: LLMActionType,
+        llm_service: LLMService  # LLMService instance passed in
+    ) -> LLMSuggestionResponse:
+        original_text: Optional[str] = None
+        text_for_llm: str = ""
+        field_to_update: str = "" # Will hold 'title' or 'description'
+        base_prompt_override: Optional[str] = None
+
+        match action:
+            case LLMActionType.IMPROVE_TITLE:
+                if not task.title: # Check directly on the model
+                    raise TaskDataMissingError(detail="Task title is missing for 'improve_title' action.")
+                original_text = task.title
+                text_for_llm = task.title
+                field_to_update = "title"
+            case LLMActionType.IMPROVE_DESCRIPTION:
+                original_text = task.description
+                text_for_llm = task.description or ""
+                field_to_update = "description"
+            case LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE:
+                if not task.title: # Check directly on the model
+                    raise TaskDataMissingError(detail="Task title is missing for 'generate_description_from_title' action.")
+                # original_text remains None as we are generating new content
+                text_for_llm = f"Task Title: {task.title}" # Context for the LLM
+                base_prompt_override = "Based on the following task title, generate a concise and informative task description:"
+                field_to_update = "description"
+            # No default case needed if LLMActionType enum is exhaustive and validated at API layer
+            # However, defensively, one could raise ValueError for an unexpected action.
+
+        try:
+            suggestion = await llm_service.improve_text(
+                text_to_process=text_for_llm,
+                base_prompt_override=base_prompt_override
+            )
+            # Check if the llm_service returned an error string (its current way of signaling some errors)
+            if suggestion.startswith("Error:"):
+                # We can map specific known "Error:" messages from LLMService to more specific exceptions if needed
+                # For now, treat them as a general LLM generation failure.
+                raise LLMGenerationError(detail=suggestion)
+        except LLMServiceError: # Re-raise if LLMService already raised a specific HTTP-based error
+            raise
+        except Exception as e: # Catch any other unexpected errors during the LLM call
+            # Log the original exception e here for debugging
+            # For example: import logging; logging.exception("Unexpected error in LLM suggestion")
+            raise LLMGenerationError(detail=f"An unexpected error occurred while generating LLM suggestion: {str(e)}")
+
+        return LLMSuggestionResponse(
+            suggestion=suggestion,
+            original_text=original_text,
+            field_to_update=field_to_update
+        )

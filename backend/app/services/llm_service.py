@@ -5,15 +5,14 @@ import openai
 
 from app.core.config import settings
 from app.core.enums import LLMProvider
+from app.core.exceptions import LLMAPIKeyNotConfiguredError, LLMGenerationError, LLMServiceError
 
 
 class LLMService:
 
     async def improve_text(self, text_to_process: str, base_prompt_override: Optional[str] = None) -> str:
         if not settings.LLM_API_KEY:
-            # In a real application, you might want to raise a custom exception
-            # or log this error more formally.
-            return "Error: LLM_API_KEY is not configured."
+            raise LLMAPIKeyNotConfiguredError()
 
         prompt_to_use = base_prompt_override or settings.LLM_TEXT_IMPROVEMENT_PROMPT
         # Using a separator to clearly distinguish the instruction/prompt from the text to be processed.
@@ -31,22 +30,23 @@ class LLMService:
                     if response.choices and response.choices[0].message and response.choices[0].message.content:
                         return response.choices[0].message.content.strip()
                     else:
-                        return "Error: OpenAI API call failed to return a valid response."
+                        raise LLMGenerationError(detail="OpenAI API call failed to return a valid response.")
                 case str(LLMProvider.GOOGLE_GEMINI):
                     gemini_model_name = settings.LLM_MODEL_NAME if settings.LLM_MODEL_NAME else "gemini-pro"
                     genai.configure(api_key=settings.LLM_API_KEY)
                     model = genai.GenerativeModel(gemini_model_name)
                     response = await model.generate_content_async(full_prompt_for_llm)
                     # Ensure response.text is not None before stripping
-                    return (
-                        response.text.strip()
-                        if response.text
-                        else "Error: GoogleGemini API call failed to return valid text."
-                    )
+                    if response.text:
+                        return response.text.strip()
+                    else:
+                        raise LLMGenerationError(detail="GoogleGemini API call failed to return valid text.")
                 case _:
-                    return f"Error: Unknown LLM_PROVIDER: {settings.LLM_PROVIDER}"
+                    raise LLMServiceError(status_code=500, detail=f"Unknown LLM_PROVIDER: {settings.LLM_PROVIDER}")
 
+        except (openai.APIError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
+            raise LLMGenerationError(detail=f"LLM provider API error: {str(e)}")
         except Exception as e:
-            # Log the exception e
-            # In a real application, you would have more sophisticated error handling.
-            return f"Error: An exception occurred while contacting the LLM provider: {str(e)}"
+            raise LLMServiceError(
+                status_code=500, detail=f"An unexpected error occurred while contacting the LLM provider: {str(e)}"
+            )

@@ -9,6 +9,7 @@ from app.core.exceptions import (
     ForbiddenException,
     InvalidCredentialsException,
     InvalidTokenException,
+    LLMAPIKeyNotConfiguredError,
     LLMGenerationError,
     LLMServiceError,
     TaskCategoryMismatchException,
@@ -66,6 +67,12 @@ async def error_handling_middleware(request: Request, call_next):
         logger.error(f"TaskDataMissingError: {e.detail}")
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.detail},
+        )
+    except LLMAPIKeyNotConfiguredError as e:
+        logger.error(f"LLMAPIKeyNotConfiguredError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": e.detail},
         )
     except LLMGenerationError as e:

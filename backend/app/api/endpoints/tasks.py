@@ -6,7 +6,12 @@ from odmantic import ObjectId
 from app.api.schemas.llm import LLMImprovementRequest, LLMImprovementResponse
 from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
 from app.core.dependencies import get_current_active_user_id
-from app.core.enums import LLMActionType
+# LLMActionType removed as it's no longer used directly in this file
+from app.core.exceptions import (
+    LLMAPIKeyNotConfiguredError,
+    LLMGenerationError,
+    LLMServiceError,
+)
 from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
 
@@ -81,38 +86,20 @@ async def improve_text_with_llm(
     Receives text and an action, and returns an LLM-generated improvement.
     This is a stateless endpoint that does not interact with any specific task in the database.
     """
-    response = LLMImprovementResponse()
-    text_to_improve = ""
-    base_prompt_override = None
-
-    match request.action:
-        case LLMActionType.IMPROVE_TITLE:
-            if not request.title:
-                raise HTTPException(status_code=400, detail="Title is required for 'improve_title' action.")
-            text_to_improve = request.title
-            base_prompt_override = "Improve the following task title to make it more concise and informative:"
-            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
-            response.improved_title = improved_text
-        case LLMActionType.IMPROVE_DESCRIPTION:
-            if request.description is None:
-                raise HTTPException(status_code=400, detail="Description is required for 'improve_description' action.")
-            text_to_improve = request.description
-            base_prompt_override = "Improve the following task description to make it more concise and informative:"
-            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
-            response.improved_description = improved_text
-        case LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE:
-            if not request.title:
-                raise HTTPException(
-                    status_code=400, detail="Title is required for 'generate_description_from_title' action."
-                )
-            text_to_improve = f"Task Title: {request.title}"
-            base_prompt_override = (
-                "Based on the following task title, generate a concise and informative task description:"
-            )
-            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
-            response.improved_description = improved_text
-
-    return response
+    try:
+        return await llm_service.process_llm_action(
+            action=request.action, title=request.title, description=request.description
+        )
+    except LLMAPIKeyNotConfiguredError as e:
+        raise HTTPException(status_code=500, detail=e.detail)
+    except LLMGenerationError as e:
+        raise HTTPException(status_code=500, detail=e.detail)
+    except LLMServiceError as e:
+        # Handle other LLMServiceErrors, potentially with their own status codes
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    except Exception as e:
+        # Catch-all for any other unexpected errors
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 
 @router.get(

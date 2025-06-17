@@ -296,3 +296,10 @@ class LLMAPIKeyNotConfiguredError(LLMServiceError):
 
     def __init__(self, detail: str = "LLM API key is not configured."):
         super().__init__(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
+
+
+class LLMInputValidationError(LLMServiceError):
+    """Raised when input validation for an LLM action fails."""
+
+    def __init__(self, detail: str):
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)

@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
-import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
+import { Task, TaskCreateRequest, TaskUpdateRequest, LLMImprovementResponse, LlmAction } from 'types/task';
 import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import Modal from './Modal';
@@ -38,7 +38,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   statusOptions,
   priorityOptions,
 }) => {
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CreateTaskFormInputs>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting }, setValue, getValues } = useForm<CreateTaskFormInputs>({
     defaultValues: {
       title: initialFormData.title,
       description: initialFormData.description || '',
@@ -48,6 +48,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       category_id: initialFormData.category_id || '',
     }
   });
+
+  const [titleSuggestion, setTitleSuggestion] = useState<string | null>(null);
+  const [descriptionSuggestion, setDescriptionSuggestion] = useState<string | null>(null);
+  const [loadingTitleSuggestion, setLoadingTitleSuggestion] = useState<boolean>(false);
+  const [loadingDescriptionSuggestion, setLoadingDescriptionSuggestion] = useState<boolean>(false);
 
   useEffect(() => {
     if (editingTask) {
@@ -69,7 +74,78 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         category_id: initialFormData.category_id || '',
       });
     }
+    // Reset suggestions and loading states when modal opens or task changes
+    setTitleSuggestion(null);
+    setDescriptionSuggestion(null);
+    setLoadingTitleSuggestion(false);
+    setLoadingDescriptionSuggestion(false);
   }, [editingTask, initialFormData, isOpen, reset]);
+
+  const handleImproveTitle = async () => {
+    setLoadingTitleSuggestion(true);
+    setTitleSuggestion(null);
+    try {
+      const currentTitle = getValues('title');
+      const response: LLMImprovementResponse = await taskService.getLlmImprovement({
+        action: 'improve_title' as LlmAction,
+        title: currentTitle,
+      });
+      if (response.improved_title) {
+        setTitleSuggestion(response.improved_title);
+      }
+    } catch (error) {
+      console.error('Error improving title:', error);
+    } finally {
+      setLoadingTitleSuggestion(false);
+    }
+  };
+
+  const handleImproveDescription = async () => {
+    setLoadingDescriptionSuggestion(true);
+    setDescriptionSuggestion(null);
+    try {
+      const currentDescription = getValues('description');
+      const currentTitle = getValues('title');
+      const action: LlmAction = currentDescription
+        ? 'improve_description'
+        : 'generate_description_from_title';
+
+      const response: LLMImprovementResponse = await taskService.getLlmImprovement({
+        action: action,
+        title: currentTitle,
+        description: currentDescription,
+      });
+      if (response.improved_description) {
+        setDescriptionSuggestion(response.improved_description);
+      }
+    } catch (error) {
+      console.error('Error improving description:', error);
+    } finally {
+      setLoadingDescriptionSuggestion(false);
+    }
+  };
+
+  const applyTitleSuggestion = () => {
+    if (titleSuggestion) {
+      setValue('title', titleSuggestion);
+      setTitleSuggestion(null);
+    }
+  };
+
+  const rejectTitleSuggestion = () => {
+    setTitleSuggestion(null);
+  };
+
+  const applyDescriptionSuggestion = () => {
+    if (descriptionSuggestion) {
+      setValue('description', descriptionSuggestion);
+      setDescriptionSuggestion(null);
+    }
+  };
+
+  const rejectDescriptionSuggestion = () => {
+    setDescriptionSuggestion(null);
+  };
 
   const onSubmit = async (data: CreateTaskFormInputs) => {
     const payload = {
@@ -96,13 +172,77 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={editingTask ? 'Edit Task' : 'Create New Task'}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label>
+          <div className="flex justify-between items-center">
+            <label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label>
+            <button
+              type="button"
+              onClick={handleImproveTitle}
+              disabled={loadingTitleSuggestion}
+              className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
+            >
+              {loadingTitleSuggestion ? 'Improving...' : 'Improve'}
+            </button>
+          </div>
           <input type="text" id="title" {...register('title', { required: 'Title is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}
+          {titleSuggestion && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
+              <p className="font-semibold mb-1">Suggestion:</p>
+              <p>{titleSuggestion}</p>
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={applyTitleSuggestion}
+                  className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={rejectTitleSuggestion}
+                  className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
+          <div className="flex justify-between items-center">
+            <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
+            <button
+              type="button"
+              onClick={handleImproveDescription}
+              disabled={loadingDescriptionSuggestion}
+              className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
+            >
+              {loadingDescriptionSuggestion ? 'Improving...' : 'Improve'}
+            </button>
+          </div>
           <textarea id="description" {...register('description')} rows={3} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+          {descriptionSuggestion && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
+              <p className="font-semibold mb-1">Suggestion:</p>
+              <p>{descriptionSuggestion}</p>
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={applyDescriptionSuggestion}
+                  className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={rejectDescriptionSuggestion}
+                  className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

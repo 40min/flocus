@@ -189,7 +189,7 @@ const MyDayPage: React.FC = () => {
   }
 
   return (
-    <main className="bg-background-card p-8 rounded-xl shadow-sm border border-slate-200">
+    <main className="min-h-screen bg-slate-50 text-slate-900 rounded-xl">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {dailyPlan ? (
           // Schedule Editor View
@@ -202,7 +202,7 @@ const MyDayPage: React.FC = () => {
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
               </div>
             </header>
-            <main className="flex flex-row gap-8">
+            <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
                 <Timeline
                   className="ml-6"
                   timeWindows={dailyPlan.time_windows

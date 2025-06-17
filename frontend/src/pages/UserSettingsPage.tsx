@@ -79,7 +79,7 @@ const UserSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto ">
       <header className="mb-10">
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight">Settings</h1>
       </header>
@@ -87,30 +87,30 @@ const UserSettingsPage: React.FC = () => {
       {errors.root && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md" aria-live="assertive">{errors.root.message}</div>}
       {successMessage && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md" aria-live="assertive">{successMessage}</div>}
 
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6 pb-2 border-b border-gray-200">Account</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
+      <section className="mb-12 bg-white shadow-sm rounded-xl border border-slate-200 p-6">
+        <h2 className="text-2xl font-semibold text-gray-700 mb-6 pb-4 border-b border-gray-200">Account</h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="username">Username</label>
             <Input className="bg-gray-200 text-gray-500 cursor-not-allowed" id="username" name="username" type="text" value={user.username} readOnly />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="email">Email</label>
             <Input id="email" type="email" {...register('email', { required: 'Email is required' })} />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
           </div>
            <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="first_name">First Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="first_name">First Name</label>
             <Input id="first_name" type="text" {...register('first_name', { required: 'First name is required' })} />
             {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
           </div>
            <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="last_name">Last Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="last_name">Last Name</label>
             <Input id="last_name" type="text" {...register('last_name', { required: 'Last name is required' })} />
             {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="password">New Password</label>
             <Input id="password" placeholder="Enter new password (optional)" type="password" {...register('password')} />
           </div>
           <div className="pt-2">
@@ -121,10 +121,10 @@ const UserSettingsPage: React.FC = () => {
         </form>
       </section>
 
-      <section>
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6 pb-2 border-b border-gray-200">Preferences</h2>
-        <div className="space-y-5">
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+      <section className="bg-white shadow-sm rounded-xl border border-slate-200 p-6">
+        <h2 className="text-2xl font-semibold text-gray-700 mb-6 pb-4 border-b border-gray-200">Preferences</h2>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
             <div>
               <h3 className="text-base font-medium text-gray-800">Dark Mode</h3>
               <p className="text-sm text-gray-500">Enable or disable dark mode for the application interface.</p>
@@ -134,7 +134,7 @@ const UserSettingsPage: React.FC = () => {
               <input className="invisible absolute" type="checkbox" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
             </label>
           </div>
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+          <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
             <div>
               <h3 className="text-base font-medium text-gray-800">Default View</h3>
               <p className="text-sm text-gray-500">Choose the default view for your daily schedule.</p>
@@ -145,7 +145,7 @@ const UserSettingsPage: React.FC = () => {
               <option>Board View</option>
             </Input>
           </div>
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+          <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
             <div>
               <h3 className="text-base font-medium text-gray-800">Pomodoro Duration</h3>
               <p className="text-sm text-gray-500">Set the default duration for your Pomodoro sessions.</p>
@@ -157,7 +157,7 @@ const UserSettingsPage: React.FC = () => {
               <option>60 minutes</option>
             </Input>
           </div>
-          <div className="flex items-center justify-between py-3">
+          <div className="flex items-center justify-between py-4 ">
             <div>
               <h3 className="text-base font-medium text-gray-800">Notification Sound</h3>
               <p className="text-sm text-gray-500">Choose the default sound for notifications.</p>

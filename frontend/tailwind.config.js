@@ -32,6 +32,9 @@ module.exports = {
         'heading-main': '#1A1A1A',
         'heading-sub': '#4A4A4A',
       },
+      fontFamily: {
+        esteban: ['Esteban', 'sans-serif'],
+      },
     },
   },
   plugins: [],

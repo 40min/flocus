@@ -49,7 +49,7 @@ const DashboardPage: React.FC = () => {
     <div className=" min-h-screen">
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex items-center justify-center md:justify-start">
-          <h1 className="text-2xl md:text-3xl font-semibold text-text-DEFAULT flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-esteban italic font-semibold text-text-DEFAULT flex items-center gap-2">
 {format(new Date(), 'EEEE, MMMM do')}
 
           </h1>

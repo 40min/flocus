@@ -4,13 +4,13 @@
 @tailwind utilities;
 @layer components {
   .btn-primary {
-    @apply bg-[#d2e2f3] text-gray-800 font-semibold py-2.5 px-5 rounded-xl transition-colors duration-200 ease-in-out;
+    @apply bg-[#87CEEB] text-white font-semibold py-2.5 px-5 rounded-xl transition-colors duration-200 ease-in-out;
   }
   .btn-primary:hover {
-    @apply bg-[#b0cdee];
+    @apply bg-[#6495ED];
   }
   .btn-standard {
-    @apply relative flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200;
+    @apply relative flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#4682B4] hover:bg-[#5F9EA0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200;
   }
 .form-input-custom {
     @apply appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm;
@@ -34,7 +34,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #ffffff;
-    color: #1e293b;
+    color: #333333;
+background-image: url('../../public/backgrounds/summer-1.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
   }
 
   code {

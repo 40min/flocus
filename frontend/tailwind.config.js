@@ -17,8 +17,8 @@ module.exports = {
           dark: '#059669',
         },
         background: {
-          DEFAULT: '#F9FAFB', // A very subtle off-white for main page background
-          card: '#FFFFFF', // White for component cards
+          DEFAULT: '#F0F9F0', // A slightly greenish off-white for main page background
+          card: '#F8FFF8', // Slightly greenish white for component cards
         },
         text: {
           DEFAULT: '#1F2937', // Dark gray for main text

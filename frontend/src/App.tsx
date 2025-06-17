@@ -41,8 +41,8 @@ const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800">
-      <aside className="flex flex-col w-64 bg-white border-r border-slate-200 p-4 space-y-4 sticky top-0 h-screen">
+    <div className="flex h-screen  text-slate-800">
+      <aside className="flex flex-col w-64 bg-background-card border-r border-slate-200 p-4 space-y-4 sticky top-0 h-screen">
         <div className="flex items-center gap-3 px-2 py-2">
           <img src={flocusLogo} alt="Flocus Logo" className="size-10" />
           <h1 className="text-slate-900 text-lg font-semibold">Flocus</h1>
@@ -54,7 +54,7 @@ const AppLayout: React.FC = () => {
             end
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -69,7 +69,7 @@ const AppLayout: React.FC = () => {
             to="/my-day"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -84,7 +84,7 @@ const AppLayout: React.FC = () => {
             to="/tasks"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -99,7 +99,7 @@ const AppLayout: React.FC = () => {
             to="/templates"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -114,7 +114,7 @@ const AppLayout: React.FC = () => {
             to="/categories"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -129,7 +129,7 @@ const AppLayout: React.FC = () => {
             to="/settings"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-slate-100 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
               }`
             }
           >
@@ -143,7 +143,7 @@ const AppLayout: React.FC = () => {
         </nav>
 
         <div className="pt-4 border-t border-slate-200">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors w-full text-sm font-medium">
+          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-slate-700 hover:bg-background-DEFAULT rounded-lg transition-colors w-full text-sm font-medium">
             <LogOut size={20} className="text-slate-700" />
             Logout
           </button>
@@ -162,7 +162,7 @@ function App() {
   const { isLoading: authContextIsLoading } = useAuth();
 
   if (authContextIsLoading) {
-    return <div className="flex items-center justify-center h-screen bg-slate-100"><p className="text-slate-700">Loading application...</p></div>;
+    return <div className="flex items-center justify-center h-screen bg-background-DEFAULT"><p className="text-slate-700">Loading application...</p></div>;
   }
 
   return (

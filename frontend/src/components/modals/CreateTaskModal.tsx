@@ -177,36 +177,19 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         <div>
           <div className="flex justify-between items-center">
             <label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label>
-            <div className="flex items-center"> {/* New div to group buttons */}
-              <button
-                type="button"
-                onClick={handleImproveTitle}
-                disabled={loadingTitleSuggestion}
-                className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
-                title="Improve title"
-              >
-                {loadingTitleSuggestion ? (
-                  <span className="flex items-center">Improving...</span>
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-              </button>
-              {title && ( // Conditional rendering for the new button
-                <button
-                  type="button"
-                  onClick={handleImproveDescription}
-                  disabled={loadingDescriptionSuggestion}
-                  className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center ml-2"
-                  title="Generate description from title"
-                >
-                  {loadingDescriptionSuggestion ? (
-                    <span className="flex items-center">Generating...</span>
-                  ) : (
-                    <Bot className="w-4 h-4" />
-                  )}
-                </button>
+            <button
+              type="button"
+              onClick={handleImproveTitle}
+              disabled={loadingTitleSuggestion}
+              className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
+              title="Improve title"
+            >
+              {loadingTitleSuggestion ? (
+                <span className="flex items-center">Improving...</span>
+              ) : (
+                <Sparkles className="w-4 h-4" />
               )}
-            </div>
+            </button>
           </div>
           <input type="text" id="title" {...register('title', { required: 'Title is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}
@@ -236,18 +219,36 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         <div>
           <div className="flex justify-between items-center">
             <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
-            <button
-              type="button"
-              onClick={handleImproveDescription}
-              disabled={loadingDescriptionSuggestion}
-              className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
-            >
-              {loadingDescriptionSuggestion ? (
-                <span className="flex items-center">Improving...</span>
-              ) : (
-                <Sparkles className="w-4 h-4" />
+            <div className="flex items-center"> {/* Group buttons */}
+              <button
+                type="button"
+                onClick={handleImproveDescription}
+                disabled={loadingDescriptionSuggestion}
+                className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
+                title="Improve description"
+              >
+                {loadingDescriptionSuggestion ? (
+                  <span className="flex items-center">Improving...</span>
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+              </button>
+              {title && ( // Conditional rendering for the new button
+                <button
+                  type="button"
+                  onClick={handleImproveDescription}
+                  disabled={loadingDescriptionSuggestion}
+                  className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center ml-2"
+                  title="Generate description from title"
+                >
+                  {loadingDescriptionSuggestion ? (
+                    <span className="flex items-center">Generating...</span>
+                  ) : (
+                    <Bot className="w-4 h-4" />
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           </div>
           <textarea id="description" {...register('description')} rows={3} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
           {descriptionSuggestion && (

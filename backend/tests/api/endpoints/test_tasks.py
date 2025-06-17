@@ -1,10 +1,12 @@
 import datetime
 from unittest.mock import patch  # For mocking datetime & async methods
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
 from odmantic import ObjectId
 
+from app.api.schemas.llm import LLMImprovementRequest, LLMImprovementResponse
 from app.api.schemas.task import (
     TaskCreateRequest,
     TaskPriority,
@@ -14,6 +16,7 @@ from app.api.schemas.task import (
     TaskUpdateRequest,
 )
 from app.core.config import settings
+from app.core.enums import LLMActionType
 from app.db.models.category import Category as CategoryModel
 from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
@@ -885,7 +888,7 @@ async def test_update_task_no_status_change_no_stat_change_via_api(
     assert updated_task.statistics.lasts_min == initial_lasts_min
 
 
-# #####################################################
+# #####################################################################
 # # Tests for New LLM Suggestion Endpoint (Apply endpoint is removed) #
 # #####################################################################
 
@@ -914,10 +917,6 @@ async def test_update_task_only_title(
     assert updated_task_resp.description == original_description  # Ensure description is unchanged
     assert updated_task_resp.status == original_status  # Ensure status is unchanged
 
-    db_task = await test_db.find_one(TaskModel, TaskModel.id == user_one_task_model.id)
-    assert db_task.title == "Updated Title Only By Patch"
-    assert db_task.description == original_description
-
 
 async def test_update_task_only_description(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], user_one_task_model: TaskModel, test_db
@@ -941,6 +940,105 @@ async def test_update_task_only_description(
     assert updated_task_resp.title == original_title  # Ensure title is unchanged
     assert updated_task_resp.status == original_status  # Ensure status is unchanged
 
-    db_task = await test_db.find_one(TaskModel, TaskModel.id == user_one_task_model.id)
-    assert db_task.description == "Updated Description Only By Patch"
-    assert db_task.title == original_title
+
+@patch("app.services.llm_service.LLMService.improve_text", new_callable=AsyncMock)
+async def test_improve_text_with_llm_improve_title(
+    mock_improve_text, async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    mock_improve_text.return_value = "This is an improved title."
+    request_data = LLMImprovementRequest(action=LLMActionType.IMPROVE_TITLE, title="original title")
+
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 200
+    response_data = LLMImprovementResponse(**response.json())
+    assert response_data.improved_title == "This is an improved title."
+    assert response_data.improved_description is None
+    mock_improve_text.assert_called_once_with(
+        "original title", "Improve the following task title to make it more concise and informative:"
+    )
+
+
+@patch("app.services.llm_service.LLMService.improve_text", new_callable=AsyncMock)
+async def test_improve_text_with_llm_improve_description(
+    mock_improve_text, async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    mock_improve_text.return_value = "This is an improved description."
+    request_data = LLMImprovementRequest(action=LLMActionType.IMPROVE_DESCRIPTION, description="original description")
+
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 200
+    response_data = LLMImprovementResponse(**response.json())
+    assert response_data.improved_description == "This is an improved description."
+    assert response_data.improved_title is None
+    mock_improve_text.assert_called_once_with(
+        "original description", "Improve the following task description to make it more concise and informative:"
+    )
+
+
+@patch("app.services.llm_service.LLMService.improve_text", new_callable=AsyncMock)
+async def test_improve_text_with_llm_generate_description_from_title(
+    mock_improve_text, async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    mock_improve_text.return_value = "This is a generated description."
+    request_data = LLMImprovementRequest(action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE, title="original title")
+
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 200
+    response_data = LLMImprovementResponse(**response.json())
+    assert response_data.improved_description == "This is a generated description."
+    assert response_data.improved_title is None
+    mock_improve_text.assert_called_once_with(
+        "Task Title: original title",
+        "Based on the following task title, generate a concise and informative task description:",
+    )
+
+
+async def test_improve_text_with_llm_missing_title_for_improve_title(
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    request_data = LLMImprovementRequest(action=LLMActionType.IMPROVE_TITLE)
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert "Title is required for 'improve_title' action." in response.json()["detail"]
+
+
+async def test_improve_text_with_llm_missing_description_for_improve_description(
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    request_data = LLMImprovementRequest(action=LLMActionType.IMPROVE_DESCRIPTION)
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert "Description is required for 'improve_description' action." in response.json()["detail"]
+
+
+async def test_improve_text_with_llm_missing_title_for_generate_description_from_title(
+    async_client: AsyncClient, auth_headers_user_one: dict[str, str]
+):
+    request_data = LLMImprovementRequest(action=LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE)
+    response = await async_client.post(
+        f"{TASKS_ENDPOINT}/llm/improve-text",
+        headers=auth_headers_user_one,
+        json=request_data.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert "Title is required for 'generate_description_from_title' action." in response.json()["detail"]

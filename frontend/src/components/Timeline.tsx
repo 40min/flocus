@@ -38,7 +38,7 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
 
   return (
     // The root element is an <aside> tag with relative positioning for its children.
-    <aside className={`relative w-28 flex-shrink-0 bg-gray-50 p-4 ${className || ''}`}>
+    <aside className={`relative w-28 flex-shrink-0  p-4 ${className || ''}`}>
       {/* The central vertical line */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-300"></div>
 

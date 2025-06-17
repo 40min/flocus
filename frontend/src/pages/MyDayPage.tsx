@@ -189,7 +189,7 @@ const MyDayPage: React.FC = () => {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="bg-background-card p-8 rounded-xl shadow-sm border border-slate-200">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {dailyPlan ? (
           // Schedule Editor View

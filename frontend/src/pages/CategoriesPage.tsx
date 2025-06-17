@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
 import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 import { useCategories } from '../hooks/useCategories';
@@ -122,18 +122,6 @@ const CategoriesPage: React.FC = () => {
         <p className="text-heading-sub mt-1">Manage your task categories.</p>
       </header>
 
-      <div className="flex justify-end mb-6">
-        <Button
-          onClick={handleAddCategoryClick}
-          variant="slate"
-          size="medium"
-          className="flex items-center gap-2"
-        >
-          <PlusCircle size={20} />
-          Add New Category
-        </Button>
-      </div>
-
       {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
 
       {showForm && (
@@ -191,8 +179,17 @@ const CategoriesPage: React.FC = () => {
       )}
 
       <div className="bg-white shadow-sm rounded-xl border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
+        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-800">All Categories</h2>
+          <Button
+            onClick={handleAddCategoryClick}
+            variant="slate"
+            size="medium"
+            className="flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Add New Category
+          </Button>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">

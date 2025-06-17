@@ -118,8 +118,8 @@ const CategoriesPage: React.FC = () => {
   return (
     <div className="container mx-auto p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
-        <p className="text-slate-600 mt-1">Manage your task categories.</p>
+        <h1 className="text-3xl font-bold text-heading-main">Categories</h1>
+        <p className="text-heading-sub mt-1">Manage your task categories.</p>
       </header>
 
       <div className="flex justify-end mb-6">
@@ -219,8 +219,8 @@ const CategoriesPage: React.FC = () => {
                 const colorDetail = getColorDetails(category.color);
                 return (
                   <tr key={category.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{category.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{category.description || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-heading-main">{category.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-heading-sub">{category.description || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorDetail.bgColor} ${colorDetail.textColor}`}>
                         {colorDetail.name}

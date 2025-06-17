@@ -29,6 +29,8 @@ module.exports = {
           DEFAULT: '#E5E7EB', // Light gray for borders
           dark: '#D1D5DB', // Slightly darker for hover/focus borders
         },
+        'heading-main': '#1A1A1A',
+        'heading-sub': '#4A4A4A',
       },
     },
   },

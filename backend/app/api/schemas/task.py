@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Literal, Optional
+from typing import Optional
 
 from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
@@ -63,17 +63,6 @@ class TaskStatisticsSchema(BaseModel):
         if dt:
             return _serialize_datetime_to_iso_z(dt)
         return None
-
-
-class LLMSuggestionResponse(BaseModel):
-    suggestion: str
-    original_text: Optional[str] = None
-    field_to_update: str  # Should be 'title' or 'description', validated by endpoint logic
-
-
-class TaskApplySuggestionRequest(BaseModel):
-    approved_text: str = Field(..., min_length=1)  # Ensure approved text is not empty
-    field_to_update: Literal["title", "description"]
 
 
 class TaskUpdateRequest(BaseModel):

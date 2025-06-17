@@ -4,19 +4,10 @@ from typing import Dict, List, Optional
 from fastapi import Depends
 from odmantic import AIOEngine, ObjectId, query
 
-from app.api.schemas.task import (
-    LLMSuggestionResponse,
-    TaskCreateRequest,
-    TaskPriority,
-    TaskResponse,
-    TaskStatus,
-    TaskUpdateRequest,
-)
-from app.core.enums import LLMActionType
+from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
 from app.core.exceptions import (
     CategoryNotFoundException,
     NotOwnerException,
-    TaskDataMissingError,
     TaskNotFoundException,
     TaskTitleExistsException,
 )
@@ -24,15 +15,13 @@ from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.task import Task, TaskStatistics
 from app.mappers.task_mapper import TaskMapper
-from app.services.llm_service import LLMService
 
 UTC = timezone.utc
 
 
 class TaskService:
-    def __init__(self, engine: AIOEngine = Depends(get_database), llm_service: LLMService = Depends(LLMService)):
+    def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
-        self.llm_service = llm_service
 
     async def create_task(self, task_data: TaskCreateRequest, current_user_id: ObjectId) -> TaskResponse:
         existing_task_title = await self.engine.find_one(
@@ -295,49 +284,3 @@ class TaskService:
             task.updated_at = datetime.now(UTC)
             await self.engine.save(task)
         return True
-
-    async def prepare_llm_suggestion(
-        self,
-        task: Task,  # Takes the Task model instance
-        action: LLMActionType,
-    ) -> LLMSuggestionResponse:
-        original_text: Optional[str] = None
-        text_for_llm: str = ""
-        field_to_update: str = ""  # Will hold 'title' or 'description'
-        base_prompt_override: Optional[str] = None
-
-        match action:
-            case LLMActionType.IMPROVE_TITLE:
-                if not task.title:  # Check directly on the model
-                    raise TaskDataMissingError(detail="Task title is missing for 'improve_title' action.")
-                original_text = task.title
-                text_for_llm = task.title
-                field_to_update = "title"
-                base_prompt_override = "Improve the following task title to make it more concise and informative:"
-            case LLMActionType.IMPROVE_DESCRIPTION:
-                original_text = task.description
-                text_for_llm = task.description or ""
-                field_to_update = "description"
-                base_prompt_override = "Improve the following task description to make it more concise and informative:"
-            case LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE:
-                if not task.title:  # Check directly on the model
-                    raise TaskDataMissingError(
-                        detail="Task title is missing for 'generate_description_from_title' action."
-                    )
-                # original_text remains None as we are generating new content
-                text_for_llm = f"Task Title: {task.title}"  # Context for the LLM
-                base_prompt_override = (
-                    "Based on the following task title, generate a concise and informative task description:"
-                )
-                field_to_update = "description"
-            # No default case needed if LLMActionType enum is exhaustive and validated at API layer
-            # However, defensively, one could raise ValueError for an unexpected action.
-
-        suggestion = await self.llm_service.improve_text(
-            text_to_process=text_for_llm,
-            base_prompt_override=base_prompt_override,
-        )
-
-        return LLMSuggestionResponse(
-            suggestion=suggestion, original_text=original_text, field_to_update=field_to_update
-        )

@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   TIME_WINDOW_BY_ID: (id: string) => `/time-windows/${id}`,
   TASKS_BASE: '/tasks',
   TASK_BY_ID: (id: string) => `/tasks/${id}`,
+  LLM_IMPROVE_TEXT: '/tasks/llm/improve-text',
   DAILY_PLANS_BASE: '/daily-plans',
   DAILY_PLAN: '/daily-plans',
   DAILY_PLAN_BY_DATE: (planDate: string) => `/daily-plans/${planDate}`,

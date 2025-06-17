@@ -1,26 +1,13 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, status
-from odmantic import AIOEngine  # For direct task fetching
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from odmantic import ObjectId
 
-from app.api.schemas.task import (
-    LLMSuggestionResponse,
-    TaskCreateRequest,
-    TaskPriority,
-    TaskResponse,
-    TaskStatus,
-    TaskUpdateRequest,
-)
-from app.core.dependencies import (  # get_current_active_user_id for other endpoints
-    get_current_active_user_id,
-    get_current_user,
-)
-from app.core.enums import LLMActionType  # Added
-from app.core.exceptions import NotOwnerException, TaskNotFoundException  # For direct task fetching
-from app.db.connection import get_database  # For direct task fetching
-from app.db.models.task import Task as TaskModel  # Added Task model import
-from app.db.models.user import User
+from app.api.schemas.llm import LLMImprovementRequest, LLMImprovementResponse
+from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
+from app.core.dependencies import get_current_active_user_id
+from app.core.enums import LLMActionType
+from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
 
 router = APIRouter()
@@ -79,30 +66,53 @@ async def get_task_by_id(
     return await service.get_task_by_id(task_id=task_id, current_user_id=current_user_id)
 
 
-@router.get(
-    "/{task_id}/llm-suggestions",
-    response_model=LLMSuggestionResponse,
-    summary="Get LLM suggestions for a task field",
+@router.post(
+    "/llm/improve-text",
+    response_model=LLMImprovementResponse,
+    summary="Improve text using LLM",
+    status_code=status.HTTP_200_OK,
 )
-async def get_llm_suggestion_for_task(
-    action: LLMActionType,
-    task_id: ObjectId = Path(..., description="The ID of the task"),
-    current_user: User = Depends(get_current_user),
-    task_service: TaskService = Depends(TaskService),
-    engine: AIOEngine = Depends(get_database),  # Inject engine for direct Task model fetching
+async def improve_text_with_llm(
+    request: LLMImprovementRequest,
+    llm_service: LLMService = Depends(LLMService),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    # Fetch the Task model directly, not TaskResponse schema
-    task_model = await engine.find_one(TaskModel, TaskModel.id == task_id)
+    """
+    Receives text and an action, and returns an LLM-generated improvement.
+    This is a stateless endpoint that does not interact with any specific task in the database.
+    """
+    response = LLMImprovementResponse()
+    text_to_improve = ""
+    base_prompt_override = None
 
-    if not task_model:
-        raise TaskNotFoundException(task_id=str(task_id))
-    if task_model.user_id != current_user.id:
-        raise NotOwnerException(resource="task")
-    if task_model.is_deleted:
-        raise TaskNotFoundException(task_id=str(task_id), detail="Task has been deleted.")
+    match request.action:
+        case LLMActionType.IMPROVE_TITLE:
+            if not request.title:
+                raise HTTPException(status_code=400, detail="Title is required for 'improve_title' action.")
+            text_to_improve = request.title
+            base_prompt_override = "Improve the following task title to make it more concise and informative:"
+            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
+            response.improved_title = improved_text
+        case LLMActionType.IMPROVE_DESCRIPTION:
+            if request.description is None:
+                raise HTTPException(status_code=400, detail="Description is required for 'improve_description' action.")
+            text_to_improve = request.description
+            base_prompt_override = "Improve the following task description to make it more concise and informative:"
+            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
+            response.improved_description = improved_text
+        case LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE:
+            if not request.title:
+                raise HTTPException(
+                    status_code=400, detail="Title is required for 'generate_description_from_title' action."
+                )
+            text_to_improve = f"Task Title: {request.title}"
+            base_prompt_override = (
+                "Based on the following task title, generate a concise and informative task description:"
+            )
+            improved_text = await llm_service.improve_text(text_to_improve, base_prompt_override)
+            response.improved_description = improved_text
 
-    suggestion_response = await task_service.prepare_llm_suggestion(task=task_model, action=action)
-    return suggestion_response
+    return response
 
 
 @router.get(

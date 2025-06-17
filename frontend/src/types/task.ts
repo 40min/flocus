@@ -56,3 +56,16 @@ export interface TaskCreateRequest {
 export interface TaskUpdateRequest extends Partial<TaskCreateRequest> {
   // All fields are optional for updates
 }
+
+export type LlmAction = 'improve_title' | 'improve_description' | 'generate_description_from_title';
+
+export interface LLMImprovementRequest {
+  action: LlmAction;
+  title?: string;
+  description?: string;
+}
+
+export interface LLMImprovementResponse {
+  improved_title?: string | null;
+  improved_description?: string | null;
+}

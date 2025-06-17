@@ -1,5 +1,10 @@
 import api from './api';
-import { Task, TaskCreateRequest, TaskUpdateRequest } from '../types/task';
+import {
+  Task, TaskCreateRequest, TaskUpdateRequest,
+  LLMImprovementRequest,
+  LLMImprovementResponse,
+  LlmAction
+} from '../types/task';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
@@ -13,21 +18,16 @@ export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
 };
 
 
-export interface LlmSuggestionResponse {
-  suggestion: string;
-  original_text?: string;
-  field_to_update: 'title' | 'description';
-}
-
-export type LlmAction = 'improve_title' | 'improve_description' | 'generate_description_from_title';
-
-export const getLlmSuggestion = async (taskId: string, action: LlmAction): Promise<LlmSuggestionResponse> => {
+export const getLlmImprovement = async (
+  payload: LLMImprovementRequest
+): Promise<LLMImprovementResponse> => {
   try {
-    const url = `${API_ENDPOINTS.TASK_BY_ID(taskId)}/llm-suggestions`;
-    const response = await api.get<LlmSuggestionResponse>(url, { params: { action } });
+    const response = await api.post<LLMImprovementResponse>(
+      API_ENDPOINTS.LLM_IMPROVE_TEXT,
+      payload
+    );
     return response.data;
   } catch (error) {
-    // Consider more specific error handling or logging here
     throw error;
   }
 };

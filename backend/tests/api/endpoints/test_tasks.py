@@ -1,12 +1,11 @@
 import datetime
-from unittest.mock import AsyncMock, patch  # For mocking datetime & async methods
+from unittest.mock import patch  # For mocking datetime & async methods
 
 import pytest
 from httpx import AsyncClient
 from odmantic import ObjectId
 
 from app.api.schemas.task import (
-    LLMSuggestionResponse,
     TaskCreateRequest,
     TaskPriority,
     TaskResponse,
@@ -15,8 +14,6 @@ from app.api.schemas.task import (
     TaskUpdateRequest,
 )
 from app.core.config import settings
-from app.core.enums import LLMActionType
-from app.core.exceptions import LLMGenerationError, TaskDataMissingError
 from app.db.models.category import Category as CategoryModel
 from app.db.models.task import Task as TaskModel
 from app.db.models.user import User as UserModel
@@ -896,112 +893,6 @@ async def test_update_task_no_status_change_no_stat_change_via_api(
 
 
 # Updated tests for GET /llm-suggestions
-@patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
-async def test_get_llm_suggestion_improve_title_success(
-    mock_prepare_suggestion,
-    async_client: AsyncClient,
-    auth_headers_user_one: dict[str, str],
-    user_one_task_model: TaskModel,
-):
-    expected_response_data = {
-        "suggestion": "LLM Suggested Title",
-        "original_text": user_one_task_model.title,
-        "field_to_update": "title",
-    }
-    mock_prepare_suggestion.return_value = LLMSuggestionResponse(**expected_response_data)
-
-    response = await async_client.get(
-        f"{TASKS_ENDPOINT}/{user_one_task_model.id}/llm-suggestions?action=improve_title",
-        headers=auth_headers_user_one,
-    )
-    assert response.status_code == 200
-    assert response.json() == expected_response_data
-    # Check that prepare_llm_suggestion was called correctly by the endpoint
-    # The endpoint fetches the task model and passes it to the service.
-    # We are mocking the service method, so we check its arguments.
-    # The actual TaskModel passed would be checked if we were testing the service method
-    # itself (done in test_task_service.py)
-    # Here, we trust the endpoint fetches the task and passes it.
-    # The first argument to prepare_llm_suggestion is 'self' (the TaskService instance),
-    # the second is the 'task' model, third is 'action', fourth is 'llm_service'.
-    # We can check the 'action' and that 'llm_service' was passed.
-    # Accessing call_args:
-    # args = mock_prepare_suggestion.call_args[0], kwargs = mock_prepare_suggestion.call_args[1]
-    # Or using call_args.args and call_args.kwargs for Python 3.8+
-    called_args = mock_prepare_suggestion.call_args.kwargs
-    assert called_args["action"] == LLMActionType.IMPROVE_TITLE
-    assert isinstance(called_args["task"], TaskModel)
-    assert called_args["task"].id == user_one_task_model.id
-
-
-@patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
-async def test_get_llm_suggestion_generate_description_success(
-    mock_prepare_suggestion,
-    async_client: AsyncClient,
-    auth_headers_user_one: dict[str, str],
-    user_one_task_model: TaskModel,
-):
-    expected_response_data = {
-        "suggestion": "Generated Description",
-        "original_text": None,  # No original for generation
-        "field_to_update": "description",
-    }
-    mock_prepare_suggestion.return_value = LLMSuggestionResponse(**expected_response_data)
-
-    response = await async_client.get(
-        f"{TASKS_ENDPOINT}/{user_one_task_model.id}/llm-suggestions?action=generate_description_from_title",
-        headers=auth_headers_user_one,
-    )
-    assert response.status_code == 200
-    assert response.json() == expected_response_data
-    called_args = mock_prepare_suggestion.call_args.kwargs
-    assert called_args["action"] == LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE
-    assert called_args["task"].id == user_one_task_model.id
-
-
-async def test_get_llm_suggestion_endpoint_task_not_found(  # Renamed to be more specific to endpoint test
-    async_client: AsyncClient, auth_headers_user_one: dict[str, str]
-):
-    non_existent_id = ObjectId()
-    # No need to mock TaskService.prepare_llm_suggestion as the endpoint should fail before calling it
-    # due to the direct task fetch and check.
-    response = await async_client.get(
-        f"{TASKS_ENDPOINT}/{non_existent_id}/llm-suggestions?action=improve_title",
-        headers=auth_headers_user_one,
-    )
-    assert response.status_code == 404  # From TaskNotFoundException raised in endpoint
-
-
-@patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
-async def test_get_llm_suggestion_task_data_missing_error_from_service(
-    mock_prepare_suggestion,
-    async_client: AsyncClient,
-    auth_headers_user_one: dict[str, str],
-    user_one_task_model: TaskModel,
-):
-    mock_prepare_suggestion.side_effect = TaskDataMissingError(detail="Test title is missing.")
-    response = await async_client.get(
-        f"{TASKS_ENDPOINT}/{user_one_task_model.id}/llm-suggestions?action=improve_title",
-        headers=auth_headers_user_one,
-    )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Test title is missing."
-
-
-@patch("app.api.endpoints.tasks.TaskService.prepare_llm_suggestion", new_callable=AsyncMock)
-async def test_get_llm_suggestion_llm_generation_error_from_service(
-    mock_prepare_suggestion,
-    async_client: AsyncClient,
-    auth_headers_user_one: dict[str, str],
-    user_one_task_model: TaskModel,
-):
-    mock_prepare_suggestion.side_effect = LLMGenerationError(detail="LLM provider failed.")
-    response = await async_client.get(
-        f"{TASKS_ENDPOINT}/{user_one_task_model.id}/llm-suggestions?action=improve_title",
-        headers=auth_headers_user_one,
-    )
-    assert response.status_code == 500
-    assert response.json()["detail"] == "LLM provider failed."
 
 
 # Verify/Augment Tests for PATCH /tasks/{task_id}

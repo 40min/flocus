@@ -70,9 +70,9 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan }) => {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-medium text-text-DEFAULT mb-2">Today's Tasks</h2>
+        <h2 className="text-lg font-bold text-text-DEFAULT bg-background-card p-2 rounded-md mb-2">Today's Tasks</h2>
         {currentTimeWindow !== null && (
-          <p className="text-sm text-text-secondary">Drag tasks to the timer to start focusing</p>
+          <p className="text-sm text-green-100 text-center">Drag tasks to the timer to start focusing</p>
         )}
       </div>
       <section className="w-full" aria-label="Task List">

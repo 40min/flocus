@@ -7,7 +7,7 @@ import { Category } from 'types/category';
 import * as taskService from 'services/taskService';
 import Modal from './Modal';
 import { utcToLocal, localToUtc } from 'lib/utils';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Bot } from 'lucide-react';
 
 interface CreateTaskFormInputs {
   title: string;
@@ -39,7 +39,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   statusOptions,
   priorityOptions,
 }) => {
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting }, setValue, getValues } = useForm<CreateTaskFormInputs>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting }, setValue, getValues, watch } = useForm<CreateTaskFormInputs>({
     defaultValues: {
       title: initialFormData.title,
       description: initialFormData.description || '',
@@ -49,6 +49,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       category_id: initialFormData.category_id || '',
     }
   });
+
+  const title = watch('title'); // Watch the title field for changes
 
   const [titleSuggestion, setTitleSuggestion] = useState<string | null>(null);
   const [descriptionSuggestion, setDescriptionSuggestion] = useState<string | null>(null);
@@ -175,18 +177,36 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         <div>
           <div className="flex justify-between items-center">
             <label htmlFor="title" className="block text-sm font-medium text-slate-700">Title</label>
-            <button
-              type="button"
-              onClick={handleImproveTitle}
-              disabled={loadingTitleSuggestion}
-              className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
-            >
-              {loadingTitleSuggestion ? (
-                <span className="flex items-center">Improving...</span>
-              ) : (
-                <Sparkles className="w-4 h-4" />
+            <div className="flex items-center"> {/* New div to group buttons */}
+              <button
+                type="button"
+                onClick={handleImproveTitle}
+                disabled={loadingTitleSuggestion}
+                className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center"
+                title="Improve title"
+              >
+                {loadingTitleSuggestion ? (
+                  <span className="flex items-center">Improving...</span>
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+              </button>
+              {title && ( // Conditional rendering for the new button
+                <button
+                  type="button"
+                  onClick={handleImproveDescription}
+                  disabled={loadingDescriptionSuggestion}
+                  className="text-gray-600 hover:text-blue-800 text-sm disabled:opacity-50 flex items-center ml-2"
+                  title="Generate description from title"
+                >
+                  {loadingDescriptionSuggestion ? (
+                    <span className="flex items-center">Generating...</span>
+                  ) : (
+                    <Bot className="w-4 h-4" />
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           </div>
           <input type="text" id="title" {...register('title', { required: 'Title is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}

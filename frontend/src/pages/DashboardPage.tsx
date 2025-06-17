@@ -1,4 +1,5 @@
 import React from 'react';
+import { format } from 'date-fns';
 import CurrentTasks from '../components/CurrentTasks';
 import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
@@ -49,6 +50,7 @@ const DashboardPage: React.FC = () => {
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex items-center justify-center md:justify-start">
           <h1 className="text-2xl md:text-3xl font-semibold text-text-DEFAULT flex items-center gap-2">
+{format(new Date(), 'EEEE, MMMM do')}
 
           </h1>
         </div>

@@ -11,7 +11,7 @@ import { createDayTemplate, updateDayTemplate } from '../services/dayTemplateSer
 import { useTemplateById } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
-import { ChevronRight, Trash2, PlusCircle } from 'lucide-react';
+import { ChevronRight, Trash2, PlusCircle, Plus } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -307,13 +307,13 @@ const EditTemplatePage: React.FC = () => {
               <Button
                 type="button"
                 variant="slate"
-                size="small"
+                size="medium"
                 onClick={() => { setIsTimeWindowModalOpen(true); }}
                 className="mt-4 flex items-center gap-2"
                 disabled={isLoading}
                 title={"Add new time window"}
               >
-                <PlusCircle size={20} />
+                <Plus size={20} />
                 Add new time window
               </Button>
           </div>

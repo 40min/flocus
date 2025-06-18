@@ -6,8 +6,9 @@ import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { Category } from '../../types/category';
 import { hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
 import { useMessage } from '../../context/MessageContext';
-import { PlusCircle } from 'lucide-react';
+import { Plus, PlusCircle } from 'lucide-react';
 import Modal from './Modal'; // Assuming Modal component is available
+import Button from 'components/Button';
 
 interface CreateTemplateTimeWindowModalProps {
   isOpen: boolean;
@@ -222,14 +223,15 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>
         )}
         <div className="flex justify-end space-x-3 mt-6">
-          <button
-            type="button"
-            onClick={handleSubmit(handleInternalSubmit)}
-            className="btn-standard mt-4 text-xs disabled:opacity-50 px-4 py-2 flex items-center disabled:cursor-not-allowed"
+          <Button
+          variant="slate"
+          size='medium'
+          onClick={handleSubmit(handleInternalSubmit)}
+          className="mt-4 flex items-center gap-2"
           >
-            <PlusCircle size={20} className="mr-1" />
+            <Plus size={20} className="mr-1" />
             Add Time Window
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

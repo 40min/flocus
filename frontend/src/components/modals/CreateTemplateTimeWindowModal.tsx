@@ -4,9 +4,10 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
 import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { Category } from '../../types/category';
+import { minutesToDate } from '../../lib/utils';
 import { hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
 import { useMessage } from '../../context/MessageContext';
-import { Plus, PlusCircle } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import Modal from './Modal'; // Assuming Modal component is available
 import Button from 'components/Button';
 
@@ -16,6 +17,7 @@ interface CreateTemplateTimeWindowModalProps {
   onSubmit: (timeWindow: TimeWindowInput) => void;
   availableCategories: Category[];
   existingTimeWindows: TimeWindow[];
+  editingTimeWindow?: TimeWindow | null;
 }
 
 interface TimeWindowFormInputs {
@@ -31,6 +33,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   onSubmit,
   availableCategories,
   existingTimeWindows,
+  editingTimeWindow,
 }) => {
   const {
     control,
@@ -49,20 +52,30 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   });
 
   const { showMessage } = useMessage();
+
   const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
 
   useEffect(() => {
     if (isOpen) {
-      reset({
-        description: '',
-        startTime: null,
-        endTime: null,
-        categoryId: '',
-      });
+      if (editingTimeWindow) {
+        reset({
+          description: editingTimeWindow.description || '',
+          startTime: minutesToDate(editingTimeWindow.start_time),
+          endTime: minutesToDate(editingTimeWindow.end_time),
+          categoryId: editingTimeWindow.category.id,
+        });
+      } else {
+        reset({
+          description: '',
+          startTime: null,
+          endTime: null,
+          categoryId: '',
+        });
+      }
       firstModalFocusableElementRef.current?.focus();
     }
-  }, [isOpen, reset, availableCategories]);
+  }, [isOpen, reset, editingTimeWindow]);
 
 
 
@@ -123,7 +136,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Time Window">
+    <Modal isOpen={isOpen} onClose={onClose} title={editingTimeWindow ? "Edit Time Window" : "Add New Time Window"}>
       <form onSubmit={handleSubmit(handleInternalSubmit)} className="space-y-4">
         <div>
           <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
@@ -229,8 +242,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           onClick={handleSubmit(handleInternalSubmit)}
           className="mt-4 flex items-center gap-2"
           >
-            <Plus size={20} className="mr-1" />
-            Add Time Window
+            {editingTimeWindow ? <Edit size={20} className="mr-1" /> : <Plus size={20} className="mr-1" />}
+            {editingTimeWindow ? "Update Time Window" : "Add Time Window"}
           </Button>
         </div>
       </form>

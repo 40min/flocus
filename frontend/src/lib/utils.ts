@@ -45,6 +45,11 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
   const targetDate = addMinutes(baseDate, totalMinutes);
   return format(targetDate, 'HH:mm');
 }
+export const minutesToDate = (minutes: number): Date => {
+  const date = new Date();
+  date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return date;
+};
 
 // Convert UTC ISO string to local date object
 export function utcToLocal(utcDate: string | null): Date | null {

@@ -6,12 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { DayTemplateCreateRequest, DayTemplateUpdateRequest, DayTemplateResponse } from '../types/dayTemplate';
 import { TimeWindow, TimeWindowInput } from '../types/timeWindow';
-import { Category } from '../types/category';
 import { createDayTemplate, updateDayTemplate } from '../services/dayTemplateService';
 import { useTemplateById } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
-import { ChevronRight, Trash2, PlusCircle, Plus } from 'lucide-react';
+import { ChevronRight, Trash2, Plus, Edit } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -32,8 +31,9 @@ const EditTemplatePage: React.FC = () => {
   const { data: template, isLoading: isLoadingTemplate, error: templateError } = useTemplateById(routeTemplateId);
   const { data: availableCategories = [], isLoading: isLoadingCategories } = useCategories();
 
+const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(null);
   const [templateTimeWindows, setTemplateTimeWindows] = useState<TimeWindow[]>([]);
-  const [formError, setFormError] = useState<string | null>(null);
+
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
 
   const {
@@ -49,43 +49,39 @@ const EditTemplatePage: React.FC = () => {
     },
   });
 
-  const handleCreateTimeWindow = useCallback((newTimeWindowInput: TimeWindowInput) => {
-    const startTimeMinutes = newTimeWindowInput.start_time;
-    const endTimeMinutes = newTimeWindowInput.end_time;
+  const handleOpenEditModal = (tw: TimeWindow) => {
+    setEditingTimeWindow(tw);
+    setIsTimeWindowModalOpen(true);
+  };
 
-    for (const existingTW of templateTimeWindows) {
-      if (
-        startTimeMinutes < existingTW.end_time &&
-        endTimeMinutes > existingTW.start_time
-      ) {
-        setFormError(
-          `New time window (${formatMinutesToHHMM(startTimeMinutes)} - ${formatMinutesToHHMM(endTimeMinutes)}) overlaps with an existing one: "${existingTW.description}" (${formatMinutesToHHMM(existingTW.start_time)} - ${formatMinutesToHHMM(existingTW.end_time)}).`
-        );
-        return;
-      }
-    }
-
-    const selectedCategory = availableCategories.find((cat: Category) => cat.id === newTimeWindowInput.category_id);
+  const handleTimeWindowSubmit = (timeWindowData: TimeWindowInput) => {
+    const selectedCategory = availableCategories.find(cat => cat.id === timeWindowData.category_id);
     if (!selectedCategory) {
-      setFormError("Selected category not found.");
+      // This should be caught by form validation, but as a fallback
       return;
     }
-
-    const newLocalTimeWindow: TimeWindow = {
-      id: `temp-${Date.now()}`,
-      description: newTimeWindowInput.description,
-      start_time: startTimeMinutes,
-      end_time: endTimeMinutes,
-      category: selectedCategory,
-      day_template_id: routeTemplateId || '',
-      user_id: '',
-      is_deleted: false,
-    };
-
-    setTemplateTimeWindows(prev => [...prev, newLocalTimeWindow]);
+    if (editingTimeWindow) {
+      // Edit
+      setTemplateTimeWindows(prev =>
+        prev.map(tw =>
+          tw.id === editingTimeWindow.id ? { ...tw, ...timeWindowData, category: selectedCategory } : tw
+        )
+      );
+    } else {
+      // Create
+      const newLocalTimeWindow: TimeWindow = {
+        id: `temp-${Date.now()}`,
+        ...timeWindowData,
+        category: selectedCategory,
+        day_template_id: routeTemplateId || '',
+        user_id: '',
+        is_deleted: false,
+      };
+      setTemplateTimeWindows(prev => [...prev, newLocalTimeWindow]);
+    }
     setIsTimeWindowModalOpen(false);
-    setFormError(null);
-  }, [templateTimeWindows, availableCategories, routeTemplateId]);
+    setEditingTimeWindow(null);
+  };
 
   useEffect(() => {
     if (template && !isCreatingNew) {
@@ -154,7 +150,6 @@ const EditTemplatePage: React.FC = () => {
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
     setTemplateTimeWindows(prev => prev.filter(tw => tw.id !== timeWindowId));
-    setFormError(null);
   };
 
   const createTemplateMutation = useMutation({
@@ -164,7 +159,7 @@ const EditTemplatePage: React.FC = () => {
       navigate('/templates');
     },
     onError: (err: any) => {
-      setFormError(`Failed to save template: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
+      // Form error handling would go here if needed
     },
   });
 
@@ -178,12 +173,12 @@ const EditTemplatePage: React.FC = () => {
       navigate('/templates');
     },
     onError: (err: any) => {
-      setFormError(`Failed to save template: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
+      // Form error handling would go here if needed
     },
   });
 
   const onSubmit = (data: TemplateFormData) => {
-    setFormError(null);
+
 
     const time_windows_payload = templateTimeWindows.map(tw => {
       const timeWindowPayload: TimeWindowInput = {
@@ -216,10 +211,10 @@ const EditTemplatePage: React.FC = () => {
   };
 
   const isLoading = isLoadingTemplate || isLoadingCategories || isSubmitting;
-  const error = templateError || formError;
+  const error = templateError;
 
   return (
-    <div className="p-8 @container">
+    <div className="p-8 @container mx-auto max-w-4xl">
       <div className="mb-6">
         <nav aria-label="Breadcrumb" className="text-sm font-medium text-gray-500">
           <ol className="list-none p-0 inline-flex">
@@ -281,26 +276,35 @@ const EditTemplatePage: React.FC = () => {
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {templateTimeWindows.length > 0 ? templateTimeWindows.slice().sort((a, b) => a.start_time - b.start_time).map(tw => (
                 <div key={tw.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50">
-                  <div className="flex-grow">
+                  <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-800">{tw.category.name}</span>
                       <span className="text-gray-400 text-xs">
                         ({formatMinutesToHHMM(tw.start_time)} - {formatMinutesToHHMM(tw.end_time)})
                       </span>
                     </div>
-                    {tw.description && (
-                      <p className="text-sm text-gray-500 mt-1">{tw.description}</p>
-                    )}
+                    {tw.description && <p className="text-sm text-gray-500 mt-1 truncate">{tw.description}</p>}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteTimeWindow(tw.id)}
-                    title="Delete time window"
-                    disabled={isLoading}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
+                  <div className="flex-shrink-0 flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => { e.preventDefault(); handleOpenEditModal(tw); }}
+                      title="Edit time window"
+                      disabled={isLoading}
+                    >
+                      <Edit size={18} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteTimeWindow(tw.id)}
+                      title="Delete time window"
+                      disabled={isLoading}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
                 </div>
               )) : <p className="text-sm text-gray-500">This template has no time windows yet. Add some below.</p>}
             </div>
@@ -308,7 +312,7 @@ const EditTemplatePage: React.FC = () => {
                 type="button"
                 variant="slate"
                 size="medium"
-                onClick={() => { setIsTimeWindowModalOpen(true); }}
+                onClick={() => { setEditingTimeWindow(null); setIsTimeWindowModalOpen(true); }}
                 className="mt-4 flex items-center gap-2"
                 disabled={isLoading}
                 title={"Add new time window"}
@@ -320,10 +324,14 @@ const EditTemplatePage: React.FC = () => {
 
         <CreateTemplateTimeWindowModal
           isOpen={isTimeWindowModalOpen}
-          onClose={() => setIsTimeWindowModalOpen(false)}
-          onSubmit={handleCreateTimeWindow}
+          onClose={() => {
+            setIsTimeWindowModalOpen(false);
+            setEditingTimeWindow(null);
+          }}
+          onSubmit={handleTimeWindowSubmit}
           availableCategories={availableCategories}
-          existingTimeWindows={templateTimeWindows}
+          existingTimeWindows={editingTimeWindow ? templateTimeWindows.filter(tw => tw.id !== editingTimeWindow.id) : templateTimeWindows}
+          editingTimeWindow={editingTimeWindow}
         />
 
 

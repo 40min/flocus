@@ -113,7 +113,11 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       end_time: endTimeMinutes,
     };
 
-    if (checkTimeWindowOverlap(newTimeWindowCandidate, existingTimeWindows.map(tw => ({ time_window: tw, tasks: [] })))) {
+    const timeWindowsForOverlapCheck = existingTimeWindows
+      .filter(tw => editingTimeWindow ? tw.id !== editingTimeWindow.id : true)
+      .map(tw => ({ time_window: tw, tasks: [] }));
+
+    if (checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck)) {
       showMessage('New time window overlaps with an existing one.', 'error');
       return;
     }
@@ -182,6 +186,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
               rules={{ required: 'Start time is required' }}
               render={({ field }) => (
                 <DatePicker
+                  id="twStartTime"
                   selected={field.value}
                   onChange={(date) => field.onChange(date)}
                   showTimeSelect
@@ -213,6 +218,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
               }}
               render={({ field }) => (
                 <DatePicker
+                  id="twEndTime"
                   selected={field.value}
                   onChange={(date) => field.onChange(date)}
                   showTimeSelect

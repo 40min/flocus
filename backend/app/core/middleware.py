@@ -11,6 +11,7 @@ from app.core.exceptions import (
     InvalidTokenException,
     LLMAPIKeyNotConfiguredError,
     LLMGenerationError,
+    LLMInputValidationError,
     LLMServiceError,
     TaskCategoryMismatchException,
     TaskDataMissingError,
@@ -69,6 +70,12 @@ async def error_handling_middleware(request: Request, call_next):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": e.detail},
         )
+    except LLMInputValidationError as e:
+        logger.info(f"LLMInputValidationError: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.detail},
+        )
     except LLMAPIKeyNotConfiguredError as e:
         logger.error(f"LLMAPIKeyNotConfiguredError: {e.detail}")
         return JSONResponse(
@@ -84,7 +91,7 @@ async def error_handling_middleware(request: Request, call_next):
     except LLMServiceError as e:
         logger.error(f"LLMServiceError: {e.detail}")
         return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=e.status_code,
             content={"detail": e.detail},
         )
     except Exception as e:

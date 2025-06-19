@@ -3,10 +3,17 @@ from bson.errors import InvalidId
 from fastapi import Depends, HTTPException, Path
 from fastapi.security import OAuth2PasswordBearer
 
+from app.clients.llm.base import LLMClient
+from app.clients.llm.google_gemini import GoogleGeminiClient
+from app.clients.llm.openai import OpenAIClient
+from app.core.config import settings
+from app.core.enums import LLMProvider
+from app.core.exceptions import LLMServiceError
 from app.db.models.user import User
+from app.services.llm_service import LLMService
 from app.services.user_service import UserService
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")  # Adjusted tokenUrl based on typical structure
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
 
 async def get_current_user(
@@ -23,8 +30,6 @@ async def get_current_active_user_id(current_user: User = Depends(get_current_us
     Dependency to get the ID of the current authenticated and active user.
     Placeholder for active check if needed in future.
     """
-    # if not current_user.is_active: # Assuming User model has is_active
-    #     raise HTTPException(status_code=400, detail="Inactive user")
     return current_user.id
 
 
@@ -55,3 +60,16 @@ def get_validated_user_id(
 ) -> ObjectId:
     """Dependency function to get and validate a user_id from a path parameter."""
     return validate_object_id(user_id)
+
+
+def get_llm_client() -> LLMClient:
+    if settings.LLM_PROVIDER == str(LLMProvider.OPENAI):
+        return OpenAIClient()
+    elif settings.LLM_PROVIDER == str(LLMProvider.GOOGLE_GEMINI):
+        return GoogleGeminiClient()
+    else:
+        raise LLMServiceError(status_code=500, detail=f"Unknown LLM_PROVIDER: {settings.LLM_PROVIDER}")
+
+
+def get_llm_service(llm_client: LLMClient = Depends(get_llm_client)) -> LLMService:
+    return LLMService(llm_client)

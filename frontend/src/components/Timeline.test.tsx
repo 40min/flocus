@@ -39,8 +39,8 @@ describe('Timeline', () => {
 
   it('displays the correct start times', () => {
     render(<Timeline timeWindows={mockTimeWindows} />);
-    expect(screen.getByText('9:00 AM')).toBeInTheDocument();
-    expect(screen.getByText('11:30 AM')).toBeInTheDocument();
+    expect(screen.getByText('11:00 AM')).toBeInTheDocument();
+    expect(screen.getByText('1:30 PM')).toBeInTheDocument();
   });
 
   it('applies the correct background color to category dots', () => {

@@ -5,7 +5,7 @@ from odmantic import ObjectId
 
 from app.api.schemas.llm import LLMImprovementRequest, LLMImprovementResponse
 from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
-from app.core.dependencies import get_current_active_user_id
+from app.core.dependencies import get_current_active_user_id, get_llm_service
 from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
 
@@ -73,7 +73,7 @@ async def get_task_by_id(
 )
 async def improve_text_with_llm(
     request: LLMImprovementRequest,
-    llm_service: LLMService = Depends(LLMService),
+    llm_service: LLMService = Depends(get_llm_service),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     """

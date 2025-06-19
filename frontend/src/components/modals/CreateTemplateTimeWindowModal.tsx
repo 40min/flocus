@@ -80,15 +80,13 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
 
 
   const handleInternalSubmit = (data: TimeWindowFormInputs, event: React.BaseSyntheticEvent | undefined) => {
-    event?.preventDefault(); // Ensure default form submission is prevented
+    event?.preventDefault();
     const { description, startTime, endTime, categoryId } = data;
 
     if (!categoryId) {
-      // This should ideally be caught by react-hook-form validation, but as a fallback
       return;
     }
     if (!startTime || !endTime) {
-      // This should ideally be caught by react-hook-form validation, but as a fallback
       return;
     }
 
@@ -103,8 +101,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
     const startTimeMinutes = hhMMToMinutes(startTimeStr);
     const endTimeMinutes = hhMMToMinutes(endTimeStr);
 
+
     if (startTimeMinutes === null || endTimeMinutes === null || endTimeMinutes <= startTimeMinutes) {
-      // This should be handled by validation rules
       return;
     }
 
@@ -117,14 +115,15 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       .filter(tw => editingTimeWindow ? tw.id !== editingTimeWindow.id : true)
       .map(tw => ({ time_window: tw, tasks: [] }));
 
-    if (checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck)) {
+    const isOverlapping = checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck);
+
+    if (isOverlapping) {
       showMessage('New time window overlaps with an existing one.', 'error');
       return;
     }
 
     const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
     if (!selectedCategory) {
-      // This should ideally be caught by react-hook-form validation
       return;
     }
 

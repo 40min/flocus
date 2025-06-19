@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import '@testing-library/jest-dom';
@@ -17,8 +17,6 @@ jest.mock('react-datepicker', () => {
   const original = jest.requireActual('react-datepicker');
   // Improved mock to avoid passing all props to the input element
   const MockDatePicker = ({ selected, onChange, id, className, ...restProps }: any) => {
-    // Only pass valid HTML attributes to the input element
-    // console.log('MockDatePicker props received:', { selected, onChange, id, className, ...restProps });
     return (
       <input
         type="text"
@@ -35,7 +33,7 @@ jest.mock('react-datepicker', () => {
             onChange(null); // Handle invalid input if necessary
           }
         }}
-        data-testid={id || "mock-datepicker"} // Use id for specific testid or a generic one
+        data-testid={id || "mock-datepicker"}
       />
     );
   };
@@ -45,7 +43,6 @@ jest.mock('react-datepicker', () => {
     default: MockDatePicker,
   };
 });
-
 
 const mockCategories: Category[] = [
   { id: 'cat1', name: 'Work', user_id: 'user1', is_deleted: false },
@@ -71,8 +68,8 @@ const renderModal = (props: Partial<React.ComponentProps<typeof CreateTemplateTi
     onClose: jest.fn(),
     onSubmit: jest.fn(),
     availableCategories: mockCategories,
-    existingTimeWindows: mockExistingTimeWindows, // Default, can be overridden by props
-    ...props,
+    existingTimeWindows: mockExistingTimeWindows,
+    ...props, // props passed to renderModal should override defaults
   };
 
   // Simple component to render messages from context
@@ -82,16 +79,19 @@ const renderModal = (props: Partial<React.ComponentProps<typeof CreateTemplateTi
     return <div data-testid="message-display" style={{ color: message.type === 'error' ? 'red' : 'green'}}>{message.text}</div>;
   };
 
+  const finalProps = { ...defaultProps, ...props };
+
+
   const { rerender, ...rest } = render(
     <QueryClientProvider client={queryClient}>
       <MessageProvider>
         <MessagesDisplay />
-        <CreateTemplateTimeWindowModal {...defaultProps} />
+        <CreateTemplateTimeWindowModal {...finalProps} />
       </MessageProvider>
     </QueryClientProvider>
   );
 
-  return { rerender, ...rest };
+  return { rerender, ...rest, props: finalProps };
 };
 
 describe('CreateTemplateTimeWindowModal', () => {
@@ -139,7 +139,6 @@ describe('CreateTemplateTimeWindowModal', () => {
     // In a real scenario, you might use userEvent.type or more complex date picker interactions.
     const startTimeInput = screen.getByLabelText(/Start Time/i);
     fireEvent.change(startTimeInput, { target: { value: '10:00' } });
-    // No need to blur with the mock, change directly calls onChange with Date
 
     const endTimeInput = screen.getByLabelText(/End Time/i);
     fireEvent.change(endTimeInput, { target: { value: '11:00' } });
@@ -175,13 +174,15 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Updated Break' } });
 
-    const startTimeInput = screen.getByLabelText(/Start Time/i);
-    fireEvent.change(startTimeInput, { target: { value: '13:30' } });
+    await act(async () => {
+      const startTimeInputEl = screen.getByLabelText<HTMLInputElement>(/Start Time/i);
+      fireEvent.change(startTimeInputEl, { target: { value: '13:30' } });
 
-    const endTimeInput = screen.getByLabelText(/End Time/i);
-    fireEvent.change(endTimeInput, { target: { value: '14:30' } });
+      const endTimeInputEl = screen.getByLabelText<HTMLInputElement>(/End Time/i);
+      fireEvent.change(endTimeInputEl, { target: { value: '14:30' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Update Time Window/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Update Time Window/i }));
+    });
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledTimes(1);
@@ -211,11 +212,11 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Add Time Window/i }));
 
-    await waitFor(() => {
+    await waitFor(() => { // waitFor for the message to appear
       expect(handleSubmit).not.toHaveBeenCalled();
-      // Expect the message to be rendered by MessagesDisplay
-      expect(screen.getByTestId('message-display')).toHaveTextContent('New time window overlaps with an existing one.');
-      expect(screen.getByTestId('message-display')).toHaveStyle('color: red');
+      const messageDisplay = screen.getByTestId('message-display');
+      expect(messageDisplay).toHaveTextContent('New time window overlaps with an existing one.');
+      expect(messageDisplay).toHaveStyle('color: red');
     });
   });
 

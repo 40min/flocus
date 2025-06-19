@@ -6,7 +6,7 @@ describe('Timeline', () => {
   const mockTimeWindows = [
     {
       id: '1',
-      start_time: '2025-01-01T09:00:00Z',
+      start_time: '2025-01-01T09:00:00Z', // Should display 9:00 AM in UTC
       end_time: '2025-01-01T10:00:00Z',
       category: {
         id: 'cat1',
@@ -16,7 +16,7 @@ describe('Timeline', () => {
     },
     {
       id: '2',
-      start_time: '2025-01-01T11:30:00Z',
+      start_time: '2025-01-01T11:30:00Z', // Should display 11:30 AM in UTC
       end_time: '2025-01-01T12:30:00Z',
       category: {
         id: 'cat2',

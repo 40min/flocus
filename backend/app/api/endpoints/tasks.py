@@ -1,17 +1,11 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from odmantic import ObjectId
 
 from app.api.schemas.llm import LLMImprovementRequest, LLMImprovementResponse
 from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
 from app.core.dependencies import get_current_active_user_id
-# LLMActionType removed as it's no longer used directly in this file
-from app.core.exceptions import (
-    LLMAPIKeyNotConfiguredError,
-    LLMGenerationError,
-    LLMServiceError,
-)
 from app.services.llm_service import LLMService
 from app.services.task_service import TaskService
 
@@ -86,20 +80,9 @@ async def improve_text_with_llm(
     Receives text and an action, and returns an LLM-generated improvement.
     This is a stateless endpoint that does not interact with any specific task in the database.
     """
-    try:
-        return await llm_service.process_llm_action(
-            action=request.action, title=request.title, description=request.description
-        )
-    except LLMAPIKeyNotConfiguredError as e:
-        raise HTTPException(status_code=500, detail=e.detail)
-    except LLMGenerationError as e:
-        raise HTTPException(status_code=500, detail=e.detail)
-    except LLMServiceError as e:
-        # Handle other LLMServiceErrors, potentially with their own status codes
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
-    except Exception as e:
-        # Catch-all for any other unexpected errors
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+    return await llm_service.process_llm_action(
+        action=request.action, title=request.title, description=request.description
+    )
 
 
 @router.get(

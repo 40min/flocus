@@ -91,7 +91,7 @@ async def error_handling_middleware(request: Request, call_next):
     except LLMServiceError as e:
         logger.error(f"LLMServiceError: {e.detail}")
         return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=e.status_code,
             content={"detail": e.detail},
         )
     except Exception as e:

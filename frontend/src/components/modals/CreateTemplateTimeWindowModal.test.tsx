@@ -6,11 +6,46 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import CreateTemplateTimeWindowModal from './CreateTemplateTimeWindowModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MessageProvider } from '../../context/MessageContext';
+import { MessageProvider, useMessage } from '../../context/MessageContext';
 import { Category } from '../../types/category';
 import { TimeWindow } from '../../types/timeWindow';
 
 const queryClient = new QueryClient();
+
+// Mock react-datepicker
+jest.mock('react-datepicker', () => {
+  const original = jest.requireActual('react-datepicker');
+  // Improved mock to avoid passing all props to the input element
+  const MockDatePicker = ({ selected, onChange, id, className, ...restProps }: any) => {
+    // Only pass valid HTML attributes to the input element
+    // console.log('MockDatePicker props received:', { selected, onChange, id, className, ...restProps });
+    return (
+      <input
+        type="text"
+        id={id} // Pass id for label association
+        className={className} // Pass className for styling if needed by tests
+        value={selected ? selected.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}) : ''}
+        onChange={(e) => {
+          const [hours, minutes] = e.target.value.split(':').map(Number);
+          if (!isNaN(hours) && !isNaN(minutes)) {
+            const newDate = new Date();
+            newDate.setHours(hours, minutes, 0, 0);
+            onChange(newDate);
+          } else {
+            onChange(null); // Handle invalid input if necessary
+          }
+        }}
+        data-testid={id || "mock-datepicker"} // Use id for specific testid or a generic one
+      />
+    );
+  };
+  return {
+    __esModule: true,
+    ...original,
+    default: MockDatePicker,
+  };
+});
+
 
 const mockCategories: Category[] = [
   { id: 'cat1', name: 'Work', user_id: 'user1', is_deleted: false },
@@ -36,13 +71,21 @@ const renderModal = (props: Partial<React.ComponentProps<typeof CreateTemplateTi
     onClose: jest.fn(),
     onSubmit: jest.fn(),
     availableCategories: mockCategories,
-    existingTimeWindows: mockExistingTimeWindows,
+    existingTimeWindows: mockExistingTimeWindows, // Default, can be overridden by props
     ...props,
+  };
+
+  // Simple component to render messages from context
+  const MessagesDisplay = () => {
+    const { message } = useMessage();
+    if (!message) return null;
+    return <div data-testid="message-display" style={{ color: message.type === 'error' ? 'red' : 'green'}}>{message.text}</div>;
   };
 
   const { rerender, ...rest } = render(
     <QueryClientProvider client={queryClient}>
       <MessageProvider>
+        <MessagesDisplay />
         <CreateTemplateTimeWindowModal {...defaultProps} />
       </MessageProvider>
     </QueryClientProvider>
@@ -85,7 +128,8 @@ describe('CreateTemplateTimeWindowModal', () => {
 
   it('calls onSubmit with correct data in add mode', async () => {
     const handleSubmit = jest.fn();
-    renderModal({ onSubmit: handleSubmit });
+    // Override existingTimeWindows to be empty for this test to avoid overlap
+    renderModal({ onSubmit: handleSubmit, existingTimeWindows: [] });
 
     fireEvent.change(screen.getByLabelText(/Category/i), { target: { value: mockCategories[0].id } });
     fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'New Time' } });
@@ -94,12 +138,11 @@ describe('CreateTemplateTimeWindowModal', () => {
     // We'll simulate selecting times by setting the input value directly for simplicity in tests.
     // In a real scenario, you might use userEvent.type or more complex date picker interactions.
     const startTimeInput = screen.getByLabelText(/Start Time/i);
-    await userEvent.type(startTimeInput, '10:00');
-    fireEvent.blur(startTimeInput); // Keep blur to trigger validation
+    fireEvent.change(startTimeInput, { target: { value: '10:00' } });
+    // No need to blur with the mock, change directly calls onChange with Date
 
     const endTimeInput = screen.getByLabelText(/End Time/i);
-    await userEvent.type(endTimeInput, '11:00');
-    fireEvent.blur(endTimeInput);
+    fireEvent.change(endTimeInput, { target: { value: '11:00' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Add Time Window/i }));
 
@@ -133,12 +176,10 @@ describe('CreateTemplateTimeWindowModal', () => {
     fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Updated Break' } });
 
     const startTimeInput = screen.getByLabelText(/Start Time/i);
-    await userEvent.type(startTimeInput, '13:30');
-    fireEvent.blur(startTimeInput);
+    fireEvent.change(startTimeInput, { target: { value: '13:30' } });
 
     const endTimeInput = screen.getByLabelText(/End Time/i);
-    await userEvent.type(endTimeInput, '14:30');
-    fireEvent.blur(endTimeInput);
+    fireEvent.change(endTimeInput, { target: { value: '14:30' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Update Time Window/i }));
 
@@ -163,18 +204,18 @@ describe('CreateTemplateTimeWindowModal', () => {
     fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Overlapping Time' } });
 
     const startTimeInput = screen.getByLabelText(/Start Time/i);
-    await userEvent.type(startTimeInput, '09:30'); // Overlaps with tw1 (09:00-12:00)
-    fireEvent.blur(startTimeInput);
+    fireEvent.change(startTimeInput, { target: { value: '09:30' } });
 
     const endTimeInput = screen.getByLabelText(/End Time/i);
-    await userEvent.type(endTimeInput, '10:30');
-    fireEvent.blur(endTimeInput);
+    fireEvent.change(endTimeInput, { target: { value: '10:30' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Add Time Window/i }));
 
     await waitFor(() => {
       expect(handleSubmit).not.toHaveBeenCalled();
-      expect(screen.getByText('New time window overlaps with an existing one.')).toBeInTheDocument();
+      // Expect the message to be rendered by MessagesDisplay
+      expect(screen.getByTestId('message-display')).toHaveTextContent('New time window overlaps with an existing one.');
+      expect(screen.getByTestId('message-display')).toHaveStyle('color: red');
     });
   });
 

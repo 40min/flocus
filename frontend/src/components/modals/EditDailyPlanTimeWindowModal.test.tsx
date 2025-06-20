@@ -6,45 +6,54 @@ import { TimeWindowAllocation } from 'types/dailyPlan';
 import { Category } from 'types/category';
 import { formatMinutesToHHMM, hhMMToMinutes } from 'lib/utils'; // checkTimeWindowOverlap is also here
 
-// Mock data
 const mockCategory: Category = {
   id: 'cat1',
   name: 'Work',
   color: '#FF0000',
-  is_default: false,
   user_id: 'user1',
-  created_at: '',
-  updated_at: '',
+  is_deleted: false,
 };
 
 const mockEditingTimeWindow: TimeWindowAllocation = {
-  id: 'tw1',
-  day: '2024-01-01',
-  start_time: 540, // 09:00
-  end_time: 600,   // 10:00
-  description: 'Morning session',
-  category: mockCategory,
-  task_allocations: [],
+  time_window: {
+    id: 'tw1',
+    description: 'Morning session',
+    start_time: 540, // 09:00
+    end_time: 600,   // 10:00
+    category: mockCategory,
+    day_template_id: 'template1', // Placeholder
+    user_id: 'user1', // Placeholder
+    is_deleted: false,
+  },
+  tasks: [],
 };
 
 const mockExistingTimeWindows: TimeWindowAllocation[] = [
   {
-    id: 'tw2',
-    day: '2024-01-01',
-    start_time: 660, // 11:00
-    end_time: 720,   // 12:00
-    description: 'Lunch break',
-    category: { ...mockCategory, id: 'cat2', name: 'Break' },
-    task_allocations: [],
+    time_window: {
+      id: 'tw2',
+      description: 'Lunch break',
+      start_time: 660, // 11:00
+      end_time: 720,   // 12:00
+      category: { ...mockCategory, id: 'cat2', name: 'Break' },
+      day_template_id: 'template1', // Placeholder
+      user_id: 'user1', // Placeholder
+      is_deleted: false,
+    },
+    tasks: [],
   },
   {
-    id: 'tw3',
-    day: '2024-01-01',
-    start_time: 780, // 13:00
-    end_time: 840,   // 14:00
-    description: 'Afternoon session',
-    category: mockCategory,
-    task_allocations: [],
+    time_window: {
+      id: 'tw3',
+      description: 'Afternoon session',
+      start_time: 780, // 13:00
+      end_time: 840,   // 14:00
+      category: mockCategory,
+      day_template_id: 'template1', // Placeholder
+      user_id: 'user1', // Placeholder
+      is_deleted: false,
+    },
+    tasks: [],
   },
 ];
 
@@ -75,12 +84,12 @@ describe('EditDailyPlanTimeWindowModal', () => {
   test('pre-fills form correctly with editingTimeWindow data', () => {
     renderModal();
 
-    expect(screen.getByLabelText(/description/i)).toHaveValue(mockEditingTimeWindow.description);
-    expect(screen.getByLabelText(/start time/i)).toHaveValue(formatMinutesToHHMM(mockEditingTimeWindow.start_time));
-    expect(screen.getByLabelText(/end time/i)).toHaveValue(formatMinutesToHHMM(mockEditingTimeWindow.end_time));
+    expect(screen.getByLabelText(/description/i)).toHaveValue(mockEditingTimeWindow.time_window.description);
+    expect(screen.getByLabelText(/start time/i)).toHaveValue(formatMinutesToHHMM(mockEditingTimeWindow.time_window.start_time));
+    expect(screen.getByLabelText(/end time/i)).toHaveValue(formatMinutesToHHMM(mockEditingTimeWindow.time_window.end_time));
 
     const categoryInput = screen.getByLabelText(/category/i) as HTMLInputElement;
-    expect(categoryInput).toHaveValue(mockEditingTimeWindow.category.name);
+    expect(categoryInput).toHaveValue(mockEditingTimeWindow.time_window.category.name);
     expect(categoryInput).toBeDisabled();
   });
 
@@ -99,8 +108,8 @@ describe('EditDailyPlanTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
-        id: mockEditingTimeWindow.id,
-        category_id: mockEditingTimeWindow.category.id,
+        id: mockEditingTimeWindow.time_window.id,
+        category_id: mockEditingTimeWindow.time_window.category.id,
         description: newDescription,
         start_time: hhMMToMinutes(newStartTime),
         end_time: hhMMToMinutes(newEndTime),
@@ -156,9 +165,9 @@ describe('EditDailyPlanTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
-        id: mockEditingTimeWindow.id,
-        category_id: mockEditingTimeWindow.category.id,
-        description: mockEditingTimeWindow.description, // Description wasn't changed in this test
+        id: mockEditingTimeWindow.time_window.id,
+        category_id: mockEditingTimeWindow.time_window.category.id,
+        description: mockEditingTimeWindow.time_window.description, // Description wasn't changed in this test
         start_time: hhMMToMinutes('08:00'),
         end_time: hhMMToMinutes('08:30'),
       });
@@ -175,11 +184,11 @@ describe('EditDailyPlanTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
-        id: mockEditingTimeWindow.id,
-        category_id: mockEditingTimeWindow.category.id,
-        description: mockEditingTimeWindow.description,
-        start_time: mockEditingTimeWindow.start_time,
-        end_time: mockEditingTimeWindow.end_time,
+        id: mockEditingTimeWindow.time_window.id,
+        category_id: mockEditingTimeWindow.time_window.category.id,
+        description: mockEditingTimeWindow.time_window.description,
+        start_time: mockEditingTimeWindow.time_window.start_time,
+        end_time: mockEditingTimeWindow.time_window.end_time,
       });
     });
     expect(screen.queryByText(/time window overlaps with an existing time window/i)).not.toBeInTheDocument();

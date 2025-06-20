@@ -44,6 +44,7 @@ interface SharedTimerContextType {
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
   setOnTaskComplete: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
+  stopCurrentTask: () => void;
 }
 
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
@@ -56,6 +57,20 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
   const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
+
+  const stopCurrentTask = async () => {
+    if (currentTaskId && onTaskComplete) {
+      try {
+        await onTaskComplete(currentTaskId, { status: 'PENDING' });
+      } catch (error) {
+        console.error("Failed to update task status to PENDING:", error);
+        // Optionally, handle the error more gracefully (e.g., show a notification to the user)
+      }
+    }
+    setCurrentTaskId(undefined);
+    setCurrentTaskName(undefined);
+    setOnTaskComplete(undefined);
+  };
 
   const handleTaskCompletion = useCallback(async () => {
     if (currentTaskId && onTaskComplete) {
@@ -168,6 +183,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setCurrentTaskId,
     setCurrentTaskName,
     setOnTaskComplete,
+    stopCurrentTask,
   };
 
   return (

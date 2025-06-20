@@ -837,6 +837,63 @@ async def test_create_daily_plan_fail_task_category_mismatch(
     assert "Task category does not match Time Window category" in response.json()["detail"]
 
 
+async def test_update_daily_plan_with_overlapping_time_windows(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel, # Renamed from test_user for consistency with existing tests
+    user_one_category: CategoryModel, # Renamed from created_category
+    test_db, # Added db_session equivalent for creating plan
+):
+    # a. Define initial valid time windows
+    initial_time_windows = [
+        {"category_id": str(user_one_category.id), "start_time": 60, "end_time": 120, "description": "Morning Prep"},
+        {"category_id": str(user_one_category.id), "start_time": 180, "end_time": 240, "description": "Work Block 1"},
+    ]
+
+    # b. Create a daily plan
+    plan_date_str = datetime.now(timezone.utc).isoformat()
+    create_data = {
+        "plan_date": plan_date_str,
+        "time_windows": initial_time_windows,
+        "user_id": str(test_user_one.id), # Ensure user_id is part of creation if needed by service logic indirectly
+    }
+    # Use DailyPlanCreateRequest for payload construction to ensure all fields are correct
+    # However, the endpoint expects a raw dict, so model_dump it.
+    # The direct dict usage above is fine as long as it matches the expected structure.
+
+    response = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_data
+    )
+    assert response.status_code == 201, f"Failed to create daily plan: {response.text}"
+    created_plan_id = response.json()["id"]
+
+    # c. Define overlapping time windows for the update
+    overlapping_time_windows = [
+        {"category_id": str(user_one_category.id), "start_time": 30, "end_time": 90, "description": "Overlap 1"},
+        {"category_id": str(user_one_category.id), "start_time": 60, "end_time": 120, "description": "Overlap 2"},
+    ]
+    update_data = {"time_windows": overlapping_time_windows}
+
+    # d. Attempt to update the daily plan
+    response = await async_client.put(
+        f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
+        headers=auth_headers_user_one,
+        json=update_data,
+    )
+
+    # e. Assert that the response status code is 422
+    assert response.status_code == 422, f"Actual status code: {response.status_code}, Response: {response.text}"
+
+    # f. Assert that the response JSON detail contains the expected error message
+    response_data = response.json()
+    assert "detail" in response_data
+    # Ensure the detail is a string or can be converted to string for robust checking
+    detail_str = str(response_data["detail"])
+    assert "Time windows overlap" in detail_str
+    assert "(30-90)" in detail_str
+    assert "(60-120)" in detail_str
+
+
 async def test_create_daily_plan_success_task_no_category(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],

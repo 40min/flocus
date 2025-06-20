@@ -4,26 +4,7 @@ from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.api.schemas.time_window import TimeWindowInputSchema, TimeWindowResponse
-
-
-# Helper function to validate time window overlaps
-def _ensure_time_windows_do_not_overlap(time_windows_list: List[TimeWindowInputSchema]) -> None:
-    """Checks if any time windows in the list overlap. Raises ValueError if they do."""
-    if not time_windows_list or len(time_windows_list) < 2:
-        return  # No overlap possible with 0 or 1 window
-
-    # Sort by start_time to check adjacent windows
-    sorted_windows = sorted(time_windows_list, key=lambda tw: tw.start_time)
-
-    for i in range(len(sorted_windows) - 1):
-        current_window = sorted_windows[i]
-        next_window = sorted_windows[i + 1]
-        # Check for overlap: next window starts before current one ends
-        if next_window.start_time < current_window.end_time:
-            raise ValueError(
-                f"Time windows overlap: ({current_window.start_time}-{current_window.end_time}) and "
-                f"({next_window.start_time}-{next_window.end_time})"
-            )
+from app.api.schemas.utils import ensure_time_windows_do_not_overlap
 
 
 class DayTemplateBase(BaseModel):
@@ -36,7 +17,7 @@ class DayTemplateCreateRequest(DayTemplateBase):
 
     @model_validator(mode="after")
     def check_time_windows_do_not_overlap(self) -> "DayTemplateCreateRequest":
-        _ensure_time_windows_do_not_overlap(self.time_windows)
+        ensure_time_windows_do_not_overlap(self.time_windows)
         return self
 
 
@@ -48,7 +29,7 @@ class DayTemplateUpdateRequest(BaseModel):  # Allow partial updates
     @model_validator(mode="after")
     def check_time_windows_do_not_overlap(self) -> "DayTemplateUpdateRequest":
         if self.time_windows is not None:
-            _ensure_time_windows_do_not_overlap(self.time_windows)
+            ensure_time_windows_do_not_overlap(self.time_windows)
         return self
 
 

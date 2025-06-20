@@ -5,6 +5,7 @@ from odmantic import ObjectId
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.api.schemas.task import TaskResponse
+from app.api.schemas.utils import ensure_time_windows_do_not_overlap
 # Import the TimeWindowResponse from the other module and alias it to avoid name collision
 from app.api.schemas.time_window import TimeWindowResponse as ImportedTimeWindowResponse
 
@@ -74,6 +75,12 @@ class DailyPlanUpdateRequest(BaseModel):
     notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
     reviewed: Optional[bool] = Field(None, description="Whether the daily plan has been reviewed.")
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def check_time_windows_overlap(self) -> "DailyPlanUpdateRequest":
+        if self.time_windows is not None:
+            ensure_time_windows_do_not_overlap(self.time_windows)
+        return self
 
 
 class DailyPlanResponse(DailyPlanBase):

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TimeWindow as TimeWindowType } from 'types/timeWindow';
 import { Task as TaskType } from 'types/task';
 import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from 'lib/utils';
-import { Clock, XCircle, PlusCircle } from 'lucide-react';
+import { Clock, XCircle, PlusCircle, Edit3 } from 'lucide-react';
 import AssignedTaskBalloon from './AssignedTaskBalloon';
 import TaskPicker from './TaskPicker';
 
@@ -10,6 +10,7 @@ interface TimeWindowBalloonProps {
   timeWindow: TimeWindowType;
   tasks?: TaskType[];
   onDelete?: (timeWindowId: string) => void;
+  onEdit?: (timeWindowId: string) => void;
   onAssignTask?: (task: TaskType) => void;
   onUnassignTask?: (taskId: string) => void;
 }
@@ -40,6 +41,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
   timeWindow,
   tasks = [],
   onDelete,
+  onEdit,
   onAssignTask,
   onUnassignTask,
 }) => {
@@ -79,15 +81,26 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{description}</p>
               )}
             </div>
-            {onDelete && (
-              <button
-                onClick={() => onDelete(id)}
-                className="text-slate-400 hover:text-red-500 transition-colors"
-                aria-label="Delete time window"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            )}
+            <div className="flex items-center">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(id)}
+                  className="text-slate-400 hover:text-blue-500 transition-colors mr-2"
+                  aria-label="Edit time window"
+                >
+                  <Edit3 className="h-5 w-5" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(id)}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  aria-label="Delete time window"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center justify-between text-sm md:text-base mt-2">
             <div className="flex items-center gap-4">

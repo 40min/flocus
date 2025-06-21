@@ -28,6 +28,7 @@ jest.mock('../context/SharedTimerContext', () => ({
     setOnTaskComplete: mockSetOnTaskComplete,
     isActive: false,
     handleStartPause: mockHandleStartPause,
+    formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
   })),
 }));
 
@@ -101,6 +102,7 @@ describe('DashboardPage - handleDragEnd', () => {
       setOnTaskComplete: mockSetOnTaskComplete,
       isActive: true, // Assuming the timer is active with the current task
       handleStartPause: mockHandleStartPause,
+      formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
     });
 
     render(
@@ -114,10 +116,11 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, disabled: false },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
       collisions: [], // Can be empty if not relevant to the logic being tested
       delta: { x: 0, y: 0 }, // Can be zero if not relevant
-      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0}, data: {}, disabled: false },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false },
+      activatorEvent: {} as any,
     };
 
     // Call the captured onDragEnd
@@ -143,10 +146,11 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, disabled: false },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
       collisions: [],
       delta: { x: 0, y: 0 },
-      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0}, data: {}, disabled: false },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false },
+      activatorEvent: {} as any,
     };
 
     act(() => {
@@ -162,6 +166,7 @@ describe('DashboardPage - handleDragEnd', () => {
     (useSharedTimerContext as jest.Mock).mockReturnValue({
       currentTaskId: 'task1', // Simulate task1 is already active
       stopCurrentTask: mockStopCurrentTask,
+      formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
       // ... other mocks returned by useSharedTimerContext
     });
 
@@ -172,10 +177,11 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, disabled: false },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
       collisions: [],
       delta: { x: 0, y: 0 },
-      over: { id: 'some-other-drop-zone', rect: {width:0, height:0, left:0, top:0}, data: {}, disabled: false }, // Different drop zone
+      over: { id: 'some-other-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false }, // Different drop zone
+      activatorEvent: {} as any,
     };
 
     act(() => {

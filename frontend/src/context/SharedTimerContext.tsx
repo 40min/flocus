@@ -58,7 +58,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
   const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
-  const stopCurrentTask = async () => {
+  const stopCurrentTask = useCallback(async () => {
     if (currentTaskId && onTaskComplete) {
       try {
         await onTaskComplete(currentTaskId, { status: 'pending' });
@@ -70,20 +70,13 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
     setOnTaskComplete(undefined);
-  };
-
-  const handleTaskCompletion = useCallback(async () => {
-    if (currentTaskId && onTaskComplete) {
-      await onTaskComplete(currentTaskId, { status: 'done' });
-    }
-  }, [currentTaskId, onTaskComplete]);
+  }, []); // MODIFIED: Added dependency array
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
     if (mode === 'work') {
-      // await handleTaskCompletion(); // Original line
-      await stopCurrentTask(); // Replace handleTaskCompletion with stopCurrentTask
+      await stopCurrentTask();
       const newPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(newPomodorosCount);
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
@@ -122,7 +115,8 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
     }
-  }, []);
+  });
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;

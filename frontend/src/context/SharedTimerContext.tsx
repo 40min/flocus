@@ -82,7 +82,8 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setIsActive(false);
 
     if (mode === 'work') {
-      await handleTaskCompletion();
+      // await handleTaskCompletion(); // Original line
+      await stopCurrentTask(); // Replace handleTaskCompletion with stopCurrentTask
       const newPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(newPomodorosCount);
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
@@ -92,7 +93,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       setMode('work');
       setTimeRemaining(WORK_DURATION);
     }
-  }, [mode, pomodorosCompleted, handleTaskCompletion]);
+  }, [mode, pomodorosCompleted, stopCurrentTask]); // Update dependencies array
 
   useEffect(() => {
     try {
@@ -142,8 +143,17 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [mode, timeRemaining, isActive, pomodorosCompleted]);
 
-  const handleStartPause = () => setIsActive(prev => !prev);
-  const handleReset = () => { setIsActive(false); setTimeRemaining(DURATION_MAP[mode]); };
+  const handleStartPause = () => {
+    if (isActive) { // Check if the timer is currently active (i.e., about to be paused)
+      stopCurrentTask();
+    }
+    setIsActive(prev => !prev);
+  };
+  const handleReset = () => {
+    stopCurrentTask(); // Call stopCurrentTask before resetting the timer
+    setIsActive(false);
+    setTimeRemaining(DURATION_MAP[mode]);
+  };
   const handleSkip = () => switchToNextMode();
 
   const formatTime = (seconds: number) => {

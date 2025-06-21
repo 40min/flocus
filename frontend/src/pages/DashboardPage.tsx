@@ -10,7 +10,7 @@ import { useUpdateTask } from '../hooks/useTasks';
 import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskComplete, isActive, handleStartPause, setCurrentTaskName } = useSharedTimerContext();
+  const { setCurrentTaskId, setOnTaskComplete, isActive, handleStartPause, setCurrentTaskName, currentTaskId, stopCurrentTask } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -31,6 +31,10 @@ const DashboardPage: React.FC = () => {
       }
 
       if (draggedTask) {
+        // If there's a current task, stop it before starting the new one
+        if (currentTaskId) { // currentTaskId is imported from useSharedTimerContext
+          stopCurrentTask(); // stopCurrentTask is imported from useSharedTimerContext
+        }
         setCurrentTaskId(taskId);
         setCurrentTaskName(draggedTask.title);
         setOnTaskComplete(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));

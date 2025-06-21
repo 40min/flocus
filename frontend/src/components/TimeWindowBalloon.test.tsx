@@ -44,6 +44,7 @@ describe('TimeWindowBalloon', () => {
 
   it('does not render unassign button when onUnassignTask prop is not provided', () => {
     renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} tasks={mockTasks} />);
+
     expect(screen.queryByLabelText(`Unassign task: ${mockTasks[0].title}`)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(`Unassign task: ${mockTasks[1].title}`)).not.toBeInTheDocument();
   });
@@ -54,6 +55,15 @@ describe('TimeWindowBalloon', () => {
     const deleteButton = screen.getByLabelText('Delete time window');
     fireEvent.click(deleteButton);
     expect(onDeleteMock).toHaveBeenCalledWith('tw1');
+  });
+it('renders edit button and calls onEdit when clicked', () => {
+    const onEditMock = jest.fn();
+    renderWithClient(
+      <TimeWindowBalloon timeWindow={mockTimeWindow} onEdit={onEditMock} />
+    );
+    const editButton = screen.getByLabelText('Edit time window');
+    fireEvent.click(editButton);
+    expect(onEditMock).toHaveBeenCalledTimes(1);
   });
 
   it('renders assign task button and opens TaskPicker when clicked', () => {

@@ -9,12 +9,13 @@ import { DayTemplateResponse } from '../types/dayTemplate';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
 import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
-import { TimeWindow } from '../types/timeWindow';
+import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
 import { Task } from '../types/task';
 import { useMessage } from '../context/MessageContext';
 import { useTodayDailyPlan, useYesterdayDailyPlan } from '../hooks/useDailyPlan';
 import { useTemplates } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
+import EditDailyPlanTimeWindowModal from 'components/modals/EditDailyPlanTimeWindowModal';
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -29,6 +30,8 @@ const MyDayPage: React.FC = () => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<DayTemplateResponse | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindowAllocation | null>(null);
   const [showYesterdayReview, setShowYesterdayReview] = useState(false);
 
   const createPlanMutation = useMutation({
@@ -154,6 +157,35 @@ const MyDayPage: React.FC = () => {
     });
   };
 
+  const handleOpenEditModal = (allocation: TimeWindowAllocation) => {
+    setEditingTimeWindow(allocation);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingTimeWindow(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleUpdateTimeWindow = (updatedData: TimeWindowCreateRequest & { id: string }) => {
+    setDailyPlan(prevPlan => {
+      if (!prevPlan) return null;
+      const newTimeWindows = prevPlan.time_windows.map(alloc => {
+        if (alloc.time_window.id === updatedData.id) {
+          const updatedTimeWindow = {
+            ...alloc.time_window,
+            description: updatedData.description,
+            start_time: updatedData.start_time,
+            end_time: updatedData.end_time,
+          };
+          return { ...alloc, time_window: updatedTimeWindow };
+        }
+        return alloc;
+      });
+      return { ...prevPlan, time_windows: newTimeWindows as TimeWindowResponse[] };
+    });
+  };
+
   const handleSaveDailyPlan = async () => {
       if (!dailyPlan) {
         showMessage('No daily plan to save.', 'error');
@@ -235,6 +267,7 @@ const MyDayPage: React.FC = () => {
                         timeWindow={alloc.time_window}
                         tasks={alloc.tasks}
                         onDelete={handleDeleteTimeWindow}
+                        onEdit={() => handleOpenEditModal(alloc)}
                         onAssignTask={task => handleAssignTask(alloc.time_window.id, task)}
                         onUnassignTask={taskId => handleUnassignTask(alloc.time_window.id, taskId)}
                       />
@@ -419,9 +452,17 @@ const MyDayPage: React.FC = () => {
         categories={categories}
         existingTimeWindows={dailyPlan?.time_windows || []}
       />
+      {dailyPlan && editingTimeWindow && (
+        <EditDailyPlanTimeWindowModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSubmit={handleUpdateTimeWindow}
+          editingTimeWindow={editingTimeWindow}
+          existingTimeWindows={dailyPlan.time_windows}
+        />
+      )}
     </main>
   );
 };
-
 
 export default MyDayPage;

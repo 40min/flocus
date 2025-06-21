@@ -19,13 +19,13 @@ jest.mock('hooks/useDailyPlan');
 jest.mock('hooks/useTemplates');
 jest.mock('hooks/useCategories');
 jest.mock('services/dailyPlanService');
-jest.mock('context/MessageContext', () => {
-  const originalModule = jest.requireActual('context/MessageContext');
-  return {
-    ...originalModule,
-    useMessage: jest.fn(),
-  };
-});
+jest.mock('components/modals/EditDailyPlanTimeWindowModal', () => ({
+  __esModule: true,
+  default: ({ isOpen }: any) => (isOpen ? <div data-testid="edit-modal">Mock Edit Modal</div> : null),
+}));
+jest.mock('context/MessageContext', () => ({
+  useMessage: jest.fn(),
+}));
 
 const mockedUseTodayDailyPlan = useTodayDailyPlan as jest.Mock;
 const mockedUseYesterdayDailyPlan = useYesterdayDailyPlan as jest.Mock;
@@ -190,6 +190,7 @@ describe('MyDayPage', () => {
         notes_content: null,
       };
 
+
       beforeEach(() => {
         mockedUseYesterdayDailyPlan.mockReturnValue({ data: mockYesterdayPlan, isLoading: false });
         mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
@@ -306,6 +307,61 @@ it("hides review section when a template is selected", async () => {
           time_windows: [],
         });
       });
+it('opens, submits edit modal, and saves the plan with updated data', async () => {
+      mockedUpdateDailyPlan.mockResolvedValue({});
+      renderComponent();
+
+      // 1. Find and click the edit button
+      await screen.findByText('Morning work');
+      const editButton = screen.getByLabelText('Edit time window');
+      fireEvent.click(editButton);
+
+      // 2. Assert modal is open and has correct data
+      await screen.findByTestId('edit-modal');
+      expect(screen.getByText('Editing: Morning work')).toBeInTheDocument();
+
+      // 3. Simulate submitting the modal
+      const submitModalButton = screen.getByRole('button', { name: 'Submit' });
+      fireEvent.click(submitModalButton);
+
+      // The real component calls onClose after onSubmit, our test should reflect that we close the modal to see the change
+      const closeButton = await screen.findByRole('button', { name: /close/i });
+      fireEvent.click(closeButton);
+
+      // 4. Assert local state (DOM) is updated and modal is closed
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-modal')).not.toBeInTheDocument();
+      });
+      expect(screen.getByText('Updated description from test')).toBeInTheDocument();
+      expect(screen.queryByText('Morning work')).not.toBeInTheDocument();
+
+      // 5. Click the main Save button for the page
+      const savePlanButton = screen.getByRole('button', { name: 'Save' });
+      fireEvent.click(savePlanButton);
+
+      // 6. Assert that updateDailyPlan was called with the new data
+      await waitFor(() => {
+        expect(mockedUpdateDailyPlan).toHaveBeenCalledWith('plan1', {
+          time_windows: expect.arrayContaining([
+            expect.objectContaining({
+              description: 'Updated description from test',
+              start_time: 99,
+              end_time: 199,
+            })
+          ])
+        });
+      });
     });
+
+
+
+
+    });
+
+
+
+
+
   });
-});
+
+  });

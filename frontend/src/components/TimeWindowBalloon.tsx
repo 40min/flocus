@@ -10,7 +10,7 @@ interface TimeWindowBalloonProps {
   timeWindow: TimeWindowType;
   tasks?: TaskType[];
   onDelete?: (timeWindowId: string) => void;
-  onEdit?: (timeWindowId: string) => void;
+  onEdit?: () => void;
   onAssignTask?: (task: TaskType) => void;
   onUnassignTask?: (taskId: string) => void;
 }
@@ -84,7 +84,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
             <div className="flex items-center">
               {onEdit && (
                 <button
-                  onClick={() => onEdit(id)}
+                  onClick={onEdit}
                   className="text-slate-400 hover:text-blue-500 transition-colors mr-2"
                   aria-label="Edit time window"
                 >

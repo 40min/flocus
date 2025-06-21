@@ -61,9 +61,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const stopCurrentTask = async () => {
     if (currentTaskId && onTaskComplete) {
       try {
-        await onTaskComplete(currentTaskId, { status: 'PENDING' });
+        await onTaskComplete(currentTaskId, { status: 'pending' });
       } catch (error) {
-        console.error("Failed to update task status to PENDING:", error);
+        console.error("Failed to update task status to 'pending':", error);
         // Optionally, handle the error more gracefully (e.g., show a notification to the user)
       }
     }

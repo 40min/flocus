@@ -26,14 +26,12 @@ const TestComponent: React.FC<TestComponentProps> = ({ onTaskCompleteMock }) => 
   } = useSharedTimerContext();
 
   useEffect(() => {
-    act(() => {
-      setCurrentTaskId('test-task-id');
-      if (onTaskCompleteMock) {
-        setOnTaskComplete(() => onTaskCompleteMock);
-      } else {
-        setOnTaskComplete(() => jest.fn());
-      }
-    });
+    setCurrentTaskId('test-task-id');
+    if (onTaskCompleteMock) {
+      setOnTaskComplete(() => onTaskCompleteMock);
+    } else {
+      setOnTaskComplete(() => jest.fn());
+    }
   }, [setCurrentTaskId, setOnTaskComplete, onTaskCompleteMock]);
 
   return (

@@ -10,12 +10,12 @@ import { useUpdateTask } from '../hooks/useTasks';
 import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskChanged, isActive, handleStartPause, setCurrentTaskName, currentTaskId, stopCurrentTask } = useSharedTimerContext();
+  const { setCurrentTaskId, setOnTaskChanged, isActive, handleStartPause, setCurrentTaskName, resetForNewTask } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     if (event.over?.id === 'pomodoro-drop-zone') {
       const taskId = event.active.id as string;
       let draggedTask;
@@ -31,19 +31,13 @@ const DashboardPage: React.FC = () => {
       }
 
       if (draggedTask) {
-        // If there's a current task, stop it before starting the new one
-        if (currentTaskId) { // currentTaskId is imported from useSharedTimerContext
-          stopCurrentTask(); // stopCurrentTask is imported from useSharedTimerContext
-        }
+        await resetForNewTask();
         setCurrentTaskId(taskId);
         setCurrentTaskName(draggedTask.title);
         setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
 
-        // Update task status to "In Progress" immediately
-        updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
-
         if (!isActive) {
-          handleStartPause();
+          await handleStartPause();
         }
       }
     }

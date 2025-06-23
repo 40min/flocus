@@ -11,23 +11,23 @@ jest.mock('../hooks/useDailyPlan');
 jest.mock('../hooks/useTasks');
 
 // Variables to hold mock functions for SharedTimerContext
-const mockStopCurrentTask = jest.fn();
 const mockSetCurrentTaskId = jest.fn();
 const mockSetCurrentTaskName = jest.fn();
 const mockSetOnTaskChanged = jest.fn();
 const mockHandleStartPause = jest.fn();
+const mockResetForNewTask = jest.fn();
 
 // Mock SharedTimerContext
 jest.mock('../context/SharedTimerContext', () => ({
   ...jest.requireActual('../context/SharedTimerContext'), // Import and retain SharedTimerProvider
   useSharedTimerContext: jest.fn(() => ({ // Default implementation for useSharedTimerContext
     currentTaskId: undefined,
-    stopCurrentTask: mockStopCurrentTask,
     setCurrentTaskId: mockSetCurrentTaskId,
     setCurrentTaskName: mockSetCurrentTaskName,
     setOnTaskChanged: mockSetOnTaskChanged,
     isActive: false,
     handleStartPause: mockHandleStartPause,
+    resetForNewTask: mockResetForNewTask,
     formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
   })),
 }));
@@ -47,11 +47,11 @@ jest.mock('@dnd-kit/core', () => ({
 describe('DashboardPage - handleDragEnd', () => {
   beforeEach(() => {
     // Reset mocks before each test
-    mockStopCurrentTask.mockClear();
     mockSetCurrentTaskId.mockClear();
     mockSetCurrentTaskName.mockClear();
     mockSetOnTaskChanged.mockClear();
     mockHandleStartPause.mockClear();
+    mockResetForNewTask.mockClear();
 
     // Reset capturedOnDragEnd to a state that would indicate if it's not properly captured
     capturedOnDragEnd = () => { throw new Error("onDragEnd not captured in this test run") };
@@ -81,28 +81,27 @@ describe('DashboardPage - handleDragEnd', () => {
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue({}) });
 
     // Default mock for useSharedTimerContext for most tests (can be overridden)
-    (useSharedTimerContext as jest.Mock).mockReturnValue({
-        currentTaskId: undefined,
-        stopCurrentTask: mockStopCurrentTask,
-        setCurrentTaskId: mockSetCurrentTaskId,
-        setCurrentTaskName: mockSetCurrentTaskName,
-        setOnTaskChanged: mockSetOnTaskChanged,
-        isActive: false,
-        handleStartPause: mockHandleStartPause,
-        formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
-    });
+    (useSharedTimerContext as jest.Mock).mockImplementation(() => ({
+      currentTaskId: undefined,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setOnTaskChanged: mockSetOnTaskChanged,
+      isActive: false,
+      handleStartPause: mockHandleStartPause,
+      resetForNewTask: mockResetForNewTask,
+      formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
+    }));
   });
 
-  it('should call stopCurrentTask if a task is active when a new task is dragged to pomodoro zone', () => {
-    // Override useSharedTimerContext mock for this specific test
+  it('should reset timer when a new task is dragged to pomodoro zone', async () => {
     (useSharedTimerContext as jest.Mock).mockReturnValue({
       currentTaskId: 'task1', // Simulate task1 is already active
-      stopCurrentTask: mockStopCurrentTask,
       setCurrentTaskId: mockSetCurrentTaskId,
       setCurrentTaskName: mockSetCurrentTaskName,
       setOnTaskChanged: mockSetOnTaskChanged,
       isActive: true, // Assuming the timer is active with the current task
       handleStartPause: mockHandleStartPause,
+      resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
     });
 
@@ -117,28 +116,26 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
       collisions: [], // Can be empty if not relevant to the logic being tested
       delta: { x: 0, y: 0 }, // Can be zero if not relevant
-      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false } as DragEndEvent['over'],
       activatorEvent: {} as any,
     };
 
     // Call the captured onDragEnd
     // This simulates DndContext invoking the onDragEnd handler passed to it by DashboardPage
-    act(() => {
-      capturedOnDragEnd(dragEndEvent);
-    });
+    await act(async () => {
+      await capturedOnDragEnd(dragEndEvent);
+    })
 
-    expect(mockStopCurrentTask).toHaveBeenCalledTimes(1);
+    expect(mockResetForNewTask).toHaveBeenCalledTimes(1);
     // Also verify that the new task is set (optional, but good for completeness)
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
   });
 
-  it('should NOT call stopCurrentTask if NO task is active when a new task is dragged', () => {
-    // useSharedTimerContext is already mocked by default in beforeEach to have currentTaskId = undefined
-    // So, no need to override useSharedTimerContext mock here for currentTaskId
+  it('should reset and start timer if not active when a new task is dragged', async () => {
 
     render(
       <SharedTimerProvider>
@@ -147,26 +144,27 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
       collisions: [],
       delta: { x: 0, y: 0 },
-      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false } as DragEndEvent['over'],
       activatorEvent: {} as any,
     };
 
-    act(() => {
-      capturedOnDragEnd(dragEndEvent);
-    });
+    await act(async () => {
+      await capturedOnDragEnd(dragEndEvent);
+    })
 
-    expect(mockStopCurrentTask).not.toHaveBeenCalled();
+    expect(mockResetForNewTask).toHaveBeenCalledTimes(1);
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
+    expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
   });
 
-  it('should not call stopCurrentTask or set new task if not dragged to pomodoro zone', () => {
+  it('should not do anything if not dragged to pomodoro zone', async () => {
     (useSharedTimerContext as jest.Mock).mockReturnValue({
       currentTaskId: 'task1', // Simulate task1 is already active
-      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
       // ... other mocks returned by useSharedTimerContext
     });
@@ -178,18 +176,18 @@ describe('DashboardPage - handleDragEnd', () => {
     );
 
     const dragEndEvent: DragEndEvent = {
-      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } },
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
       collisions: [],
       delta: { x: 0, y: 0 },
-      over: { id: 'some-other-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false }, // Different drop zone
+      over: { id: 'some-other-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false } as DragEndEvent['over'], // Different drop zone
       activatorEvent: {} as any,
     };
 
-    act(() => {
-      capturedOnDragEnd(dragEndEvent);
-    });
+    await act(async () => {
+      await capturedOnDragEnd(dragEndEvent);
+    })
 
-    expect(mockStopCurrentTask).not.toHaveBeenCalled();
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskId).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskName).not.toHaveBeenCalled();
   });

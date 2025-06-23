@@ -31,7 +31,7 @@ interface SharedTimerContextType {
   pomodorosCompleted: number;
   handleStartPause: () => void;
   handleReset: () => void;
-  handleSkip: () => void;
+  handleSkip: () => Promise<void>;
   formatTime: (seconds: number) => string;
   isBreak: boolean;
   timerColor: string;
@@ -45,6 +45,7 @@ interface SharedTimerContextType {
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
   setOnTaskChanged: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
   stopCurrentTask: () => Promise<void>;
+  resetForNewTask: () => Promise<void>;
 }
 
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
@@ -63,13 +64,13 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       try {
         await onTaskChanged(currentTaskId, { status: 'pending' });
       } catch (error) {
-        console.error("Failed to update task status to 'done':", error);
+        console.error("Failed to update task status to 'pending':", error);
       }
     }
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
     setOnTaskChanged(undefined);
-  }, [currentTaskId, onTaskChanged]); // FIXED: Added dependencies
+  }, [currentTaskId, onTaskChanged]);
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
@@ -87,7 +88,6 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [mode, pomodorosCompleted, stopCurrentTask]);
 
-  // FIXED: Added dependency array to prevent infinite loop
   useEffect(() => {
     try {
       const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -115,14 +115,13 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
     }
-  }, []); // FIXED: Added empty dependency array
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeRemaining > 0) {
       interval = setInterval(() => setTimeRemaining(prev => prev - 1), 1000);
     } else if (isActive && timeRemaining <= 0) {
-      // IMPROVED: Make timer completion async-safe
       const handleTimerComplete = async () => {
         await switchToNextMode();
       };
@@ -140,28 +139,35 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [mode, timeRemaining, isActive, pomodorosCompleted]);
 
-  const handleStartPause = useCallback(() => {
-    if (isActive) {
-      stopCurrentTask();
+  const handleStartPause = useCallback(async () => {
+    if (currentTaskId && onTaskChanged) {
+      await onTaskChanged(currentTaskId, { status: isActive ? 'pending' : 'in_progress' });
     }
     setIsActive(prev => !prev);
-  }, [isActive, stopCurrentTask]); // IMPROVED: Added dependencies
+  }, [isActive, currentTaskId, onTaskChanged]);
 
-  const handleReset = useCallback(() => {
-    stopCurrentTask();
+  const handleReset = useCallback(async () => {
+    await stopCurrentTask();
     setIsActive(false);
     setTimeRemaining(DURATION_MAP[mode]);
-  }, [stopCurrentTask, mode]); // IMPROVED: Added dependencies
+  }, [stopCurrentTask, mode]);
 
-  const handleSkip = useCallback(() => {
-    switchToNextMode();
-  }, [switchToNextMode]); // IMPROVED: Added dependency
+  const resetForNewTask = useCallback(async () => {
+    await stopCurrentTask();
+    setIsActive(false);
+    setMode('work');
+    setTimeRemaining(WORK_DURATION);
+  }, [stopCurrentTask]);
+
+  const handleSkip = useCallback(async () => {
+    await switchToNextMode();
+  }, [switchToNextMode]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
     return `${mins}:${secs}`;
-  }, []); // IMPROVED: Made it a useCallback for performance
+  }, []);
 
   const isBreak = mode !== 'work';
   const timerColor = isBreak ? 'border-accent-DEFAULT' : 'border-primary-DEFAULT';
@@ -195,6 +201,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setCurrentTaskName,
     setOnTaskChanged,
     stopCurrentTask,
+    resetForNewTask,
   };
 
   return (

@@ -23,6 +23,29 @@ class TaskService:
     def __init__(self, engine: AIOEngine = Depends(get_database)):
         self.engine = engine
 
+    async def _fetch_tasks_with_categories(
+        self, tasks_models: List[Task], current_user_id: ObjectId
+    ) -> List[TaskResponse]:
+        category_ids = {task.category_id for task in tasks_models if task.category_id}
+        categories_model_map: Dict[ObjectId, Category] = {}
+        if category_ids:
+            category_models = await self.engine.find(
+                Category,
+                Category.id.in_(list(category_ids)),
+                Category.user == current_user_id,
+                Category.is_deleted == False,  # noqa: E712
+            )
+            categories_model_map = {cat.id: cat for cat in category_models}
+
+        task_responses = []
+        for task_model in tasks_models:
+            category_model_for_task = (
+                categories_model_map.get(task_model.category_id) if task_model.category_id else None
+            )
+            task_responses.append(TaskMapper.to_response(task_model, category_model_for_task))
+
+        return task_responses
+
     async def create_task(self, task_data: TaskCreateRequest, current_user_id: ObjectId) -> TaskResponse:
         existing_task_title = await self.engine.find_one(
             Task,
@@ -131,24 +154,7 @@ class TaskService:
 
         tasks_models = await self.engine.find(Task, *query_conditions, sort=sort_expression)
 
-        # Batch fetch categories
-        category_ids = {task.category_id for task in tasks_models if task.category_id}
-        categories_model_map: Dict[ObjectId, Category] = {}
-        if category_ids:
-            category_models = await self.engine.find(
-                Category,
-                Category.id.in_(list(category_ids)),
-                Category.user == current_user_id,
-                Category.is_deleted == False,  # noqa: E712
-            )
-            categories_model_map = {cat.id: cat for cat in category_models}
-
-        task_responses = []
-        for task_model in tasks_models:
-            category_model_for_task = (
-                categories_model_map.get(task_model.category_id) if task_model.category_id else None
-            )
-            task_responses.append(TaskMapper.to_response(task_model, category_model_for_task))
+        task_responses = await self._fetch_tasks_with_categories(tasks_models, current_user_id)
 
         # Apply Python-side sorting for due_date and priority to match test expectations
         if sort_by == "due_date":
@@ -169,26 +175,7 @@ class TaskService:
         ]
         tasks_models = await self.engine.find(Task, *query_conditions)
 
-        # Batch fetch categories for these tasks
-        category_ids = {task.category_id for task in tasks_models if task.category_id}
-        categories_model_map: Dict[ObjectId, Category] = {}
-        if category_ids:
-            category_models = await self.engine.find(
-                Category,
-                Category.id.in_(list(category_ids)),
-                Category.user == current_user_id,  # Assuming Category.user stores the user_id
-                Category.is_deleted == False,  # noqa: E712
-            )
-            categories_model_map = {cat.id: cat for cat in category_models}
-
-        task_responses = []
-        for task_model in tasks_models:
-            category_model_for_task = (
-                categories_model_map.get(task_model.category_id) if task_model.category_id else None
-            )
-            task_responses.append(TaskMapper.to_response(task_model, category_model_for_task))
-
-        return task_responses
+        return await self._fetch_tasks_with_categories(tasks_models, current_user_id)
 
     async def update_task(
         self, task_id: ObjectId, task_data: TaskUpdateRequest, current_user_id: ObjectId

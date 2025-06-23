@@ -5,10 +5,15 @@ import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
 import { Task } from '../types/task';
 import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
 
 const TaskCard = ({ task }: { task: Task }) => {
+  const { currentTaskId } = useSharedTimerContext();
+  const isActiveTask = currentTaskId === task.id;
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
+    disabled: isActiveTask,
   });
 
   const style = transform
@@ -26,10 +31,9 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   return (
     <li className="list-none" ref={setNodeRef} style={style}>
-      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative')} tabIndex={0}>
+      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isActiveTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
         <div
           className="bg-background-card text-text-DEFAULT flex flex-col gap-6 rounded-xl border py-6 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-300 border-border-DEFAULT hover:border-border-dark focus-within:ring-2 focus-within:ring-primary/20"
-
           aria-label={`Drag task: ${task.title}`}
           {...listeners}
           {...attributes}

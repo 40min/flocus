@@ -10,14 +10,20 @@ import { useUpdateTask } from '../hooks/useTasks';
 import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskChanged, isActive, handleStartPause, setCurrentTaskName, resetForNewTask } = useSharedTimerContext();
+  const { setCurrentTaskId, setOnTaskChanged, isActive, handleStartPause, setCurrentTaskName, resetForNewTask, currentTaskId } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    const taskId = event.active.id as string;
+
+    // If the dragged task is the currently active task, do nothing.
+    if (taskId === currentTaskId) {
+      return;
+    }
+
     if (event.over?.id === 'pomodoro-drop-zone') {
-      const taskId = event.active.id as string;
       let draggedTask;
 
       if (dailyPlan) {

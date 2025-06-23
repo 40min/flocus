@@ -42,6 +42,15 @@ jest.mock('@dnd-kit/core', () => ({
     capturedOnDragEnd = onDragEnd; // Capture the onDragEnd prop
     return <div>{children}</div>; // Render children to ensure the rest of the app tree renders
   },
+  useDraggable: jest.fn(({ id, disabled }) => ({ // Mock useDraggable to control its behavior
+    attributes: {},
+    listeners: {},
+    setNodeRef: jest.fn(),
+    transform: null,
+    isDragging: false,
+    active: { id, data: { current: { title: `Task ${id}` } } },
+    disabled, // Expose disabled state for testing
+  })),
 }));
 
 describe('DashboardPage - handleDragEnd', () => {
@@ -160,7 +169,7 @@ describe('DashboardPage - handleDragEnd', () => {
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
     expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
   });
-it('should call updateTask with in_progress status when a task is dragged to pomodoro zone and timer is not active', async () => {
+  it('should call updateTask with in_progress status when a task is dragged to pomodoro zone and timer is not active', async () => {
     const mockMutateAsync = jest.fn().mockResolvedValue({});
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockMutateAsync });
 
@@ -217,5 +226,44 @@ it('should call updateTask with in_progress status when a task is dragged to pom
     expect(mockResetForNewTask).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskId).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskName).not.toHaveBeenCalled();
+  });
+
+  it('should not allow dragging an active task to the pomodoro zone', async () => {
+    const activeTaskId = 'task1';
+    (useSharedTimerContext as jest.Mock).mockImplementation(() => ({
+      currentTaskId: activeTaskId,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setOnTaskChanged: mockSetOnTaskChanged,
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      resetForNewTask: mockResetForNewTask,
+      formatTime: jest.fn(),
+    }));
+
+    render(
+      <SharedTimerProvider>
+        <DashboardPage />
+      </SharedTimerProvider>
+    );
+
+    const dragEndEvent: DragEndEvent = {
+      active: { id: activeTaskId, data: { current: { title: 'Existing Task' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
+      collisions: [],
+      delta: { x: 0, y: 0 },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false } as DragEndEvent['over'],
+      activatorEvent: {} as any,
+    };
+
+    await act(async () => {
+      await capturedOnDragEnd(dragEndEvent);
+    });
+
+    // Assert that none of the timer-related functions were called
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
+    expect(mockSetCurrentTaskId).not.toHaveBeenCalled();
+    expect(mockSetCurrentTaskName).not.toHaveBeenCalled();
+    expect(mockSetOnTaskChanged).not.toHaveBeenCalled();
+    expect(mockHandleStartPause).not.toHaveBeenCalled();
   });
 });

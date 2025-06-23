@@ -237,7 +237,7 @@ class TaskService:
         if task.statistics is None:  # Should not happen with default_factory
             task.statistics = TaskStatistics()
 
-        new_status = task_data.status  # From original task_data, not exclude_unset payload
+        new_status = task.status
 
         if new_status is not None and new_status != old_status:
             now = datetime.now(UTC)  # Use timezone-aware datetime

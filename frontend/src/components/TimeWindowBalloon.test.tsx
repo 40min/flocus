@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TimeWindowBalloon from './TimeWindowBalloon';
 import { TimeWindow } from 'types/timeWindow';
 import { Task } from 'types/task';
+import { SharedTimerProvider } from '../context/SharedTimerContext';
 
 const queryClient = new QueryClient();
 
@@ -25,8 +26,17 @@ const mockTasks: Task[] = [
 
 describe('TimeWindowBalloon', () => {
   const renderWithClient = (ui: React.ReactElement) => {
-    return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <SharedTimerProvider>
+          {ui}
+        </SharedTimerProvider>
+      </QueryClientProvider>
+    );
   };
+afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('renders time window details correctly', () => {
     renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} />);
@@ -85,6 +95,38 @@ it('renders edit button and calls onEdit when clicked', () => {
     expect(screen.getByText('Select a Task')).toBeInTheDocument();
   });
 
+it('calls stopCurrentTask when deleting a time window with an active assigned task', () => {
+    const onDeleteMock = jest.fn();
+    const stopCurrentTaskMock = jest.fn();
+
+    // Mock the useSharedTimerContext to control currentTaskId and stopCurrentTask
+    jest.spyOn(require('../context/SharedTimerContext'), 'useSharedTimerContext').mockReturnValue({
+      currentTaskId: 'task1', // Simulate 'task1' being active
+      stopCurrentTask: stopCurrentTaskMock,
+      startTimer: jest.fn(),
+      pauseTimer: jest.fn(),
+      resumeTimer: jest.fn(),
+      resetTimer: jest.fn(),
+      timer: 0,
+      isTimerRunning: false,
+      isTimerPaused: false,
+      activeTask: null,
+    });
+
+    renderWithClient(
+      <TimeWindowBalloon
+        timeWindow={mockTimeWindow}
+        tasks={mockTasks} // Pass mockTasks which includes 'task1'
+        onDelete={onDeleteMock}
+      />
+    );
+
+    const deleteButton = screen.getByLabelText('Delete time window');
+    fireEvent.click(deleteButton);
+
+    expect(stopCurrentTaskMock).toHaveBeenCalledTimes(1);
+    expect(onDeleteMock).toHaveBeenCalledWith('tw1');
+  });
   it('calls onUnassignTask when unassign button is clicked on an assigned task', () => {
     const onUnassignTaskMock = jest.fn();
     renderWithClient(<TimeWindowBalloon timeWindow={mockTimeWindow} tasks={mockTasks} onUnassignTask={onUnassignTaskMock} />);

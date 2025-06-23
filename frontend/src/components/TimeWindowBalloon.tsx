@@ -5,6 +5,7 @@ import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from 'lib/utils';
 import { Clock, XCircle, PlusCircle, Edit3 } from 'lucide-react';
 import AssignedTaskBalloon from './AssignedTaskBalloon';
 import TaskPicker from './TaskPicker';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
 
 interface TimeWindowBalloonProps {
   timeWindow: TimeWindowType;
@@ -45,7 +46,9 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
   onAssignTask,
   onUnassignTask,
 }) => {
+  const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
   const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
+
   const { id, description, start_time, end_time, category } = timeWindow;
   const categoryColor = category?.color || '#A0AEC0'; // Default to a neutral gray
   const lightBgColor = categoryColor + '20'; // Add 20 for ~12% opacity in hex
@@ -61,6 +64,16 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
     'relative rounded-t-[2rem] rounded-b-[1.5rem] border-2 p-4 md:p-6 shadow-lg backdrop-blur-sm transition-all duration-300 max-w-lg scale-80 ml-0',
     'hover:shadow-xl' // General hover shadow enhancement from design
   );
+
+  const handleDelete = () => {
+    if (onDelete) {
+      const assignedTask = tasks.find(task => task.id === currentTaskId);
+      if (assignedTask) {
+        stopCurrentTask();
+      }
+      onDelete(id);
+    }
+  };
 
   return (
     <article
@@ -93,7 +106,7 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
               )}
               {onDelete && (
                 <button
-                  onClick={() => onDelete(id)}
+                  onClick={handleDelete}
                   className="text-slate-400 hover:text-red-500 transition-colors"
                   aria-label="Delete time window"
                 >

@@ -14,7 +14,7 @@ jest.mock('../hooks/useTasks');
 const mockStopCurrentTask = jest.fn();
 const mockSetCurrentTaskId = jest.fn();
 const mockSetCurrentTaskName = jest.fn();
-const mockSetOnTaskComplete = jest.fn();
+const mockSetOnTaskChanged = jest.fn();
 const mockHandleStartPause = jest.fn();
 
 // Mock SharedTimerContext
@@ -25,7 +25,7 @@ jest.mock('../context/SharedTimerContext', () => ({
     stopCurrentTask: mockStopCurrentTask,
     setCurrentTaskId: mockSetCurrentTaskId,
     setCurrentTaskName: mockSetCurrentTaskName,
-    setOnTaskComplete: mockSetOnTaskComplete,
+    setOnTaskChanged: mockSetOnTaskChanged,
     isActive: false,
     handleStartPause: mockHandleStartPause,
     formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
@@ -50,7 +50,7 @@ describe('DashboardPage - handleDragEnd', () => {
     mockStopCurrentTask.mockClear();
     mockSetCurrentTaskId.mockClear();
     mockSetCurrentTaskName.mockClear();
-    mockSetOnTaskComplete.mockClear();
+    mockSetOnTaskChanged.mockClear();
     mockHandleStartPause.mockClear();
 
     // Reset capturedOnDragEnd to a state that would indicate if it's not properly captured
@@ -86,7 +86,7 @@ describe('DashboardPage - handleDragEnd', () => {
         stopCurrentTask: mockStopCurrentTask,
         setCurrentTaskId: mockSetCurrentTaskId,
         setCurrentTaskName: mockSetCurrentTaskName,
-        setOnTaskComplete: mockSetOnTaskComplete,
+        setOnTaskChanged: mockSetOnTaskChanged,
         isActive: false,
         handleStartPause: mockHandleStartPause,
         formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
@@ -100,7 +100,7 @@ describe('DashboardPage - handleDragEnd', () => {
       stopCurrentTask: mockStopCurrentTask,
       setCurrentTaskId: mockSetCurrentTaskId,
       setCurrentTaskName: mockSetCurrentTaskName,
-      setOnTaskComplete: mockSetOnTaskComplete,
+      setOnTaskChanged: mockSetOnTaskChanged,
       isActive: true, // Assuming the timer is active with the current task
       handleStartPause: mockHandleStartPause,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),

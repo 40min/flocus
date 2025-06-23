@@ -31,7 +31,13 @@ class Task(Model):
     model_config = {
         "collection": "tasks",
         "indexes": lambda: [
-            Index(Task.user_id, Task.title, Task.is_deleted, name="user_title_deleted_idx", unique=True),
+            Index(
+                Task.user_id,
+                Task.title,
+                name="user_title_unique_idx",
+                unique=True,
+                partialFilterExpression={"is_deleted": False},
+            ),
             Index(Task.user_id, Task.status, Task.is_deleted, name="user_status_deleted_idx"),
             Index(Task.user_id, Task.priority, Task.is_deleted, name="user_priority_deleted_idx"),
             Index(Task.user_id, Task.due_date, Task.is_deleted, name="user_due_date_deleted_idx"),

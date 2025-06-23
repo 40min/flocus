@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import * as SharedTimerContext from 'context/SharedTimerContext';
 import CreateTaskModal from './CreateTaskModal';
 import * as taskService from 'services/taskService';
 import { Task, LLMImprovementResponse, TaskStatus, TaskPriority } from 'types/task';
@@ -10,6 +11,14 @@ import { SharedTimerProvider } from 'context/SharedTimerContext';
 // Mock the taskService
 jest.mock('services/taskService');
 const mockedTaskService = taskService as jest.Mocked<typeof taskService>;
+
+// Mock the SharedTimerContext
+jest.mock('context/SharedTimerContext', () => ({
+  ...jest.requireActual('context/SharedTimerContext'),
+  useSharedTimerContext: jest.fn(),
+}));
+
+const mockedUseSharedTimerContext = SharedTimerContext.useSharedTimerContext as jest.Mock;
 
 const mockCategories: Category[] = [
   { id: 'cat1', name: 'Work', description: 'Work related tasks', user_id: 'user1', is_deleted: false },
@@ -45,28 +54,32 @@ describe('CreateTaskModal', () => {
     onCloseMock.mockClear();
     onSubmitSuccessMock.mockClear();
     jest.clearAllMocks();
+    // Reset the mock for useSharedTimerContext before each test
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: null,
+      stopCurrentTask: jest.fn(),
+      resetForNewTask: jest.fn(),
+    });
   });
 
   const renderModal = (props?: Partial<React.ComponentProps<typeof CreateTaskModal>>) => {
     return render(
-      <SharedTimerProvider>
-        <CreateTaskModal
-          isOpen={true}
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-          statusOptions={mockStatusOptions}
-          priorityOptions={mockPriorityOptions}
-          {...props}
-        />
-      </SharedTimerProvider>
+      <CreateTaskModal
+        isOpen={true}
+        onClose={onCloseMock}
+        onSubmitSuccess={onSubmitSuccessMock}
+        editingTask={null}
+        categories={mockCategories}
+        initialFormData={defaultInitialFormData}
+        statusOptions={mockStatusOptions}
+        priorityOptions={mockPriorityOptions}
+        {...props}
+      />
     );
   };
 
   it('does not render when isOpen is false', () => {
-    render(<SharedTimerProvider><CreateTaskModal isOpen={false} onClose={onCloseMock} onSubmitSuccess={onSubmitSuccessMock} editingTask={null} categories={[]} initialFormData={defaultInitialFormData} statusOptions={[]} priorityOptions={[]} /></SharedTimerProvider>);
+    render(<CreateTaskModal isOpen={false} onClose={onCloseMock} onSubmitSuccess={onSubmitSuccessMock} editingTask={null} categories={[]} initialFormData={defaultInitialFormData} statusOptions={[]} priorityOptions={[]} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -142,6 +155,78 @@ describe('CreateTaskModal', () => {
       title: 'Updated Task Title',
       description: 'Updated Task Description',
     }));
+    await waitFor(() => expect(onSubmitSuccessMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onCloseMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('calls resetForNewTask when an in-progress task\'s status is changed to in_progress via modal', async () => {
+    const editingTask: Task = {
+      id: '1',
+      title: 'Existing Task',
+      description: 'Existing Description',
+      status: 'pending', // Initial status is pending
+      priority: 'medium',
+      user_id: 'user1',
+      created_at: '2023-01-01T00:00:00Z',
+      updated_at: '2023-01-01T00:00:00Z',
+    };
+    mockedTaskService.updateTask.mockResolvedValueOnce({} as Task);
+    const mockResetForNewTask = jest.fn();
+    const mockStopCurrentTask = jest.fn();
+
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: '1',
+      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
+    });
+
+    renderModal({ editingTask });
+
+    fireEvent.change(screen.getByLabelText(/Status/i), { target: { value: 'in_progress' } });
+    fireEvent.click(screen.getByRole('button', { name: /Update Task/i }));
+
+    await waitFor(() => expect(mockedTaskService.updateTask).toHaveBeenCalledTimes(1));
+    expect(mockedTaskService.updateTask).toHaveBeenCalledWith('1', expect.objectContaining({
+      status: 'in_progress',
+    }));
+    await waitFor(() => expect(mockResetForNewTask).toHaveBeenCalledTimes(1));
+    expect(mockStopCurrentTask).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSubmitSuccessMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onCloseMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('calls stopCurrentTask when an in-progress task\'s status is changed from in_progress to another status via modal', async () => {
+    const editingTask: Task = {
+      id: '1',
+      title: 'Existing Task',
+      description: 'Existing Description',
+      status: 'in_progress', // Initial status is in_progress
+      priority: 'medium',
+      user_id: 'user1',
+      created_at: '2023-01-01T00:00:00Z',
+      updated_at: '2023-01-01T00:00:00Z',
+    };
+    mockedTaskService.updateTask.mockResolvedValueOnce({} as Task);
+    const mockResetForNewTask = jest.fn();
+    const mockStopCurrentTask = jest.fn();
+
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: '1',
+      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
+    });
+
+    renderModal({ editingTask });
+
+    fireEvent.change(screen.getByLabelText(/Status/i), { target: { value: 'done' } }); // Change to 'done'
+    fireEvent.click(screen.getByRole('button', { name: /Update Task/i }));
+
+    await waitFor(() => expect(mockedTaskService.updateTask).toHaveBeenCalledTimes(1));
+    expect(mockedTaskService.updateTask).toHaveBeenCalledWith('1', expect.objectContaining({
+      status: 'done',
+    }));
+    await waitFor(() => expect(mockStopCurrentTask).toHaveBeenCalledTimes(1));
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
     await waitFor(() => expect(onSubmitSuccessMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onCloseMock).toHaveBeenCalledTimes(1));
   });
@@ -273,33 +358,29 @@ describe('CreateTaskModal', () => {
 
     // Simulate modal closing and reopening, or editingTask changing
     rerender(
-      <SharedTimerProvider>
-        <CreateTaskModal
-          isOpen={false} // Close the modal
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-          statusOptions={mockStatusOptions}
-          priorityOptions={mockPriorityOptions}
-        />
-      </SharedTimerProvider>
+      <CreateTaskModal
+        isOpen={false} // Close the modal
+        onClose={onCloseMock}
+        onSubmitSuccess={onSubmitSuccessMock}
+        editingTask={null}
+        categories={mockCategories}
+        initialFormData={defaultInitialFormData}
+        statusOptions={mockStatusOptions}
+        priorityOptions={mockPriorityOptions}
+      />
     );
 
     rerender(
-      <SharedTimerProvider>
-        <CreateTaskModal
-          isOpen={true} // Reopen the modal
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-          statusOptions={mockStatusOptions}
-          priorityOptions={mockPriorityOptions}
-        />
-      </SharedTimerProvider>
+      <CreateTaskModal
+        isOpen={true} // Reopen the modal
+        onClose={onCloseMock}
+        onSubmitSuccess={onSubmitSuccessMock}
+        editingTask={null}
+        categories={mockCategories}
+        initialFormData={defaultInitialFormData}
+        statusOptions={mockStatusOptions}
+        priorityOptions={mockPriorityOptions}
+      />
     );
 
     expect(screen.queryByText('Suggested Title')).not.toBeInTheDocument();

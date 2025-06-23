@@ -53,7 +53,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   });
 
-  const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
+  const { currentTaskId, stopCurrentTask, resetForNewTask } = useSharedTimerContext();
 
   const title = watch('title'); // Watch the title field for changes
 
@@ -170,6 +170,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           data.status !== 'in_progress'
         ) {
           await stopCurrentTask();
+        } else if (
+          editingTask.id === currentTaskId &&
+          data.status === 'in_progress'
+        ) {
+          // If the current task is explicitly set to 'in_progress' via the modal, reset the timer
+          await resetForNewTask();
         }
         await taskService.updateTask(editingTask.id, payload as TaskUpdateRequest);
       } else {

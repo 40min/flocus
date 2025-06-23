@@ -10,6 +10,7 @@ import { Category } from 'types/category';
 import { User } from 'types/user';
 import { useTasks, useTasksByCategory } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
+import { SharedTimerProvider } from 'context/SharedTimerContext';
 
 jest.mock('services/taskService');
 jest.mock('services/taskService');
@@ -84,7 +85,9 @@ const renderTasksPage = (
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={mockAuthContextValue}>
-          <TasksPage />
+          <SharedTimerProvider>
+            <TasksPage />
+          </SharedTimerProvider>
         </AuthContext.Provider>
       </QueryClientProvider>
     </Router>

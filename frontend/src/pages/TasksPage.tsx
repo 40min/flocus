@@ -5,11 +5,10 @@ import { Plus, Edit, Trash2, Info } from 'lucide-react'; // Updated icons
 import Button from 'components/Button';
 import { Task, TaskCreateRequest } from 'types/task';
 import * as taskService from 'services/taskService';
-
-// taskService.updateTask is available via the '* as taskService' import
 import CreateTaskModal from 'components/modals/CreateTaskModal';
 import { useTasks, useTasksByCategory } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
+import { useSharedTimerContext } from 'context/SharedTimerContext';
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -31,6 +30,8 @@ const TasksPage: React.FC = () => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
+
+  const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
 
 
   const queryClient = useQueryClient();
@@ -81,6 +82,9 @@ const TasksPage: React.FC = () => {
   const TaskStatisticsModal = React.lazy(() => import('../components/modals/TaskStatisticsModal'));
 
   const handleDelete = async (id: string) => {
+    if (id === currentTaskId) {
+      await stopCurrentTask();
+    }
     try {
       await taskService.deleteTask(id);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

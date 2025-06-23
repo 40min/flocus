@@ -5,6 +5,7 @@ import CreateTaskModal from './CreateTaskModal';
 import * as taskService from 'services/taskService';
 import { Task, LLMImprovementResponse, TaskStatus, TaskPriority } from 'types/task';
 import { Category } from 'types/category';
+import { SharedTimerProvider } from 'context/SharedTimerContext';
 
 // Mock the taskService
 jest.mock('services/taskService');
@@ -48,22 +49,24 @@ describe('CreateTaskModal', () => {
 
   const renderModal = (props?: Partial<React.ComponentProps<typeof CreateTaskModal>>) => {
     return render(
-      <CreateTaskModal
-        isOpen={true}
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
-        {...props}
-      />
+      <SharedTimerProvider>
+        <CreateTaskModal
+          isOpen={true}
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+          statusOptions={mockStatusOptions}
+          priorityOptions={mockPriorityOptions}
+          {...props}
+        />
+      </SharedTimerProvider>
     );
   };
 
   it('does not render when isOpen is false', () => {
-    render(<CreateTaskModal isOpen={false} onClose={onCloseMock} onSubmitSuccess={onSubmitSuccessMock} editingTask={null} categories={[]} initialFormData={defaultInitialFormData} statusOptions={[]} priorityOptions={[]} />);
+    render(<SharedTimerProvider><CreateTaskModal isOpen={false} onClose={onCloseMock} onSubmitSuccess={onSubmitSuccessMock} editingTask={null} categories={[]} initialFormData={defaultInitialFormData} statusOptions={[]} priorityOptions={[]} /></SharedTimerProvider>);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -270,29 +273,33 @@ describe('CreateTaskModal', () => {
 
     // Simulate modal closing and reopening, or editingTask changing
     rerender(
-      <CreateTaskModal
-        isOpen={false} // Close the modal
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
-      />
+      <SharedTimerProvider>
+        <CreateTaskModal
+          isOpen={false} // Close the modal
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+          statusOptions={mockStatusOptions}
+          priorityOptions={mockPriorityOptions}
+        />
+      </SharedTimerProvider>
     );
 
     rerender(
-      <CreateTaskModal
-        isOpen={true} // Reopen the modal
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
-      />
+      <SharedTimerProvider>
+        <CreateTaskModal
+          isOpen={true} // Reopen the modal
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+          statusOptions={mockStatusOptions}
+          priorityOptions={mockPriorityOptions}
+        />
+      </SharedTimerProvider>
     );
 
     expect(screen.queryByText('Suggested Title')).not.toBeInTheDocument();

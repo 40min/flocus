@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
 import { Task, TaskCreateRequest, TaskUpdateRequest, LLMImprovementResponse, LlmAction } from 'types/task';
 import { Category } from 'types/category';
+import { useSharedTimerContext } from 'context/SharedTimerContext';
 import * as taskService from 'services/taskService';
 import Modal from './Modal';
 import { utcToLocal, localToUtc } from 'lib/utils';
@@ -34,6 +35,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   onClose,
   onSubmitSuccess,
   editingTask,
+
   categories,
   initialFormData,
   statusOptions,
@@ -47,8 +49,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       priority: initialFormData.priority,
       due_date: null,
       category_id: initialFormData.category_id || '',
+
     }
   });
+
+  const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
 
   const title = watch('title'); // Watch the title field for changes
 
@@ -159,6 +164,13 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
     try {
       if (editingTask) {
+        if (
+          editingTask.id === currentTaskId &&
+          editingTask.status === 'in_progress' &&
+          data.status !== 'in_progress'
+        ) {
+          await stopCurrentTask();
+        }
         await taskService.updateTask(editingTask.id, payload as TaskUpdateRequest);
       } else {
         await taskService.createTask(payload as TaskCreateRequest);

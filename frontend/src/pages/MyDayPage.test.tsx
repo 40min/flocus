@@ -13,6 +13,7 @@ import { DailyPlanResponse } from 'types/dailyPlan';
 import { DayTemplateResponse } from 'types/dayTemplate';
 import { Category } from 'types/category';
 import { Task } from 'types/task';
+import { SharedTimerProvider } from 'context/SharedTimerContext';
 
 // Mocks
 jest.mock('hooks/useDailyPlan');
@@ -85,7 +86,9 @@ const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MessageProvider>
-          {children}
+          <SharedTimerProvider>
+            {children}
+          </SharedTimerProvider>
         </MessageProvider>
       </AuthProvider>
     </QueryClientProvider>

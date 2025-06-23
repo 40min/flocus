@@ -15,11 +15,13 @@ import { useMessage } from '../context/MessageContext';
 import { useTodayDailyPlan, useYesterdayDailyPlan } from '../hooks/useDailyPlan';
 import { useTemplates } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
+import { useSharedTimerContext } from '../context/SharedTimerContext';
 import EditDailyPlanTimeWindowModal from 'components/modals/EditDailyPlanTimeWindowModal';
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showMessage } = useMessage();
+  const { stopCurrentTask, currentTaskId } = useSharedTimerContext();
 
   const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } = useTodayDailyPlan();
   const { data: yesterdayPlan, isLoading: isLoadingYesterdayPlan } = useYesterdayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
@@ -80,6 +82,9 @@ const MyDayPage: React.FC = () => {
   };
 
   const handleUnassignTask = (timeWindowId: string, taskId: string) => {
+    if (taskId === currentTaskId) {
+      stopCurrentTask();
+    }
     setDailyPlan(prevPlan => {
       if (!prevPlan) return null;
 
@@ -146,6 +151,15 @@ const MyDayPage: React.FC = () => {
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
+    if (currentTaskId && dailyPlan) {
+      const allocationToDelete = dailyPlan.time_windows.find(
+        alloc => alloc.time_window.id === timeWindowId
+      );
+      if (allocationToDelete?.tasks.some(task => task.id === currentTaskId)) {
+        stopCurrentTask();
+      }
+    }
+
     setDailyPlan(prevDailyPlan => {
       if (!prevDailyPlan) return null;
       return {

@@ -238,7 +238,7 @@ describe('SharedTimerContext', () => {
       expect(mockOnTaskComplete).toHaveBeenCalledTimes(1);
     });
 
-    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "done" });
+    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "pending" });
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');

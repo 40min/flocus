@@ -41,7 +41,7 @@ class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     status: TaskStatus = Field(default=TaskStatus.PENDING)
-    priority: TaskPriority = Field(default=TaskPriority.MEDIUM)
+    priority: Optional[TaskPriority] = Field(default=TaskPriority.MEDIUM)  # Made Optional
     due_date: Optional[datetime] = None  # This will also use the encoder
     category_id: Optional[ObjectId] = None
 

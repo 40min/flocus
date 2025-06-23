@@ -30,6 +30,7 @@ interface SharedTimerContextType {
   isActive: boolean;
   pomodorosCompleted: number;
   handleStartPause: () => void;
+  setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
   handleReset: () => void;
   handleSkip: () => Promise<void>;
   formatTime: (seconds: number) => string;
@@ -202,6 +203,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setOnTaskChanged,
     stopCurrentTask,
     resetForNewTask,
+    setIsActive,
   };
 
   return (

@@ -25,8 +25,8 @@ export const useCurrentTimeWindow = (dailyPlan: DailyPlanResponse | null): Curre
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
     const currentWindowResponse = dailyPlan.time_windows.find((window: TimeWindowResponse) => {
-      const start = window.time_window.start_time;
-      const end = window.time_window.end_time;
+      const start = window.time_window?.start_time;
+      const end = window.time_window?.end_time;
       return currentTimeInMinutes >= start && currentTimeInMinutes <= end;
     });
 

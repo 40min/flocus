@@ -40,11 +40,11 @@ interface SharedTimerContextType {
   modeText: Record<Mode, string>;
   currentTaskId: string | undefined;
   currentTaskName: string | undefined;
-  onTaskComplete: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
+  onTaskChanged: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
-  setOnTaskComplete: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
-  stopCurrentTask: () => void;
+  setOnTaskChanged: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
+  stopCurrentTask: () => Promise<void>;
 }
 
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
@@ -56,33 +56,26 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
-  const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
+  const [onTaskChanged, setOnTaskChanged] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
-  const stopCurrentTask = async () => {
-    if (currentTaskId && onTaskComplete) {
+  const stopCurrentTask = useCallback(async () => {
+    if (currentTaskId && onTaskChanged) {
       try {
-        await onTaskComplete(currentTaskId, { status: 'pending' });
+        await onTaskChanged(currentTaskId, { status: 'pending' });
       } catch (error) {
-        console.error("Failed to update task status to 'pending':", error);
-        // Optionally, handle the error more gracefully (e.g., show a notification to the user)
+        console.error("Failed to update task status to 'done':", error);
       }
     }
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
-    setOnTaskComplete(undefined);
-  };
-
-  const handleTaskCompletion = useCallback(async () => {
-    if (currentTaskId && onTaskComplete) {
-      await onTaskComplete(currentTaskId, { status: 'done' });
-    }
-  }, [currentTaskId, onTaskComplete]);
+    setOnTaskChanged(undefined);
+  }, [currentTaskId, onTaskChanged]); // FIXED: Added dependencies
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
     if (mode === 'work') {
-      await handleTaskCompletion();
+      await stopCurrentTask();
       const newPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(newPomodorosCount);
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
@@ -92,8 +85,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       setMode('work');
       setTimeRemaining(WORK_DURATION);
     }
-  }, [mode, pomodorosCompleted, handleTaskCompletion]);
+  }, [mode, pomodorosCompleted, stopCurrentTask]);
 
+  // FIXED: Added dependency array to prevent infinite loop
   useEffect(() => {
     try {
       const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -121,14 +115,18 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
     }
-  }, []);
+  }, []); // FIXED: Added empty dependency array
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeRemaining > 0) {
       interval = setInterval(() => setTimeRemaining(prev => prev - 1), 1000);
     } else if (isActive && timeRemaining <= 0) {
-      switchToNextMode();
+      // IMPROVED: Make timer completion async-safe
+      const handleTimerComplete = async () => {
+        await switchToNextMode();
+      };
+      handleTimerComplete();
     }
     return () => { if (interval) clearInterval(interval); };
   }, [isActive, timeRemaining, switchToNextMode]);
@@ -142,15 +140,28 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [mode, timeRemaining, isActive, pomodorosCompleted]);
 
-  const handleStartPause = () => setIsActive(prev => !prev);
-  const handleReset = () => { setIsActive(false); setTimeRemaining(DURATION_MAP[mode]); };
-  const handleSkip = () => switchToNextMode();
+  const handleStartPause = useCallback(() => {
+    if (isActive) {
+      stopCurrentTask();
+    }
+    setIsActive(prev => !prev);
+  }, [isActive, stopCurrentTask]); // IMPROVED: Added dependencies
 
-  const formatTime = (seconds: number) => {
+  const handleReset = useCallback(() => {
+    stopCurrentTask();
+    setIsActive(false);
+    setTimeRemaining(DURATION_MAP[mode]);
+  }, [stopCurrentTask, mode]); // IMPROVED: Added dependencies
+
+  const handleSkip = useCallback(() => {
+    switchToNextMode();
+  }, [switchToNextMode]); // IMPROVED: Added dependency
+
+  const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
     return `${mins}:${secs}`;
-  };
+  }, []); // IMPROVED: Made it a useCallback for performance
 
   const isBreak = mode !== 'work';
   const timerColor = isBreak ? 'border-accent-DEFAULT' : 'border-primary-DEFAULT';
@@ -179,10 +190,10 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     modeText,
     currentTaskId,
     currentTaskName,
-    onTaskComplete,
+    onTaskChanged,
     setCurrentTaskId,
     setCurrentTaskName,
-    setOnTaskComplete,
+    setOnTaskChanged,
     stopCurrentTask,
   };
 

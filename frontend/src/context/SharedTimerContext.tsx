@@ -40,10 +40,10 @@ interface SharedTimerContextType {
   modeText: Record<Mode, string>;
   currentTaskId: string | undefined;
   currentTaskName: string | undefined;
-  onTaskComplete: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
+  onTaskChanged: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
-  setOnTaskComplete: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
+  setOnTaskChanged: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
   stopCurrentTask: () => Promise<void>;
 }
 
@@ -56,20 +56,20 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
-  const [onTaskComplete, setOnTaskComplete] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
+  const [onTaskChanged, setOnTaskChanged] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
   const stopCurrentTask = useCallback(async () => {
-    if (currentTaskId && onTaskComplete) {
+    if (currentTaskId && onTaskChanged) {
       try {
-        await onTaskComplete(currentTaskId, { status: 'pending' });
+        await onTaskChanged(currentTaskId, { status: 'pending' });
       } catch (error) {
         console.error("Failed to update task status to 'done':", error);
       }
     }
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
-    setOnTaskComplete(undefined);
-  }, [currentTaskId, onTaskComplete]); // FIXED: Added dependencies
+    setOnTaskChanged(undefined);
+  }, [currentTaskId, onTaskChanged]); // FIXED: Added dependencies
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
@@ -190,10 +190,10 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     modeText,
     currentTaskId,
     currentTaskName,
-    onTaskComplete,
+    onTaskChanged,
     setCurrentTaskId,
     setCurrentTaskName,
-    setOnTaskComplete,
+    setOnTaskChanged,
     stopCurrentTask,
   };
 

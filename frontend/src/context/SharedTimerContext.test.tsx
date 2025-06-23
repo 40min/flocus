@@ -8,10 +8,10 @@ const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
 
 // Test component with better error handling
 interface TestComponentProps {
-  onTaskCompleteMock?: (taskId: string, taskData: TaskUpdateRequest) => Promise<Task>;
+  onTaskChangedMock?: (taskId: string, taskData: TaskUpdateRequest) => Promise<Task>;
 }
 
-const TestComponent: React.FC<TestComponentProps> = ({ onTaskCompleteMock }) => {
+const TestComponent: React.FC<TestComponentProps> = ({ onTaskChangedMock }) => {
   const {
     mode,
     timeRemaining,
@@ -22,17 +22,17 @@ const TestComponent: React.FC<TestComponentProps> = ({ onTaskCompleteMock }) => 
     handleSkip,
     formatTime,
     setCurrentTaskId,
-    setOnTaskComplete,
+    setOnTaskChanged,
   } = useSharedTimerContext();
 
   useEffect(() => {
     setCurrentTaskId('test-task-id');
-    if (onTaskCompleteMock) {
-      setOnTaskComplete(() => onTaskCompleteMock);
+    if (onTaskChangedMock) {
+      setOnTaskChanged(() => onTaskChangedMock);
     } else {
-      setOnTaskComplete(() => jest.fn());
+      setOnTaskChanged(() => jest.fn());
     }
-  }, [setCurrentTaskId, setOnTaskComplete, onTaskCompleteMock]);
+  }, [setCurrentTaskId, setOnTaskChanged, onTaskChangedMock]);
 
   return (
     <div>
@@ -214,7 +214,7 @@ describe('SharedTimerContext', () => {
     });
   });
 
-  it('calls onTaskComplete callback when work session finishes', async () => {
+  it('calls onTaskChanged callback when work session finishes', async () => {
     const mockOnTaskComplete = jest.fn()
       .mockImplementation((taskId: string, taskData: TaskUpdateRequest): Promise<Task> =>
         Promise.resolve({} as Task)
@@ -222,7 +222,7 @@ describe('SharedTimerContext', () => {
 
     render(
       <SharedTimerProvider>
-        <TestComponent onTaskCompleteMock={mockOnTaskComplete} />
+        <TestComponent onTaskChangedMock={mockOnTaskComplete} />
       </SharedTimerProvider>
     );
 
@@ -255,7 +255,7 @@ describe('SharedTimerContext - Hook Behavior', () => {
     hookResult = useSharedTimerContext();
     useEffect(() => {
       hookResult.setCurrentTaskId('test-task-id');
-      hookResult.setOnTaskComplete(() => mockOnTaskComplete);
+      hookResult.setOnTaskChanged(() => mockOnTaskComplete);
     }, []);
     return <div data-testid="hook-wrapper">Hook Test</div>;
   };
@@ -271,7 +271,7 @@ describe('SharedTimerContext - Hook Behavior', () => {
     jest.restoreAllMocks();
   });
 
-  it('should call onTaskComplete when pausing an active timer', async () => {
+  it('should call onTaskChanged when pausing an active timer', async () => {
     render(
       <SharedTimerProvider>
         <TestHookWrapper />
@@ -294,7 +294,7 @@ describe('SharedTimerContext - Hook Behavior', () => {
     expect(hookResult.isActive).toBe(false);
   });
 
-  it('should not call onTaskComplete when starting a timer', async () => {
+  it('should not call onTaskChanged when starting a timer', async () => {
     render(
       <SharedTimerProvider>
         <TestHookWrapper />
@@ -311,7 +311,7 @@ describe('SharedTimerContext - Hook Behavior', () => {
     expect(hookResult.isActive).toBe(true);
   });
 
-  it('should call onTaskComplete when handleReset is called', async () => {
+  it('should call onTaskChanged when handleReset is called', async () => {
     render(
       <SharedTimerProvider>
         <TestHookWrapper />

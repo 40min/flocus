@@ -37,6 +37,7 @@ const DashboardPage: React.FC = () => {
         setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
 
         if (!isActive) {
+          await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
           await handleStartPause();
         }
       }

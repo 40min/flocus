@@ -160,6 +160,33 @@ describe('DashboardPage - handleDragEnd', () => {
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
     expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
   });
+it('should call updateTask with in_progress status when a task is dragged to pomodoro zone and timer is not active', async () => {
+    const mockMutateAsync = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockMutateAsync });
+
+    render(
+      <SharedTimerProvider>
+        <DashboardPage />
+      </SharedTimerProvider>
+    );
+
+    const dragEndEvent: DragEndEvent = {
+      active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
+      collisions: [],
+      delta: { x: 0, y: 0 },
+      over: { id: 'pomodoro-drop-zone', rect: {width:0, height:0, left:0, top:0, right:0, bottom:0}, data: { current: {} }, disabled: false } as DragEndEvent['over'],
+      activatorEvent: {} as any,
+    };
+
+    await act(async () => {
+      await capturedOnDragEnd(dragEndEvent);
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledWith({
+      taskId: 'task2',
+      taskData: { status: 'in_progress' },
+    });
+  });
 
   it('should not do anything if not dragged to pomodoro zone', async () => {
     (useSharedTimerContext as jest.Mock).mockReturnValue({

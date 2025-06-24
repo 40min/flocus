@@ -4,6 +4,7 @@ from odmantic import ObjectId
 
 from app.api.schemas.category import CategoryCreateRequest, CategoryResponse, CategoryUpdateRequest
 from app.core.config import settings
+from app.core.exceptions import NotOwnerException
 from app.db.models.category import Category as CategoryModel
 from app.db.models.user import User
 
@@ -381,3 +382,72 @@ async def test_delete_already_soft_deleted_category_succeeds(
     assert get_response.status_code == 200
     fetched_category = CategoryResponse(**get_response.json())
     assert fetched_category.is_deleted is True
+
+
+async def test_get_category_not_owner_exception_detail(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    auth_headers_user_two: dict[str, str],
+    test_user_one: User,
+):
+    # Create a category by user one
+    category_data = CategoryCreateRequest(name="UserOneCategoryForNotOwnerTest")
+    create_response = await async_client.post(
+        CATEGORIES_ENDPOINT, headers=auth_headers_user_one, json=category_data.model_dump(mode="json")
+    )
+    assert create_response.status_code == 201
+    category_id = create_response.json()["id"]
+
+    # User two tries to access user one's category
+    response = await async_client.get(f"{CATEGORIES_ENDPOINT}/{category_id}", headers=auth_headers_user_two)
+    assert response.status_code == NotOwnerException().status_code
+    assert response.json()["detail"] == NotOwnerException(resource="category").detail
+
+
+async def test_update_category_not_owner_exception_detail(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    auth_headers_user_two: dict[str, str],
+    test_user_one: User,
+):
+    # Create a category by user one
+    category_data = CategoryCreateRequest(name="UserOneCategoryUpdateForNotOwnerTest")
+    create_response = await async_client.post(
+        CATEGORIES_ENDPOINT, headers=auth_headers_user_one, json=category_data.model_dump(mode="json")
+    )
+    assert create_response.status_code == 201
+    category_id = create_response.json()["id"]
+
+    # User two tries to update user one's category
+    update_data = CategoryUpdateRequest(name="AttemptedUpdateByTwo")
+    response = await async_client.patch(
+        f"{CATEGORIES_ENDPOINT}/{category_id}", headers=auth_headers_user_two, json=update_data.model_dump(mode="json")
+    )
+    assert response.status_code == NotOwnerException().status_code
+    assert (
+        response.json()["detail"]
+        == NotOwnerException(resource="category", detail_override="Not authorized to update this category").detail
+    )
+
+
+async def test_delete_category_not_owner_exception_detail(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    auth_headers_user_two: dict[str, str],
+    test_user_one: User,
+):
+    # Create a category by user one
+    category_data = CategoryCreateRequest(name="UserOneCategoryDeleteForNotOwnerTest")
+    create_response = await async_client.post(
+        CATEGORIES_ENDPOINT, headers=auth_headers_user_one, json=category_data.model_dump(mode="json")
+    )
+    assert create_response.status_code == 201
+    category_id = create_response.json()["id"]
+
+    # User two tries to delete user one's category
+    response = await async_client.delete(f"{CATEGORIES_ENDPOINT}/{category_id}", headers=auth_headers_user_two)
+    assert response.status_code == NotOwnerException().status_code
+    assert (
+        response.json()["detail"]
+        == NotOwnerException(resource="category", detail_override="Not authorized to delete this category").detail
+    )

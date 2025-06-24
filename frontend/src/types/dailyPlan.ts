@@ -1,14 +1,14 @@
-import { TaskResponse } from './task';
+import { Task } from './task';
 import { TimeWindow } from './timeWindow';
 
 export interface TimeWindowAllocation {
   time_window: TimeWindow;
-  tasks: TaskResponse[];
+  tasks: Task[];
 }
 
 export interface TimeWindowResponse {
   time_window: TimeWindow;
-  tasks: TaskResponse[];
+  tasks: Task[];
 }
 
 export interface DailyPlanResponse {

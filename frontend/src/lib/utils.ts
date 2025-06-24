@@ -10,136 +10,289 @@ import {
   parseISO,
   isValid,
   getYear,
-  getHours,
-  getMinutes,
 } from 'date-fns';
 import { format as formatTZ, toZonedTime } from 'date-fns-tz';
 import { TimeWindowCreateRequest } from '../types/timeWindow';
 import { TimeWindowAllocation } from '../types/dailyPlan';
 
+// ===== STYLING UTILITIES =====
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// ===== TIME PARSING AND CONVERSION =====
+
+/**
+ * Convert time string in H:MM or HH:MM format to total minutes
+ * @param timeStr - Time string (e.g., "1:30", "13:45")
+ * @returns Total minutes from 00:00, or null if invalid
+ */
 export function hhMMToMinutes(timeStr: string): number | null {
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (typeof timeStr !== 'string' || !timeStr.trim()) {
+    return null;
+  }
+
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{1,2})$/);
   if (!match) return null;
 
-  const parsedTime = parse(timeStr, 'HH:mm', new Date());
-  if (!isValid(parsedTime)) return null;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
 
-  const hours = getHours(parsedTime);
-  const minutes = getMinutes(parsedTime);
+  // Validate time ranges
+  if (hours > 23 || minutes > 59) return null;
+
   return hours * 60 + minutes;
 }
 
+/**
+ * Convert total minutes to HH:MM format string
+ * @param totalMinutes - Total minutes (can be negative)
+ * @returns Formatted time string with 24-hour wraparound
+ */
 export function formatMinutesToHHMM(totalMinutes: number): string {
-  if (totalMinutes < 0) {
-    const sign = "-";
-    const absMinutes = Math.abs(totalMinutes);
-    const baseDate = startOfDay(new Date());
-    const targetDate = addMinutes(baseDate, absMinutes);
-    return sign + format(targetDate, 'HH:mm');
+  if (!Number.isInteger(totalMinutes)) {
+    return '00:00';
   }
-  const baseDate = startOfDay(new Date());
-  const targetDate = addMinutes(baseDate, totalMinutes);
-  return format(targetDate, 'HH:mm');
+
+  const isNegative = totalMinutes < 0;
+  const absMinutes = Math.abs(totalMinutes);
+
+  // Handle 24-hour wraparound (1440 minutes = 24 hours = 00:00)
+  const normalizedMinutes = absMinutes % (24 * 60);
+
+  const hours = Math.floor(normalizedMinutes / 60);
+  const minutes = normalizedMinutes % 60;
+
+  const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  return isNegative ? `-${formattedTime}` : formattedTime;
 }
-export const minutesToDate = (minutes: number): Date => {
+
+/**
+ * Convert minutes since midnight to a Date object for today
+ * @param minutes - Minutes since 00:00
+ * @returns Date object set to today with specified time
+ */
+export function minutesToDate(minutes: number): Date {
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes >= 24 * 60) {
+    throw new Error(`Invalid minutes value: ${minutes}. Must be 0-1439.`);
+  }
+
   const date = new Date();
   date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
   return date;
-};
+}
 
-// Convert UTC ISO string to local date object
+// ===== TIMEZONE UTILITIES =====
+
+// Cache timezone to avoid repeated system calls
+const LOCAL_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/**
+ * Convert UTC ISO string to local date object
+ * @param utcDate - UTC date string or null
+ * @returns Local date object or null
+ */
 export function utcToLocal(utcDate: string | null): Date | null {
-  if (!utcDate) return null;
-  const date = parseISO(utcDate);
-  // Add a validity check after parsing, which is good practice.
-  if (!isValid(date)) {
-    console.error(`utcToLocal: Failed to parse date input: '${utcDate}'`);
+  if (!utcDate?.trim()) return null;
+
+  try {
+    const date = parseISO(utcDate.trim());
+    if (!isValid(date)) {
+      console.warn(`utcToLocal: Invalid date format: '${utcDate}'`);
+      return null;
+    }
+    return toZonedTime(date, LOCAL_TIMEZONE);
+  } catch (error) {
+    console.error(`utcToLocal: Error parsing date '${utcDate}':`, error);
     return null;
   }
-  return toZonedTime(date, Intl.DateTimeFormat().resolvedOptions().timeZone);
 }
 
-// Convert local date object to UTC ISO string
+/**
+ * Convert local date object to UTC ISO string
+ * @param localDate - Local date object or null
+ * @returns UTC ISO string or null
+ */
 export function localToUtc(localDate: Date | null): string | null {
-  if (!localDate) return null;
-  return localDate.toISOString();
+  if (!localDate || !isValid(localDate)) return null;
+
+  try {
+    return localDate.toISOString();
+  } catch (error) {
+    console.error('localToUtc: Error converting date to ISO string:', error);
+    return null;
+  }
 }
 
+// ===== DATE FORMATTING =====
+
+/**
+ * Format a due date string for display
+ * @param dateString - UTC date string
+ * @returns Formatted date string
+ */
 export function formatDueDate(dateString: string | null): string {
-  if (!dateString) {
-    return 'N/A';
-  }
+  if (!dateString?.trim()) return 'N/A';
 
   const date = utcToLocal(dateString);
-  if (!date || !isValid(date)) {
-    return 'Invalid Date';
-  }
+  if (!date) return 'Invalid Date';
 
-  if (isToday(date)) {
-    return 'Today';
-  } else if (isTomorrow(date)) {
-    return 'Tomorrow';
-  } else {
-    const currentYear = getYear(new Date());
-    if (getYear(date) === currentYear) {
-      return formatTZ(date, 'MMMM d', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-    } else {
-      return formatTZ(date, 'MMMM d, yyyy', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+  try {
+    if (isToday(date)) {
+      return 'Today';
     }
-  }
-}
 
-export function formatDateTime(dateString: string | undefined | null): string {
-  if (!dateString) {
-    return 'N/A';
-  }
+    if (isTomorrow(date)) {
+      return 'Tomorrow';
+    }
 
-  const date = utcToLocal(dateString);
-  if (!date || !isValid(date)) {
+    const currentYear = getYear(new Date());
+    const dateYear = getYear(date);
+
+    const formatString = dateYear === currentYear ? 'MMMM d' : 'MMMM d, yyyy';
+    return formatTZ(date, formatString, { timeZone: LOCAL_TIMEZONE });
+  } catch (error) {
+    console.error('formatDueDate: Error formatting date:', error);
     return 'Invalid Date';
   }
-
-  return formatTZ(date, 'MMM d, yyyy, h:mm a', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
 }
 
+/**
+ * Format a date-time string for display
+ * @param dateString - UTC date string
+ * @returns Formatted date-time string
+ */
+export function formatDateTime(dateString: string | undefined | null): string {
+  if (!dateString?.trim()) return 'N/A';
+
+  const date = utcToLocal(dateString);
+  if (!date) return 'Invalid Date';
+
+  try {
+    return formatTZ(date, 'MMM d, yyyy, h:mm a', { timeZone: LOCAL_TIMEZONE });
+  } catch (error) {
+    console.error('formatDateTime: Error formatting date:', error);
+    return 'Invalid Date';
+  }
+}
+
+/**
+ * Format duration from minutes to human-readable string
+ * @param totalMinutes - Duration in minutes
+ * @returns Formatted duration string
+ */
 export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {
-  if (totalMinutes === undefined || totalMinutes === null) {
+  if (totalMinutes == null || !Number.isInteger(totalMinutes) || totalMinutes < 0) {
     return 'N/A';
   }
+
+  if (totalMinutes === 0) return '0min';
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
   if (hours === 0) {
     return `${minutes}min`;
-  } else if (minutes === 0) {
-    return `${hours}h`;
-  } else {
-    return `${hours}h ${minutes}min`;
   }
+
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${minutes}min`;
 }
 
+// ===== TIME WINDOW UTILITIES =====
 
+/**
+ * Check if a new time window overlaps with existing time windows
+ * @param newTimeWindow - New time window to check
+ * @param existingTimeWindows - Array of existing time window allocations
+ * @returns True if overlap detected, false otherwise
+ */
 export function checkTimeWindowOverlap(
   newTimeWindow: TimeWindowCreateRequest,
   existingTimeWindows: TimeWindowAllocation[]
 ): boolean {
+  if (!newTimeWindow || !Array.isArray(existingTimeWindows)) {
+    return false;
+  }
+
   const newStart = newTimeWindow.start_time;
   const newEnd = newTimeWindow.end_time;
 
-  for (const allocation of existingTimeWindows) {
-    const existingStart = allocation.time_window.start_time;
-    const existingEnd = allocation.time_window.end_time;
-
-    // Check for overlap:
-    // (start1 < end2) && (end1 > start2)
-    if (newStart < existingEnd && newEnd > existingStart) {
-      return true; // Overlap detected
-    }
+  // Validate new time window
+  if (typeof newStart !== 'number' || typeof newEnd !== 'number' || newStart >= newEnd) {
+    return false;
   }
-  return false; // No overlap
+
+  return existingTimeWindows.some(allocation => {
+    if (!allocation?.time_window) return false;
+
+    const { start_time: existingStart, end_time: existingEnd } = allocation.time_window;
+
+    // Validate existing time window
+    if (typeof existingStart !== 'number' || typeof existingEnd !== 'number') {
+      return false;
+    }
+
+    // Check for overlap: (start1 < end2) && (end1 > start2)
+    return newStart < existingEnd && newEnd > existingStart;
+  });
+}
+
+// ===== ADDITIONAL UTILITY FUNCTIONS =====
+
+/**
+ * Get current time in minutes since midnight
+ * @returns Current time as minutes since 00:00
+ */
+export function getCurrentTimeInMinutes(): number {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+/**
+ * Calculate time difference between two time strings
+ * @param startTime - Start time in HH:MM format
+ * @param endTime - End time in HH:MM format
+ * @returns Duration in minutes, or null if invalid
+ */
+export function calculateDuration(startTime: string, endTime: string): number | null {
+  const start = hhMMToMinutes(startTime);
+  const end = hhMMToMinutes(endTime);
+
+  if (start === null || end === null) return null;
+
+  let duration = end - start;
+
+  // Handle overnight periods (e.g., 23:00 to 01:00)
+  if (duration < 0) {
+    duration += 24 * 60; // Add 24 hours in minutes
+  }
+
+  return duration;
+}
+
+/**
+ * Validate if a time string is in valid HH:MM format
+ * @param timeStr - Time string to validate
+ * @returns True if valid, false otherwise
+ */
+export function isValidTimeFormat(timeStr: string): boolean {
+  return hhMMToMinutes(timeStr) !== null;
+}
+
+/**
+ * Round minutes to nearest interval
+ * @param minutes - Minutes to round
+ * @param interval - Interval to round to (default: 15)
+ * @returns Rounded minutes
+ */
+export function roundToInterval(minutes: number, interval: number = 15): number {
+  if (!Number.isInteger(minutes) || !Number.isInteger(interval) || interval <= 0) {
+    return minutes;
+  }
+
+  return Math.round(minutes / interval) * interval;
 }

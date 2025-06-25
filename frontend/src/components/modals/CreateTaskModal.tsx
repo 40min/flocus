@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
-import { Task, TaskCreateRequest, TaskUpdateRequest, LLMImprovementResponse, LlmAction } from 'types/task';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Task, TaskCreateRequest, TaskUpdateRequest, LLMImprovementResponse, LlmAction, TaskStatus, TaskPriority } from 'types/task';
 import { Category } from 'types/category';
 import { useSharedTimerContext } from 'context/SharedTimerContext';
 import * as taskService from 'services/taskService';
@@ -10,14 +12,16 @@ import Modal from './Modal';
 import { utcToLocal, localToUtc } from 'lib/utils';
 import { Sparkles, Bot } from 'lucide-react';
 
-interface CreateTaskFormInputs {
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  due_date: Date | null;
-  category_id: string | undefined;
-}
+const taskFormSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  status: z.string({ required_error: 'Status is required' }),
+  priority: z.string({ required_error: 'Priority is required' }),
+  due_date: z.date().nullable().optional(),
+  category_id: z.string().optional(),
+});
+
+type CreateTaskFormInputs = z.infer<typeof taskFormSchema>;
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -42,6 +46,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   priorityOptions,
 }) => {
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting }, setValue, getValues, watch } = useForm<CreateTaskFormInputs>({
+    resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: initialFormData.title,
       description: initialFormData.description || '',
@@ -49,7 +54,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       priority: initialFormData.priority,
       due_date: null,
       category_id: initialFormData.category_id || '',
-
     }
   });
 
@@ -209,7 +213,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               )}
             </button>
           </div>
-          <input type="text" id="title" {...register('title', { required: 'Title is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          <input type="text" id="title" {...register('title')} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}
           {titleSuggestion && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
@@ -295,14 +299,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label>
-            <select id="status" {...register('status', { required: 'Status is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            <select id="status" {...register('status')} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
               {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>}
           </div>
           <div>
             <label htmlFor="priority" className="block text-sm font-medium text-slate-700">Priority</label>
-            <select id="priority" {...register('priority', { required: 'Priority is required' })} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            <select id="priority" {...register('priority')} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
               {priorityOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
             {errors.priority && <p className="mt-1 text-sm text-red-600">{errors.priority.message}</p>}

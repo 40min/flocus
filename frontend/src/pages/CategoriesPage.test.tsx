@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from 'context/AuthContext';
@@ -80,16 +80,22 @@ describe('CategoriesPage', () => {
     mockedCreateCategory.mockResolvedValue({});
     renderComponent();
 
-    fireEvent.click(screen.getByText('Add New Category'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Add New Category'));
+    });
     await screen.findByText('Create New Category');
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Category' } });
-    fireEvent.change(screen.getByLabelText(/description/i), { target: { value: 'New Desc' } });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Category' } });
+      fireEvent.change(screen.getByLabelText(/description/i), { target: { value: 'New Desc' } });
 
-    const colorButton = screen.getByTitle('Green');
-    fireEvent.click(colorButton);
+      const colorButton = screen.getByTitle('Green');
+      fireEvent.click(colorButton);
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Create|Update/i }));
+    });
 
     await waitFor(() => {
       expect(mockedCreateCategory).toHaveBeenCalledWith({
@@ -106,8 +112,10 @@ describe('CategoriesPage', () => {
     mockedDeleteCategory.mockResolvedValue({});
     renderComponent();
 
-    const deleteButtons = screen.getAllByTitle('Delete Category');
-    fireEvent.click(deleteButtons[0]);
+    await act(async () => {
+      const deleteButtons = screen.getAllByTitle('Delete Category');
+      fireEvent.click(deleteButtons[0]);
+    });
 
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this category?');
     await waitFor(() => {

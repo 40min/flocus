@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import Modal from './Modal';
 import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
 import { Category } from '../../types/category';
@@ -15,6 +17,14 @@ interface CreateTimeWindowModalProps {
   existingTimeWindows: TimeWindowAllocation[];
 }
 
+const createTimeWindowSchemaBase = z.object({
+  description: z.string().optional(),
+  start_time: z.number(),
+  end_time: z.number(),
+  category_id: z.string().min(1, 'Category is required'),
+});
+
+
 const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
   isOpen,
   onClose,
@@ -22,22 +32,32 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
   categories,
   existingTimeWindows,
 }) => {
-  const { showMessage } = useMessage();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [overlapError, setOverlapError] = useState<string | null>(null);
+  const createTimeWindowSchema = useMemo(() => {
+    return createTimeWindowSchemaBase.refine(data => data.end_time > data.start_time, {
+      message: 'End time must be after start time.',
+      path: ['end_time']
+    }).refine(data => {
+      return !checkTimeWindowOverlap(data, existingTimeWindows);
+    }, {
+      message: 'New time window overlaps with an existing one.',
+      path: ['start_time']
+    });
+  }, [existingTimeWindows]);
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<TimeWindowCreateRequest>({
+  const { showMessage } = useMessage();
+
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = useForm<TimeWindowCreateRequest>({
+    resolver: zodResolver(createTimeWindowSchema),
     defaultValues: {
       description: '',
       start_time: 540, // Default to 9:00 AM
       end_time: 600,   // Default to 10:00 AM
       category_id: '',
-    }
+    },
   });
 
   const startTime = watch('start_time');
   const endTime = watch('end_time');
-  const categoryId = watch('category_id');
 
   useEffect(() => {
     if (isOpen) {
@@ -48,28 +68,11 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
         end_time: 600,
         category_id: defaultCategoryId,
       });
-      setOverlapError(null); // Clear error on modal open
     }
   }, [isOpen, categories, reset]);
 
-  useEffect(() => {
-    if (startTime !== undefined && endTime !== undefined) {
-      if (startTime >= endTime) {
-        setOverlapError('End time must be after start time.');
-      } else {
-        setOverlapError(null);
-      }
-    }
-  }, [startTime, endTime]);
 
   const onSubmit: SubmitHandler<TimeWindowCreateRequest> = async (data) => {
-    if (checkTimeWindowOverlap(data, existingTimeWindows)) {
-      setOverlapError('New time window overlaps with an existing one.');
-      return;
-    }
-
-    setIsLoading(true);
-
     try {
       const tempId = `temp-${Date.now()}`;
       const selectedCategory = categories.find(cat => cat.id === data.category_id);
@@ -95,8 +98,6 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     } catch (err) {
       showMessage('Failed to create time window.', 'error');
       console.error('Failed to create time window:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -107,7 +108,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
           <label htmlFor="category_id" className="block text-sm font-medium text-slate-700">Category</label>
           <select
             id="category_id"
-            {...register('category_id', { required: 'Category is required' })}
+            {...register('category_id')}
             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           >
             {categories.map(cat => (
@@ -150,9 +151,7 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
             {errors.end_time && <p className="text-red-500 text-sm">{errors.end_time.message}</p>}
           </div>
         </div>
-        {overlapError && (
-          <p className="text-red-500 text-sm">{overlapError}</p>
-        )}
+        {errors.start_time && errors.start_time.type === 'custom' && <p className="text-red-500 text-sm">{errors.start_time.message}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
@@ -163,10 +162,10 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={isLoading || !categoryId || !!overlapError || Object.keys(errors).length > 0}
+            disabled={isSubmitting}
             className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
           >
-            {isLoading ? 'Adding...' : 'Add Time Window'}
+            {isSubmitting ? 'Adding...' : 'Add Time Window'}
           </button>
         </div>
       </form>

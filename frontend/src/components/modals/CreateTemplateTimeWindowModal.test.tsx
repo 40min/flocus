@@ -6,7 +6,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import CreateTemplateTimeWindowModal from './CreateTemplateTimeWindowModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MessageProvider, useMessage } from '../../context/MessageContext';
 import { Category } from '../../types/category';
 import { TimeWindow } from '../../types/timeWindow';
 
@@ -72,22 +71,12 @@ const renderModal = (props: Partial<React.ComponentProps<typeof CreateTemplateTi
     ...props, // props passed to renderModal should override defaults
   };
 
-  // Simple component to render messages from context
-  const MessagesDisplay = () => {
-    const { message } = useMessage();
-    if (!message) return null;
-    return <div data-testid="message-display" style={{ color: message.type === 'error' ? 'red' : 'green'}}>{message.text}</div>;
-  };
-
   const finalProps = { ...defaultProps, ...props };
 
 
   const { rerender, ...rest } = render(
     <QueryClientProvider client={queryClient}>
-      <MessageProvider>
-        <MessagesDisplay />
-        <CreateTemplateTimeWindowModal {...finalProps} />
-      </MessageProvider>
+      <CreateTemplateTimeWindowModal {...finalProps} />
     </QueryClientProvider>
   );
 
@@ -212,11 +201,9 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Add Time Window/i }));
 
-    await waitFor(() => { // waitFor for the message to appear
+    await waitFor(() => {
       expect(handleSubmit).not.toHaveBeenCalled();
-      const messageDisplay = screen.getByTestId('message-display');
-      expect(messageDisplay).toHaveTextContent('New time window overlaps with an existing one.');
-      expect(messageDisplay).toHaveStyle('color: red');
+      expect(screen.getByText('New time window overlaps with an existing one.')).toBeInTheDocument();
     });
   });
 
@@ -261,17 +248,13 @@ describe('CreateTemplateTimeWindowModal', () => {
     // Simulate modal closing and re-opening
     rerender(
       <QueryClientProvider client={queryClient}>
-        <MessageProvider>
-          <CreateTemplateTimeWindowModal isOpen={false} onClose={handleClose} onSubmit={jest.fn()} availableCategories={mockCategories} existingTimeWindows={mockExistingTimeWindows} />
-        </MessageProvider>
+        <CreateTemplateTimeWindowModal isOpen={false} onClose={handleClose} onSubmit={jest.fn()} availableCategories={mockCategories} existingTimeWindows={mockExistingTimeWindows} />
       </QueryClientProvider>
     );
 
     rerender(
       <QueryClientProvider client={queryClient}>
-        <MessageProvider>
-          <CreateTemplateTimeWindowModal isOpen={true} onClose={handleClose} onSubmit={jest.fn()} availableCategories={mockCategories} existingTimeWindows={mockExistingTimeWindows} />
-        </MessageProvider>
+        <CreateTemplateTimeWindowModal isOpen={true} onClose={handleClose} onSubmit={jest.fn()} availableCategories={mockCategories} existingTimeWindows={mockExistingTimeWindows} />
       </QueryClientProvider>
     );
 

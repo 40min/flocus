@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
-import { loginUser, type UserCredentials } from '../services/authService';
+import { loginUser } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
+
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type UserCredentials = z.infer<typeof loginSchema>;
 
 const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors, isSubmitting }
   } = useForm<UserCredentials>({
-    defaultValues: {
-      username: '',
-      password: ''
-    }
+    resolver: zodResolver(loginSchema)
   });
 
   const onSubmit: SubmitHandler<UserCredentials> = async (data) => {
-    setIsLoading(true);
     setError(null);
 
     try {
@@ -38,8 +42,6 @@ const LoginPage: React.FC = () => {
         message = err.message;
       }
       setError(message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -68,7 +70,7 @@ const LoginPage: React.FC = () => {
                 type="text"
                 className="form-input-custom"
                 placeholder="Enter your username"
-                {...register('username', { required: 'Username is required' })}
+                {...register('username')}
               />
               {errors.username && <p className="mt-2 text-sm text-red-600">{errors.username.message}</p>}
             </div>
@@ -81,7 +83,7 @@ const LoginPage: React.FC = () => {
                 type="password"
                 className="form-input-custom"
                 placeholder="Enter your password"
-                {...register('password', { required: 'Password is required' })}
+                {...register('password')}
               />
               {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>}
             </div>
@@ -105,16 +107,16 @@ const LoginPage: React.FC = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="btn-standard w-full"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : null}
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isSubmitting ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>

@@ -3,32 +3,36 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import { useMutation } from '@tanstack/react-query';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { User, UserUpdatePayload } from '../types/user';
 import { updateUser } from '../services/userService';
 import { AxiosError } from 'axios';
 
-interface UserSettingsFormInputs {
-  email: string;
-  first_name: string;
-  last_name: string;
-  password?: string;
-}
+const userSettingsSchema = z.object({
+  email: z.string({ required_error: "Email is required" }).email('Invalid email address'),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal('')),
+});
+
+type UserSettingsFormInputs = z.infer<typeof userSettingsSchema>;
 
 const UserSettingsPage: React.FC = () => {
   const { user, login, token } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, formState: { errors }, setError: setFormError } = useForm<UserSettingsFormInputs>();
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting }, setError: setFormError } = useForm<UserSettingsFormInputs>({
+    resolver: zodResolver(userSettingsSchema)
+  });
 
   const updateUserMutation = useMutation<User, Error, UserUpdatePayload>({
     mutationFn: (payload: UserUpdatePayload) => updateUser(user!.id, payload),
     onSuccess: async () => {
       setSuccessMessage('Account updated successfully!');
       setValue('password', '');
-      if (token) {
-        await login(token);
-      }
+      if (token) await login(token);
     },
     onError: (err) => {
       let message = 'Failed to update account.';
@@ -67,7 +71,7 @@ const UserSettingsPage: React.FC = () => {
       last_name: data.last_name,
     };
 
-    if (data.password) {
+    if (data.password && data.password.length > 0) {
       updatePayload.password = data.password;
     }
 
@@ -96,26 +100,27 @@ const UserSettingsPage: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="email">Email</label>
-            <Input id="email" type="email" {...register('email', { required: 'Email is required' })} />
+            <Input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
           </div>
            <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="first_name">First Name</label>
-            <Input id="first_name" type="text" {...register('first_name', { required: 'First name is required' })} />
+            <Input id="first_name" type="text" {...register('first_name')} />
             {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
           </div>
            <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="last_name">Last Name</label>
-            <Input id="last_name" type="text" {...register('last_name', { required: 'Last name is required' })} />
+            <Input id="last_name" type="text" {...register('last_name')} />
             {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="password">New Password</label>
             <Input id="password" placeholder="Enter new password (optional)" type="password" {...register('password')} />
+            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
           </div>
           <div className="pt-2">
-            <Button variant="slate" size="medium" type="submit" disabled={updateUserMutation.isPending} className="flex items-center gap-2">
-              {updateUserMutation.isPending ? 'Updating...' : 'Update Account'}
+            <Button variant="slate" size="medium" type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+              {isSubmitting ? 'Updating...' : 'Update Account'}
             </Button>
           </div>
         </form>

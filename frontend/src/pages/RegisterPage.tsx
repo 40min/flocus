@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { registerUser, type UserRegistrationData } from '../services/authService';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { registerUser } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 import { AxiosError } from 'axios';
 
+const registerSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
+});
+
+type UserRegistrationData = z.infer<typeof registerSchema>;
+
 const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<UserRegistrationData>({
-    defaultValues: {
-      username: '',
-      email: '',
-      password: '',
-      first_name: '',
-      last_name: ''
-    }
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<UserRegistrationData>({
+    resolver: zodResolver(registerSchema),
   });
 
   const onSubmit: SubmitHandler<UserRegistrationData> = async (data) => {
     setError(null);
     setSuccessMessage(null);
-    setIsLoading(true);
 
     interface FastAPIErrorDetail { loc: string[]; msg: string; }
 
@@ -57,8 +61,6 @@ const RegisterPage: React.FC = () => {
       setError(errorMessage);
       if (err instanceof AxiosError && err.response?.data) {
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -85,7 +87,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="username"
                 type="text"
-                {...register('username', { required: 'Username is required' })}
+                {...register('username')}
                 className="form-input-custom"
                 placeholder="Choose a username"
               />
@@ -98,13 +100,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="email"
                 type="email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
-                    message: 'Invalid email address'
-                  }
-                })}
+                {...register('email')}
                 className="form-input-custom"
                 placeholder="Enter your email"
               />
@@ -117,7 +113,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="first_name"
                 type="text"
-                {...register('first_name', { required: 'First name is required' })}
+                {...register('first_name')}
                 className="form-input-custom"
                 placeholder="Enter your first name"
               />
@@ -130,7 +126,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="last_name"
                 type="text"
-                {...register('last_name', { required: 'Last name is required' })}
+                {...register('last_name')}
                 className="form-input-custom"
                 placeholder="Enter your last name"
               />
@@ -143,13 +139,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                {...register('password', {
-                  required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters'
-                  }
-                })}
+                {...register('password')}
                 className="form-input-custom"
                 placeholder="Choose a strong password"
               />
@@ -190,16 +180,16 @@ const RegisterPage: React.FC = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : null}
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
           </div>
         </form>

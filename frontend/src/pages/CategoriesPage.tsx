@@ -1,44 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
 import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 import { useCategories } from '../hooks/useCategories';
 import Button from '../components/Button';
 import Input from '../components/Input';
+import { useMessage } from '../context/MessageContext';
 
 const colorOptions = [
-  { name: 'Blue', value: '#3B82F6',bgColor: 'bg-blue-500', textColor: 'text-blue-700', ringColor: 'ring-blue-500' },
-  { name: 'Green', value: '#10B981', bgColor: 'bg-green-500', textColor: 'text-green-700', ringColor: 'ring-green-500' },
-  { name: 'Yellow', value: '#F59E0B', bgColor: 'bg-yellow-500', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500' },
   { name: 'Red', value: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-700', ringColor: 'ring-red-500' },
-  { name: 'Purple', value: '#8B5CF6', bgColor: 'bg-purple-500', textColor: 'text-purple-700', ringColor: 'ring-purple-500' },
-  { name: 'Pink', value: '#EC4899', bgColor: 'bg-pink-500', textColor: 'text-pink-700', ringColor: 'ring-pink-500' },
+  { name: 'Orange', value: '#F97316', bgColor: 'bg-orange-500', textColor: 'text-orange-700', ringColor: 'ring-orange-500' },
+  { name: 'Yellow', value: '#F59E0B', bgColor: 'bg-yellow-500', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500' },
+  { name: 'Green', value: '#22C55E', bgColor: 'bg-green-500', textColor: 'text-green-700', ringColor: 'ring-green-500' },
+  { name: 'Blue', value: '#3B82F6', bgColor: 'bg-blue-500', textColor: 'text-blue-700', ringColor: 'ring-blue-500' },
   { name: 'Indigo', value: '#6366F1', bgColor: 'bg-indigo-500', textColor: 'text-indigo-700', ringColor: 'ring-indigo-500' },
 ];
+
+const categoryFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  color: z.string({ required_error: "Color is required" }),
+});
+
+type CategoryFormData = z.infer<typeof categoryFormSchema>;
 
 const CategoriesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: categories = [], isLoading, error } = useCategories();
 
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  interface CategoryFormData {
-    name: string;
-    description?: string;
-    color: string;
-  }
-
-  const { register, handleSubmit: handleFormSubmit, formState: { errors }, setValue, reset, watch } = useForm<CategoryFormData>({
+  const { register, handleSubmit: handleFormSubmit, formState: { errors, isSubmitting }, setValue, reset, watch } = useForm<CategoryFormData>({
+    resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: '',
       description: '',
       color: colorOptions[0].value,
-    }
+    },
   });
 
   const watchedColor = watch("color");
@@ -61,7 +65,6 @@ const CategoriesPage: React.FC = () => {
 
 
   const onSubmit: SubmitHandler<CategoryFormData> = async (data) => {
-    setIsSubmitting(true);
     setFormError(null);
     try {
       if (editingCategory) {
@@ -76,8 +79,6 @@ const CategoriesPage: React.FC = () => {
     } catch (err) {
       setFormError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
       console.error(err);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -133,7 +134,7 @@ const CategoriesPage: React.FC = () => {
               <Input
                 type="text"
                 id="name"
-                {...register("name", { required: "Name is required" })}
+                {...register("name")}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
@@ -148,7 +149,7 @@ const CategoriesPage: React.FC = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
-              <input type="hidden" {...register("color", { required: "Color is required" })} />
+              <input type="hidden" {...register("color")} />
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((option) => (
                   <Button

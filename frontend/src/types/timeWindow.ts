@@ -16,7 +16,7 @@ export interface TimeWindowCreateRequest {
   description?: string;
   start_time: number;
   end_time: number;
-  category_id?: string; // category_id
+  category_id: string; // category_id
 }
 
 export interface TimeWindowUpdateRequest {

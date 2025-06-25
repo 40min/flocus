@@ -1,12 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { Category } from '../../types/category';
-import { minutesToDate } from '../../lib/utils';
-import { hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
-import { useMessage } from '../../context/MessageContext';
+import { minutesToDate, hhMMToMinutes, checkTimeWindowOverlap } from '../../lib/utils';
 import { Plus, Edit } from 'lucide-react';
 import Modal from './Modal'; // Assuming Modal component is available
 import Button from 'components/Button';
@@ -20,12 +20,14 @@ interface CreateTemplateTimeWindowModalProps {
   editingTimeWindow?: TimeWindow | null;
 }
 
-interface TimeWindowFormInputs {
-  description: string;
-  startTime: Date | null;
-  endTime: Date | null;
-  categoryId: string;
-}
+const timeWindowFormSchemaBase = z.object({
+  description: z.string().optional(),
+  startTime: z.date({ required_error: 'Start time is required' }).nullable().optional(),
+  endTime: z.date({ required_error: 'End time is required' }).nullable().optional(),
+  categoryId: z.string().min(1, "Category is required"),
+});
+
+type TimeWindowFormInputs = z.infer<typeof timeWindowFormSchemaBase>;
 
 const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps> = ({
   isOpen,
@@ -35,23 +37,49 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   existingTimeWindows,
   editingTimeWindow,
 }) => {
+  const timeWindowFormSchema = useMemo(() => {
+    return timeWindowFormSchemaBase.refine((data) => {
+      if (data.startTime && data.endTime) {
+        return data.endTime > data.startTime;
+      }
+      return true;
+    }, {
+      message: 'End time must be after start time',
+      path: ['endTime'],
+    }).refine((data) => {
+      const startTimeMinutes = data.startTime ? hhMMToMinutes(`${data.startTime.getHours()}:${data.startTime.getMinutes()}`) : null;
+      const endTimeMinutes = data.endTime ? hhMMToMinutes(`${data.endTime.getHours()}:${data.endTime.getMinutes()}`) : null;
+
+      if (startTimeMinutes === null || endTimeMinutes === null) return true;
+
+      // Add a dummy category_id to satisfy TimeWindowCreateRequest
+      const newTimeWindowCandidate = { start_time: startTimeMinutes, end_time: endTimeMinutes, category_id: "dummy" };
+      const timeWindowsForOverlapCheck = existingTimeWindows
+        .filter(tw => editingTimeWindow ? tw.id !== editingTimeWindow.id : true)
+        .map(tw => ({ time_window: tw, tasks: [] }));
+
+      return !checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck);
+    }, {
+      message: "New time window overlaps with an existing one.",
+      path: ["startTime"],
+    });
+  }, [existingTimeWindows, editingTimeWindow]);
+
   const {
     control,
     register,
     handleSubmit,
-    watch,
     formState: { errors },
     reset,
   } = useForm<TimeWindowFormInputs>({
+    resolver: zodResolver(timeWindowFormSchema),
     defaultValues: {
       description: '',
-      startTime: null,
-      endTime: null,
+      startTime: undefined,
+      endTime: undefined,
       categoryId: '',
     },
   });
-
-  const { showMessage } = useMessage();
 
   const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
@@ -68,8 +96,8 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       } else {
         reset({
           description: '',
-          startTime: null,
-          endTime: null,
+          startTime: undefined,
+          endTime: undefined,
           categoryId: '',
         });
       }
@@ -79,46 +107,15 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
 
 
 
-  const handleInternalSubmit = (data: TimeWindowFormInputs, event: React.BaseSyntheticEvent | undefined) => {
-    event?.preventDefault();
+  const handleInternalSubmit = (data: TimeWindowFormInputs) => {
     const { description, startTime, endTime, categoryId } = data;
 
-    if (!categoryId) {
-      return;
-    }
-    if (!startTime || !endTime) {
-      return;
-    }
-
-    const formatTime = (date: Date): string => {
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`;
-    };
-
-    const startTimeStr = formatTime(startTime);
-    const endTimeStr = formatTime(endTime);
+    const startTimeStr = startTime ? `${startTime.getHours()}:${startTime.getMinutes()}` : '';
+    const endTimeStr = endTime ? `${endTime.getHours()}:${endTime.getMinutes()}` : '';
     const startTimeMinutes = hhMMToMinutes(startTimeStr);
     const endTimeMinutes = hhMMToMinutes(endTimeStr);
 
-
     if (startTimeMinutes === null || endTimeMinutes === null || endTimeMinutes <= startTimeMinutes) {
-      return;
-    }
-
-    const newTimeWindowCandidate = {
-      start_time: startTimeMinutes,
-      end_time: endTimeMinutes,
-    };
-
-    const timeWindowsForOverlapCheck = existingTimeWindows
-      .filter(tw => editingTimeWindow ? tw.id !== editingTimeWindow.id : true)
-      .map(tw => ({ time_window: tw, tasks: [] }));
-
-    const isOverlapping = checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck);
-
-    if (isOverlapping) {
-      showMessage('New time window overlaps with an existing one.', 'error');
       return;
     }
 
@@ -133,7 +130,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       end_time: endTimeMinutes,
       category_id: categoryId,
     };
-
     onSubmit(newTimeWindow);
     onClose();
   };
@@ -146,7 +142,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           <Controller
             control={control}
             name="categoryId"
-            rules={{ required: 'Category is required' }}
             render={({ field }) => (
               <select
                 id="twCategory"
@@ -182,7 +177,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
             <Controller
               control={control}
               name="startTime"
-              rules={{ required: 'Start time is required' }}
               render={({ field }) => (
                 <DatePicker
                   id="twStartTime"
@@ -205,16 +199,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
             <Controller
               control={control}
               name="endTime"
-              rules={{
-                required: 'End time is required',
-                validate: (value) => {
-                  const startTime = watch('startTime');
-                  if (startTime && value && value <= startTime) {
-                    return 'End time must be after start time';
-                  }
-                  return true;
-                },
-              }}
               render={({ field }) => (
                 <DatePicker
                   id="twEndTime"
@@ -233,13 +217,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
             {errors.endTime && <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>}
           </div>
         </div>
-        {/* Manual overlap validation error display */}
-        {errors.startTime?.type === 'validate' && errors.startTime.message && (
-          <p className="mt-1 text-sm text-red-600">{errors.startTime.message}</p>
-        )}
-        {errors.endTime?.type === 'validate' && errors.endTime.message && (
-          <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>
-        )}
+
         <div className="flex justify-end space-x-3 mt-6">
           <Button
           variant="slate"

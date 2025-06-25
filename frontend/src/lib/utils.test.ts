@@ -14,6 +14,9 @@ import { TimeWindowCreateRequest } from '../types/timeWindow';
 import { toZonedTime } from 'date-fns-tz';
 import { startOfDay } from 'date-fns';
 
+// Keep a reference to the original console.warn
+const originalConsoleWarn = console.warn;
+
 // Helper to create a mock TimeWindowAllocation for testing
 const createMockAllocation = (id: string, start: number, end: number): TimeWindowAllocation => ({
   time_window: {
@@ -29,6 +32,22 @@ const createMockAllocation = (id: string, start: number, end: number): TimeWindo
 });
 
 describe('utils', () => {
+  beforeAll(() => {
+    console.warn = (...args: any[]) => {
+      if (typeof args[0] === 'string' && args[0].includes("utcToLocal: Invalid date format:")) {
+        // Suppress the specific warning
+        return;
+      }
+      // For all other warnings, call the original console.warn
+      originalConsoleWarn.apply(console, args);
+    };
+  });
+
+  afterAll(() => {
+    // Restore the original console.warn after all tests in this suite
+    console.warn = originalConsoleWarn;
+  });
+
   describe('hhMMToMinutes', () => {
     it('should convert valid HH:MM strings to minutes', () => {
       expect(hhMMToMinutes('00:00')).toBe(0);

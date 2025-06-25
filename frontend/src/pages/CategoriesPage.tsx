@@ -154,6 +154,7 @@ const CategoriesPage: React.FC = () => {
                 {colorOptions.map((option) => (
                   <Button
                     key={option.value}
+                    type="button" // Add this line
                     variant="ghost"
                     size="icon"
                     onClick={() => setValue("color", option.value, { shouldValidate: true })}

@@ -91,9 +91,7 @@ describe('SharedTimerContext', () => {
     );
 
     // Start timer
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-    });
+    fireEvent.click(screen.getByText('Start/Pause'));
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('true'));
 
     // Advance time
@@ -103,9 +101,7 @@ describe('SharedTimerContext', () => {
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('24:58');
 
     // Pause timer
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-    });
+    fireEvent.click(screen.getByText('Start/Pause'));
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('false'));
 
     // Time should not advance when paused
@@ -123,17 +119,13 @@ describe('SharedTimerContext', () => {
     );
 
     // Start and advance timer
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-    });
+    fireEvent.click(screen.getByText('Start/Pause'));
     act(() => {
       jest.advanceTimersByTime(5000);
     });
 
     // Reset timer
-    await act(async () => {
-      fireEvent.click(screen.getByText('Reset'));
-    });
+    fireEvent.click(screen.getByText('Reset'));
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
     });
@@ -173,9 +165,7 @@ describe('SharedTimerContext', () => {
       </SharedTimerProvider>
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Skip'));
-    });
+    fireEvent.click(screen.getByText('Skip'));
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');

@@ -1,7 +1,6 @@
 import React from 'react';
 
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor, } from '@testing-library/react';
 
 import '@testing-library/jest-dom';
 import CreateTemplateTimeWindowModal from './CreateTemplateTimeWindowModal';
@@ -136,6 +135,8 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           description: 'New Time',
@@ -163,18 +164,19 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Updated Break' } });
 
-    await act(async () => {
-      const startTimeInputEl = screen.getByLabelText<HTMLInputElement>(/Start Time/i);
-      fireEvent.change(startTimeInputEl, { target: { value: '13:30' } });
+    const startTimeInputEl = screen.getByLabelText<HTMLInputElement>(/Start Time/i);
+    fireEvent.change(startTimeInputEl, { target: { value: '13:30' } });
 
-      const endTimeInputEl = screen.getByLabelText<HTMLInputElement>(/End Time/i);
-      fireEvent.change(endTimeInputEl, { target: { value: '14:30' } });
+    const endTimeInputEl = screen.getByLabelText<HTMLInputElement>(/End Time/i);
+    fireEvent.change(endTimeInputEl, { target: { value: '14:30' } });
 
-      fireEvent.click(screen.getByRole('button', { name: /Update Time Window/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Update Time Window/i }));
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           description: 'Updated Break',
@@ -203,6 +205,8 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(handleSubmit).not.toHaveBeenCalled();
+    });
+    await waitFor(() => {
       expect(screen.getByText('New time window overlaps with an existing one.')).toBeInTheDocument();
     });
   });
@@ -228,6 +232,9 @@ describe('CreateTemplateTimeWindowModal', () => {
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
       expect(screen.queryByText('New time window overlaps with an existing one.')).not.toBeInTheDocument();
     });
   });

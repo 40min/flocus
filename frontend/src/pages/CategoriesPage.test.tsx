@@ -80,28 +80,22 @@ describe('CategoriesPage', () => {
     mockedCreateCategory.mockResolvedValue({});
     renderComponent();
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Add New Category'));
-    });
+    fireEvent.click(screen.getByText('Add New Category'));
     await screen.findByText('Create New Category');
 
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Category' } });
-      fireEvent.change(screen.getByLabelText(/description/i), { target: { value: 'New Desc' } });
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Category' } });
+    fireEvent.change(screen.getByLabelText(/description/i), { target: { value: 'New Desc' } });
 
-      const colorButton = screen.getByTitle('Green');
-      fireEvent.click(colorButton);
-    });
+    const colorButton = screen.getByTitle('Green'); // Restore color selection
+    fireEvent.click(colorButton); // Restore color selection
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Create|Update/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Create|Update/i }));
 
     await waitFor(() => {
       expect(mockedCreateCategory).toHaveBeenCalledWith({
         name: 'New Category',
         description: 'New Desc',
-        color: '#10B981',
+        color: '#22C55E', // Expecting Green
       });
     });
   });
@@ -112,10 +106,8 @@ describe('CategoriesPage', () => {
     mockedDeleteCategory.mockResolvedValue({});
     renderComponent();
 
-    await act(async () => {
-      const deleteButtons = screen.getAllByTitle('Delete Category');
-      fireEvent.click(deleteButtons[0]);
-    });
+    const deleteButtons = screen.getAllByTitle('Delete Category');
+    fireEvent.click(deleteButtons[0]);
 
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this category?');
     await waitFor(() => {

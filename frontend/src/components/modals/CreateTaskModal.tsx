@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Task, TaskCreateRequest, TaskUpdateRequest, LLMImprovementResponse, LlmAction, TaskStatus, TaskPriority } from 'types/task';
+import { Task, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskPriority } from 'types/task';
 import { Category } from 'types/category';
 import { useSharedTimerContext } from 'context/SharedTimerContext';
 import * as taskService from 'services/taskService';
+import { useLlmSuggestions } from 'hooks/useLlmSuggestions';
 import Modal from './Modal';
 import { utcToLocal, localToUtc } from 'lib/utils';
 import { Sparkles, Bot } from 'lucide-react';
@@ -61,10 +62,19 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
   const title = watch('title'); // Watch the title field for changes
 
-  const [titleSuggestion, setTitleSuggestion] = useState<string | null>(null);
-  const [descriptionSuggestion, setDescriptionSuggestion] = useState<string | null>(null);
-  const [loadingTitleSuggestion, setLoadingTitleSuggestion] = useState<boolean>(false);
-  const [loadingDescriptionSuggestion, setLoadingDescriptionSuggestion] = useState<boolean>(false);
+  const {
+    titleSuggestion,
+    descriptionSuggestion,
+    loadingTitleSuggestion,
+    loadingDescriptionSuggestion,
+    handleImproveTitle,
+    handleImproveDescription,
+    applyTitleSuggestion,
+    rejectTitleSuggestion,
+    applyDescriptionSuggestion,
+    rejectDescriptionSuggestion,
+    resetSuggestions,
+  } = useLlmSuggestions(getValues, setValue);
 
   useEffect(() => {
     if (editingTask) {
@@ -87,77 +97,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       });
     }
     // Reset suggestions and loading states when modal opens or task changes
-    setTitleSuggestion(null);
-    setDescriptionSuggestion(null);
-    setLoadingTitleSuggestion(false);
-    setLoadingDescriptionSuggestion(false);
-  }, [editingTask, initialFormData, isOpen, reset]);
-
-  const handleImproveTitle = async () => {
-    setLoadingTitleSuggestion(true);
-    setTitleSuggestion(null);
-    try {
-      const currentTitle = getValues('title');
-      const response: LLMImprovementResponse = await taskService.getLlmImprovement({
-        action: 'improve_title' as LlmAction,
-        title: currentTitle,
-      });
-      if (response.improved_title) {
-        setTitleSuggestion(response.improved_title);
-      }
-    } catch (error) {
-      console.error('Error improving title:', error);
-    } finally {
-      setLoadingTitleSuggestion(false);
-    }
-  };
-
-  const handleImproveDescription = async () => {
-    setLoadingDescriptionSuggestion(true);
-    setDescriptionSuggestion(null);
-    try {
-      const currentDescription = getValues('description');
-      const currentTitle = getValues('title');
-      const action: LlmAction = currentDescription
-        ? 'improve_description'
-        : 'generate_description_from_title';
-
-      const response: LLMImprovementResponse = await taskService.getLlmImprovement({
-        action: action,
-        title: currentTitle,
-        description: currentDescription,
-      });
-      if (response.improved_description) {
-        setDescriptionSuggestion(response.improved_description);
-      }
-    } catch (error) {
-      console.error('Error improving description:', error);
-    } finally {
-      setLoadingDescriptionSuggestion(false);
-    }
-  };
-
-  const applyTitleSuggestion = () => {
-    if (titleSuggestion) {
-      setValue('title', titleSuggestion);
-      setTitleSuggestion(null);
-    }
-  };
-
-  const rejectTitleSuggestion = () => {
-    setTitleSuggestion(null);
-  };
-
-  const applyDescriptionSuggestion = () => {
-    if (descriptionSuggestion) {
-      setValue('description', descriptionSuggestion);
-      setDescriptionSuggestion(null);
-    }
-  };
-
-  const rejectDescriptionSuggestion = () => {
-    setDescriptionSuggestion(null);
-  };
+    resetSuggestions();
+  }, [editingTask, initialFormData, isOpen, reset, resetSuggestions]);
 
   const onSubmit = async (data: CreateTaskFormInputs) => {
     const payload = {

@@ -127,7 +127,7 @@ describe('CreateTimeWindowModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Add Time Window/i }));
 
-    expect(await screen.findAllByText('New time window overlaps with an existing one.')).toHaveLength(2);
+    expect(await screen.findByText('New time window overlaps with an existing one.')).toBeInTheDocument();
     expect(onSubmitSuccessMock).not.toHaveBeenCalled();
   });
 

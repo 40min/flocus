@@ -52,6 +52,8 @@ module.exports = {
       config.transformIgnorePatterns = [
         'node_modules/(?!date-fns|date-fns-tz)/',
       ];
+
+
       config.moduleDirectories = ['node_modules', 'src'];
       return config;
     },

@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Modal from './Modal';
@@ -6,7 +7,16 @@ describe('Modal', () => {
   const onCloseMock = jest.fn();
 
   beforeEach(() => {
+const modalRoot = document.createElement('div');
+    modalRoot.setAttribute('id', 'modal-root');
+    document.body.appendChild(modalRoot);
     onCloseMock.mockClear();
+  });
+afterEach(() => {
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) {
+      document.body.removeChild(modalRoot);
+    }
   });
 
   it('does not render when isOpen is false', () => {
@@ -15,7 +25,7 @@ describe('Modal', () => {
         <div>Modal Content</div>
       </Modal>
     );
-    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('renders when isOpen is true', () => {

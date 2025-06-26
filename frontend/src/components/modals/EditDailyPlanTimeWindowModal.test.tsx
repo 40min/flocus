@@ -89,7 +89,7 @@ describe('EditDailyPlanTimeWindowModal', () => {
     expect(screen.getByLabelText(/end time/i)).toHaveValue(formatMinutesToHHMM(mockEditingTimeWindow.time_window.end_time));
 
     const categoryInput = screen.getByLabelText(/category/i) as HTMLInputElement;
-    expect(categoryInput).toHaveValue(mockEditingTimeWindow.time_window.category.name);
+    expect(categoryInput).toHaveValue(mockEditingTimeWindow.time_window.category.id);
     expect(categoryInput).toBeDisabled();
   });
 
@@ -146,7 +146,7 @@ describe('EditDailyPlanTimeWindowModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/time window overlaps with an existing time window/i)).toBeInTheDocument();
+      expect(screen.getByText(/New time window overlaps with an existing one./i)).toBeInTheDocument();
     });
     expect(mockOnSubmit).not.toHaveBeenCalled();
     expect(mockOnClose).not.toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe('EditDailyPlanTimeWindowModal', () => {
         end_time: hhMMToMinutes('08:30'),
       });
     });
-    expect(screen.queryByText(/time window overlaps with an existing time window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/New time window overlaps with an existing one./i)).not.toBeInTheDocument();
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
@@ -191,7 +191,7 @@ describe('EditDailyPlanTimeWindowModal', () => {
         end_time: mockEditingTimeWindow.time_window.end_time,
       });
     });
-    expect(screen.queryByText(/time window overlaps with an existing time window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/New time window overlaps with an existing one./i)).not.toBeInTheDocument();
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 

@@ -28,14 +28,19 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
   const { showMessage } = useMessage();
 
   const initialData = useMemo(() => {
-    const defaultCategoryId = categories.length > 0 ? categories[0].id : '';
+    let startTimeMinutes = 540;
+if (existingTimeWindows.length > 0) {
+      startTimeMinutes = Math.max(...existingTimeWindows.map((alloc) => alloc.time_window.end_time));
+    }
+
+    const endTimeMinutes = Math.min(startTimeMinutes + 60, 1439);
     return {
       description: '',
-      startTime: minutesToDate(540),
-      endTime: minutesToDate(600),
-      categoryId: defaultCategoryId,
+      startTime: minutesToDate(startTimeMinutes),
+      endTime: minutesToDate(endTimeMinutes),
+      categoryId: '',
     };
-  }, [categories]);
+  }, [existingTimeWindows]);
 
   const {
     control,

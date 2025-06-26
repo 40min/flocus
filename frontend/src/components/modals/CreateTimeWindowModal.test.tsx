@@ -62,11 +62,122 @@ describe('CreateTimeWindowModal', () => {
   it('renders the modal with default values when open', () => {
     renderComponent();
     expect(screen.getByText('Add New Time Window')).toBeInTheDocument();
-    expect(screen.getByLabelText('Category')).toHaveValue(mockCategories[0].id);
+    expect(screen.getByLabelText('Category')).toHaveValue('');
     expect(screen.getByLabelText('Description (Optional)')).toHaveValue('');
     expect(screen.getByLabelText('Start Time')).toHaveValue('09:00');
     expect(screen.getByLabelText('End Time')).toHaveValue('10:00');
     expect(screen.getByRole('button', { name: /Add Time Window/i })).toBeInTheDocument();
+expect(screen.getByLabelText('Category')).toHaveValue('');
+    expect(screen.getByLabelText('Description (Optional)')).toHaveValue('');
+    expect(screen.getByLabelText('Start Time')).toHaveValue('09:00');
+    expect(screen.getByLabelText('End Time')).toHaveValue('10:00');
+    expect(screen.getByRole('button', { name: /Add Time Window/i })).toBeInTheDocument();
+  });
+
+  it('renders with default start and end times based on latest existing time window', () => {
+    const latestEndTime = 720; // 12:00
+    const existingWindowsWithLatest = [
+      ...mockExistingTimeWindows,
+      {
+        time_window: {
+          id: 'tw2',
+          description: 'Afternoon Work',
+          start_time: 660, // 11:00
+          end_time: latestEndTime, // 12:00
+          category: mockCategories[0],
+          day_template_id: 'template1',
+          user_id: 'user1',
+          is_deleted: false,
+        },
+        tasks: [],
+      },
+    ];
+    renderComponent({ existingTimeWindows: existingWindowsWithLatest });
+
+    expect(screen.getByLabelText('Start Time')).toHaveValue('12:00');
+    expect(screen.getByLabelText('End Time')).toHaveValue('13:00'); // 12:00 + 1 hour
+  });
+
+  it('caps the end time at 23:59 (1439 minutes)', () => {
+    const latestEndTime = 1400; // 23:20
+    const existingWindowsWithLateEnd = [
+      {
+        time_window: {
+          id: 'tw3',
+          description: 'Late Night',
+          start_time: 1340, // 22:20
+          end_time: latestEndTime, // 23:20
+          category: mockCategories[0],
+          day_template_id: 'template1',
+          user_id: 'user1',
+          is_deleted: false,
+        },
+        tasks: [],
+      },
+    ];
+    renderComponent({ existingTimeWindows: existingWindowsWithLateEnd });
+
+    expect(screen.getByLabelText('Start Time')).toHaveValue('23:20');
+    expect(screen.getByLabelText('End Time')).toHaveValue('23:59'); // Capped at 23:59
+  });
+
+  it('resets form with default values when modal opens with new existingTimeWindows', async () => {
+    const { rerender } = renderComponent({ isOpen: false, existingTimeWindows: [] });
+
+    // Open the modal initially, it should have default 09:00-10:00
+    rerender(
+      <MessageProvider>
+        <CreateTimeWindowModal
+          isOpen={true}
+          onClose={jest.fn()}
+          onSubmitSuccess={jest.fn()}
+          categories={mockCategories}
+          existingTimeWindows={[]}
+        />
+      </MessageProvider>
+    );
+    expect(screen.getByLabelText('Start Time')).toHaveValue('09:00');
+    expect(screen.getByLabelText('End Time')).toHaveValue('10:00');
+
+    // Simulate existing time windows changing and modal re-opening
+    const latestEndTime = 720; // 12:00
+    const updatedExistingWindows = [
+      {
+        time_window: {
+          id: 'tw2',
+          description: 'Afternoon Work',
+          start_time: 660, // 11:00
+          end_time: latestEndTime, // 12:00
+          category: mockCategories[0],
+          day_template_id: 'template1',
+          user_id: 'user1',
+          is_deleted: false,
+        },
+        tasks: [],
+      },
+    ];
+
+    rerender(
+      <MessageProvider>
+        <CreateTimeWindowModal
+          isOpen={true}
+          onClose={jest.fn()}
+          onSubmitSuccess={jest.fn()}
+          categories={mockCategories}
+          existingTimeWindows={updatedExistingWindows}
+        />
+      </MessageProvider>
+    );
+
+    // Expect the form to reset with new default times based on updated existingTimeWindows
+    await waitFor(() => expect(screen.getByLabelText('Start Time')).toHaveValue('12:00'));
+    await waitFor(() => expect(screen.getByLabelText('End Time')).toHaveValue('13:00'));
+  });
+
+  it('renders the modal with default values when open and no categories', () => {
+    renderComponent({ categories: [] });
+    expect(screen.getByText('Add New Time Window')).toBeInTheDocument();
+    expect(screen.getByLabelText('Category')).toHaveValue('');
   });
 
   it('handles form submission with valid data', async () => {

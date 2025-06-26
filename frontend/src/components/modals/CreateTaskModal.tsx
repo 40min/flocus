@@ -4,7 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Task, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskPriority } from 'types/task';
+import { Task, TaskCreateRequest, TaskUpdateRequest } from 'types/task';
 import { Category } from 'types/category';
 import { useSharedTimerContext } from 'context/SharedTimerContext';
 import * as taskService from 'services/taskService';

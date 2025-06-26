@@ -102,7 +102,7 @@ describe('EditTemplatePage', () => {
           time_windows: [],
         });
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/templates');
+      expect(mockNavigate).toHaveBeenCalledWith('/templates/edit/template1');
     });
   });
 

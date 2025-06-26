@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDroppable } from '@dnd-kit/core';
@@ -7,7 +7,6 @@ import Button from './Button'; // Import the Button component
 
 const PomodoroTimer: React.FC = () => {
   const {
-    mode,
     timeRemaining,
     isActive,
     pomodorosCompleted,

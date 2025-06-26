@@ -10,7 +10,7 @@ import { useUpdateTask } from '../hooks/useTasks';
 import { TaskUpdateRequest } from '../types/task';
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskChanged, isActive, handleStartPause, setCurrentTaskName, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
+  const { setCurrentTaskId, setOnTaskChanged, setCurrentTaskName, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();

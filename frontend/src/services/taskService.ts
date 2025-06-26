@@ -3,7 +3,6 @@ import {
   Task, TaskCreateRequest, TaskUpdateRequest,
   LLMImprovementRequest,
   LLMImprovementResponse,
-  LlmAction
 } from '../types/task';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 

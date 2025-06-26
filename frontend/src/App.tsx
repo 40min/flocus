@@ -2,7 +2,7 @@ import React from 'react';
 import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import flocusLogo from './assets/flocus_logo.png';
-import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut, Timer } from 'lucide-react';
+import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut } from 'lucide-react';
 import MyDayPage from './pages/MyDayPage';
 import DashboardPage from './pages/DashboardPage'; // New import
 import LoginPage from './pages/LoginPage';

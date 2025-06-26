@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
 import { Category } from '../../types/category';
 import { hhMMToMinutes, minutesToDate } from '../../lib/utils';
 import { useMessage } from '../../context/MessageContext';
 import { TimeWindowAllocation } from '../../types/dailyPlan';
-import TimeWindowForm, { TimeWindowFormInputs } from './TimeWindowForm';
+import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
 import { PlusCircle } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface CreateTimeWindowModalProps {
   isOpen: boolean;
@@ -35,7 +37,22 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
     };
   }, [categories]);
 
-  const handleFormSubmit = (data: TimeWindowFormInputs) => {
+  const {
+    control,
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<TimeWindowFormInputs>({
+    resolver: zodResolver(createTimeWindowFormSchema(existingTimeWindows)),
+    defaultValues: initialData,
+  });
+
+  useEffect(() => {
+    reset(initialData);
+  }, [initialData, reset]);
+
+  const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime, categoryId } = data;
     if (!startTime || !endTime || !categoryId) return;
 
@@ -80,18 +97,25 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add New Time Window">
-      <TimeWindowForm
-        onSubmit={handleFormSubmit}
-        onClose={onClose}
-        initialData={initialData}
-        availableCategories={categories}
-        existingTimeWindows={existingTimeWindows}
-        submitButtonContent={
-          <>
-            <PlusCircle size={18} /> Add Time Window
-          </>
-        }
-      />
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <TimeWindowForm
+          onClose={onClose}
+          initialData={initialData}
+          availableCategories={categories}
+          existingTimeWindows={existingTimeWindows}
+          submitButtonContent={
+            <>
+              <PlusCircle size={18} /> Add Time Window
+            </>
+          }
+          control={control}
+          register={register}
+          errors={errors}
+          isSubmitting={isSubmitting}
+          reset={reset}
+onFormSubmit={handleSubmit(handleFormSubmit)}
+        />
+      </form>
     </Modal>
   );
 };

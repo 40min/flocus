@@ -9,7 +9,6 @@ import { createCategory, updateCategory, deleteCategory } from '../services/cate
 import { useCategories } from '../hooks/useCategories';
 import Button from '../components/Button';
 import Input from '../components/Input';
-import { useMessage } from '../context/MessageContext';
 
 const colorOptions = [
   { name: 'Red', value: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-700', ringColor: 'ring-red-500' },

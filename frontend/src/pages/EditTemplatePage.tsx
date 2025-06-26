@@ -156,7 +156,7 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
     mutationFn: createDayTemplate,
     onSuccess: (savedTemplate: DayTemplateResponse) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
-      navigate('/templates');
+      navigate(`/templates/edit/${savedTemplate.id}`);
     },
     onError: (err: any) => {
       // Form error handling would go here if needed
@@ -170,7 +170,7 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
       queryClient.invalidateQueries({ queryKey: ['template', savedTemplate.id] });
       reset(undefined, { keepValues: true, keepDirty: false }); // Reset dirty state after successful save
       setTemplateTimeWindows(savedTemplate.time_windows || []); // Update time windows from saved data
-      navigate('/templates');
+      // Do not navigate, stay on the current edit page
     },
     onError: (err: any) => {
       // Form error handling would go here if needed

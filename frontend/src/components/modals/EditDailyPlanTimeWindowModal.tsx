@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Modal from 'components/modals/Modal';
-import { TimeWindowAllocation } from 'types/dailyPlan';
 import { TimeWindowCreateRequest } from 'types/timeWindow';
 import { hhMMToMinutes, minutesToDate } from 'lib/utils';
-import TimeWindowForm, { TimeWindowFormInputs } from './TimeWindowForm';
+import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { TimeWindowAllocation } from 'types/dailyPlan';
 
 interface EditDailyPlanTimeWindowModalProps {
   isOpen: boolean;
@@ -37,7 +39,22 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
     };
   }, [editingTimeWindow]);
 
-  const handleFormSubmit = (data: TimeWindowFormInputs) => {
+  const {
+    control,
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<TimeWindowFormInputs>({
+    resolver: zodResolver(createTimeWindowFormSchema(existingTimeWindows, editingTimeWindow.time_window.id)),
+    defaultValues: initialData,
+  });
+
+  useEffect(() => {
+    reset(initialData);
+  }, [initialData, reset]);
+
+  const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime } = data;
     if (!startTime || !endTime) return;
 
@@ -60,16 +77,23 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Edit: ${editingTimeWindow.time_window.category.name}`}>
-      <TimeWindowForm
-        onSubmit={handleFormSubmit}
-        onClose={onClose}
-        initialData={initialData}
-        availableCategories={[editingTimeWindow.time_window.category]}
-        existingTimeWindows={existingTimeWindows}
-        editingTimeWindowId={editingTimeWindow.time_window.id}
-        submitButtonContent="Save Changes"
-        categoryDisabled={true}
-      />
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <TimeWindowForm
+          onClose={onClose}
+          initialData={initialData}
+          availableCategories={[editingTimeWindow.time_window.category]}
+          existingTimeWindows={existingTimeWindows}
+          editingTimeWindowId={editingTimeWindow.time_window.id}
+          submitButtonContent="Save Changes"
+          categoryDisabled={true}
+          control={control}
+          register={register}
+          errors={errors}
+          isSubmitting={isSubmitting}
+          reset={reset}
+onFormSubmit={handleSubmit(handleFormSubmit)}
+        />
+      </form>
     </Modal>
   );
 };

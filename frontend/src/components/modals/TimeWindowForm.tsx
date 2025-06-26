@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { Category } from '../../types/category';
 import { TimeWindowAllocation } from '../../types/dailyPlan';
@@ -17,7 +16,6 @@ export interface TimeWindowFormInputs {
 }
 
 interface TimeWindowFormProps {
-  onSubmit: (data: TimeWindowFormInputs) => void;
   onClose: () => void;
   initialData: Partial<TimeWindowFormInputs>;
   availableCategories: Category[];
@@ -25,69 +23,62 @@ interface TimeWindowFormProps {
   editingTimeWindowId?: string | null;
   submitButtonContent: React.ReactNode;
   categoryDisabled?: boolean;
+  control: any;
+  register: any;
+  errors: any;
+  isSubmitting: boolean;
+  reset: any;
+onFormSubmit: () => void;
 }
 
-const timeWindowFormSchemaBase = z.object({
+export const timeWindowFormSchemaBase = z.object({
   description: z.string().optional(),
   startTime: z.date({ invalid_type_error: 'Start time is required' }).nullable(),
   endTime: z.date({ invalid_type_error: 'End time is required' }).nullable(),
   categoryId: z.string().min(1, 'Category is required'),
+}).refine((data) => (data.startTime && data.endTime ? data.endTime > data.startTime : true), {
+  message: 'End time must be after start time.',
+  path: ['endTime'],
 });
 
+export const createTimeWindowFormSchema = (existingTimeWindows: TimeWindowAllocation[], editingTimeWindowId?: string | null) => {
+  return timeWindowFormSchemaBase.refine(
+    (data) => {
+      if (!data.startTime || !data.endTime) return true;
+
+      const startTimeMinutes = hhMMToMinutes(`${data.startTime.getHours()}:${data.startTime.getMinutes()}`);
+      const endTimeMinutes = hhMMToMinutes(`${data.endTime.getHours()}:${data.endTime.getMinutes()}`);
+
+      if (startTimeMinutes === null || endTimeMinutes === null) return true;
+
+      const newTimeWindowCandidate = { start_time: startTimeMinutes, end_time: endTimeMinutes, category_id: 'dummy' };
+
+      const timeWindowsForOverlapCheck = existingTimeWindows.filter(
+        (alloc) => alloc.time_window.id !== editingTimeWindowId
+      );
+
+      return !checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck);
+    },
+    {
+      message: 'New time window overlaps with an existing one.',
+      path: ['startTime'],
+    }
+  );
+};
+
 const TimeWindowForm: React.FC<TimeWindowFormProps> = ({
-  onSubmit,
   onClose,
   initialData,
   availableCategories,
-  existingTimeWindows,
-  editingTimeWindowId,
   submitButtonContent,
   categoryDisabled,
+  control,
+  register,
+  errors,
+  isSubmitting,
+  reset,
+  onFormSubmit,
 }) => {
-  const timeWindowFormSchema = useMemo(
-    () => {
-      return timeWindowFormSchemaBase
-        .refine((data) => (data.startTime && data.endTime ? data.endTime > data.startTime : true), {
-          message: 'End time must be after start time.',
-          path: ['endTime'],
-        })
-        .refine(
-          (data) => {
-            if (!data.startTime || !data.endTime) return true;
-
-            const startTimeMinutes = hhMMToMinutes(`${data.startTime.getHours()}:${data.startTime.getMinutes()}`);
-            const endTimeMinutes = hhMMToMinutes(`${data.endTime.getHours()}:${data.endTime.getMinutes()}`);
-
-            if (startTimeMinutes === null || endTimeMinutes === null) return true;
-
-            const newTimeWindowCandidate = { start_time: startTimeMinutes, end_time: endTimeMinutes, category_id: 'dummy' };
-
-            const timeWindowsForOverlapCheck = existingTimeWindows.filter(
-              (alloc) => alloc.time_window.id !== editingTimeWindowId
-            );
-
-            return !checkTimeWindowOverlap(newTimeWindowCandidate, timeWindowsForOverlapCheck);
-          },
-          {
-            message: 'New time window overlaps with an existing one.',
-            path: ['startTime'],
-          }
-        );
-    },
-    [existingTimeWindows, editingTimeWindowId]
-  );
-
-  const {
-    control,
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<TimeWindowFormInputs>({
-    resolver: zodResolver(timeWindowFormSchema),
-    defaultValues: initialData,
-  });
-
   const firstModalFocusableElementRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
@@ -97,12 +88,8 @@ const TimeWindowForm: React.FC<TimeWindowFormProps> = ({
     }
   }, [initialData, reset, categoryDisabled]);
 
-  const handleInternalSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
-    onSubmit(data);
-  };
-
   return (
-    <form onSubmit={handleSubmit(handleInternalSubmit)} className="space-y-4">
+    <div className="space-y-4">
       <div>
         <label htmlFor="twCategory" className="block text-sm font-medium text-gray-700">Category</label>
         <Controller
@@ -147,9 +134,9 @@ const TimeWindowForm: React.FC<TimeWindowFormProps> = ({
 
       <div className="flex justify-end space-x-3 mt-6">
         <Button type="button" variant="secondary" size="medium" onClick={onClose}> Cancel </Button>
-        <Button type="submit" variant="slate" size="medium" disabled={isSubmitting} className="flex items-center gap-2"> {submitButtonContent} </Button>
+        <Button type="button" variant="slate" size="medium" disabled={isSubmitting} className="flex items-center gap-2" onClick={onFormSubmit}> {submitButtonContent} </Button>
       </div>
-    </form>
+    </div>
   );
 };
 

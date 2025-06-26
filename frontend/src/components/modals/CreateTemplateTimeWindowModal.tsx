@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import 'react-datepicker/dist/react-datepicker.css';
 import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
 import { TimeWindowAllocation } from '../../types/dailyPlan';
 import { Category } from '../../types/category';
 import { minutesToDate, hhMMToMinutes } from '../../lib/utils';
 import { Plus, Edit } from 'lucide-react';
-import Modal from './Modal'; // Assuming Modal component is available
-import TimeWindowForm, { TimeWindowFormInputs } from './TimeWindowForm';
+import Modal from './Modal';
+import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface CreateTemplateTimeWindowModalProps {
   isOpen: boolean;
@@ -35,15 +37,29 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
       };
     }
     return { description: '', startTime: null, endTime: null, categoryId: '' };
-  }, [existingTimeWindows, editingTimeWindow]);
+  }, [editingTimeWindow]);
 
-  // Convert TimeWindow[] to TimeWindowAllocation[] for the overlap check in the form
   const existingTimeWindowsForOverlapCheck: TimeWindowAllocation[] = useMemo(
     () => existingTimeWindows.map((tw) => ({ time_window: tw, tasks: [] })),
     [existingTimeWindows]
   );
 
-  const handleFormSubmit = (data: TimeWindowFormInputs) => {
+  const {
+    control,
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<TimeWindowFormInputs>({
+    resolver: zodResolver(createTimeWindowFormSchema(existingTimeWindowsForOverlapCheck, editingTimeWindow?.id)),
+    defaultValues: initialData,
+  });
+
+  useEffect(() => {
+    reset(initialData);
+  }, [initialData, reset]);
+
+  const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime, categoryId } = data;
     if (!startTime || !endTime || !categoryId) return;
 
@@ -68,20 +84,27 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingTimeWindow ? "Edit Time Window" : "Add New Time Window"}>
-      <TimeWindowForm
-        onSubmit={handleFormSubmit}
-        onClose={onClose}
-        initialData={initialData}
-        availableCategories={availableCategories}
-        existingTimeWindows={existingTimeWindowsForOverlapCheck}
-        editingTimeWindowId={editingTimeWindow?.id}
-        submitButtonContent={
-          <>
-            {editingTimeWindow ? <Edit size={16} /> : <Plus size={16} />}
-            {editingTimeWindow ? 'Update Time Window' : 'Add Time Window'}
-          </>
-        }
-      />
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <TimeWindowForm
+          onClose={onClose}
+          initialData={initialData}
+          availableCategories={availableCategories}
+          existingTimeWindows={existingTimeWindowsForOverlapCheck}
+          editingTimeWindowId={editingTimeWindow?.id}
+          submitButtonContent={
+            <>
+              {editingTimeWindow ? <Edit size={16} /> : <Plus size={16} />}
+              {editingTimeWindow ? 'Update Time Window' : 'Add Time Window'}
+            </>
+          }
+          control={control}
+          register={register}
+          errors={errors}
+          isSubmitting={isSubmitting}
+          reset={reset}
+onFormSubmit={handleSubmit(handleFormSubmit)}
+        />
+      </form>
     </Modal>
   );
 };

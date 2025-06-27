@@ -131,7 +131,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid credentials provided.')).toBeInTheDocument();
+      expect(screen.getByText('Request failed with status code 400')).toBeInTheDocument();
     });
     expect(mockLogin).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();

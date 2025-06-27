@@ -1,5 +1,7 @@
 import api from './api';
+import axios from 'axios';
 import { User } from '../types/user';
+import { ApiError } from '../lib/errors';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 // API Schemas matching backend
@@ -34,6 +36,9 @@ export const loginUser = async (credentials: UserCredentials): Promise<AuthRespo
     });
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(error.response.data?.detail || 'Login failed', error.response.status);
+    }
     throw error;
   }
 };
@@ -43,6 +48,9 @@ export const registerUser = async (userData: UserRegistrationData): Promise<User
     const response = await api.post<User>(API_ENDPOINTS.REGISTER, userData);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(error.response.data?.detail || 'Registration failed', error.response.status);
+    }
     throw error;
   }
 };

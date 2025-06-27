@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { User, UserUpdatePayload } from '../types/user';
 import { updateUser } from '../services/userService';
-import { AxiosError } from 'axios';
+import { ApiError } from '../lib/errors';
 
 const userSettingsSchema = z.object({
   email: z.string({ required_error: "Email is required" }).email('Invalid email address'),
@@ -36,8 +36,8 @@ const UserSettingsPage: React.FC = () => {
     },
     onError: (err) => {
       let message = 'Failed to update account.';
-      if (err instanceof AxiosError) {
-        message = err.response?.data?.detail || message;
+      if (err instanceof ApiError) {
+        message = err.message;
       } else if (err instanceof Error) {
         message = err.message;
       }

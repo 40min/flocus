@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { loginUser } from '../services/authService';
 import Button from 'components/Button';
+import { ApiError } from '../lib/errors';
 import Input from 'components/Input';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 
@@ -36,10 +37,10 @@ const LoginPage: React.FC = () => {
       const response = await loginUser(data);
       await login(response.access_token);
       navigate('/');
-    } catch (err: any) {
-      let message = 'Login failed. Please check your credentials.';
-      if (err && err.isAxiosError && err.response?.data?.detail) {
-        message = err.response.data.detail;
+    } catch (err) {
+      let message = 'An unexpected error occurred. Please try again.';
+      if (err instanceof ApiError) {
+        message = err.message;
       } else if (err instanceof Error) {
         message = err.message;
       }

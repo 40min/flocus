@@ -13,7 +13,7 @@ type InputProps = InputElementProps | TextareaElementProps | SelectElementProps;
 
 const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, InputProps>(
   ({ className, as = 'input', ...props }, ref) => {
-    const baseStyles = "block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm";
+    const baseStyles = "block w-full rounded-lg border border-slate-300 bg-white text-gray-900 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 placeholder-gray-400 py-2.5 px-3.5 text-sm";
 
     let Component: React.ElementType;
     let mergedProps: any;

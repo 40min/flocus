@@ -100,7 +100,7 @@ const TimeWindowForm: React.FC<TimeWindowFormProps> = ({
               id="twCategory"
               {...field}
               disabled={categoryDisabled}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm disabled:bg-slate-200 disabled:text-slate-500"
+              className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm disabled:bg-slate-200 disabled:text-slate-500"
               ref={firstModalFocusableElementRef}
             >
               <option value="">Select a category</option>
@@ -116,18 +116,18 @@ const TimeWindowForm: React.FC<TimeWindowFormProps> = ({
       </div>
       <div>
         <label htmlFor="twDescription" className="block text-sm font-medium text-gray-700">Description (Optional)</label>
-        <input type="text" id="twDescription" {...register('description')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm" placeholder="e.g., Focus on project X" />
+        <input type="text" id="twDescription" {...register('description')} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Focus on project X" />
         {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
       </div>
       <div className="flex space-x-4">
         <div className="w-1/2">
           <label htmlFor="twStartTime" className="block text-sm font-medium text-gray-700">Start Time</label>
-          <Controller control={control} name="startTime" render={({ field }) => ( <DatePicker id="twStartTime" selected={field.value} onChange={(date) => field.onChange(date)} showTimeSelect showTimeSelectOnly timeIntervals={15} timeCaption="Time" dateFormat="HH:mm" timeFormat="HH:mm" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm" /> )} />
+          <Controller control={control} name="startTime" render={({ field }) => ( <DatePicker id="twStartTime" selected={field.value} onChange={(date) => field.onChange(date)} showTimeSelect showTimeSelectOnly timeIntervals={15} timeCaption="Time" dateFormat="HH:mm" timeFormat="HH:mm" className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm" /> )} />
           {errors.startTime && <p className="mt-1 text-sm text-red-600">{errors.startTime.message}</p>}
         </div>
         <div className="w-1/2">
           <label htmlFor="twEndTime" className="block text-sm font-medium text-gray-700">End Time</label>
-          <Controller control={control} name="endTime" render={({ field }) => ( <DatePicker id="twEndTime" selected={field.value} onChange={(date) => field.onChange(date)} showTimeSelect showTimeSelectOnly timeIntervals={15} timeCaption="Time" dateFormat="HH:mm" timeFormat="HH:mm" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm" /> )} />
+          <Controller control={control} name="endTime" render={({ field }) => ( <DatePicker id="twEndTime" selected={field.value} onChange={(date) => field.onChange(date)} showTimeSelect showTimeSelectOnly timeIntervals={15} timeCaption="Time" dateFormat="HH:mm" timeFormat="HH:mm" className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 py-2.5 px-3.5 text-sm" /> )} />
           {errors.endTime && <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>}
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TimeWindow as TimeWindowType } from 'types/timeWindow';
 import { Task as TaskType } from 'types/task';
 import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from 'lib/utils';
+import Button from './Button';
 import { Clock, XCircle, PlusCircle, Edit3 } from 'lucide-react';
 import AssignedTaskBalloon from './AssignedTaskBalloon';
 import TaskPicker from './TaskPicker';
@@ -96,22 +97,25 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
             </div>
             <div className="flex items-center">
               {onEdit && (
-                <button
+                <Button
                   onClick={onEdit}
-                  className="text-slate-400 hover:text-blue-500 transition-colors mr-2"
+                  variant="ghost"
+                  size="icon"
                   aria-label="Edit time window"
                 >
                   <Edit3 className="h-5 w-5" />
-                </button>
+                </Button>
               )}
               {onDelete && (
-                <button
+                <Button
                   onClick={handleDelete}
-                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  variant="ghost"
+                  size="icon"
+                  className="text-slate-400 hover:text-red-500"
                   aria-label="Delete time window"
                 >
                   <XCircle className="h-5 w-5" />
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -144,14 +148,15 @@ const TimeWindowBalloon: React.FC<TimeWindowBalloonProps> = ({
               ))
             )}
             {onAssignTask && (
-              <button
-                type="button"
+              <Button
                 onClick={() => setIsTaskPickerOpen(true)}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-blue-600 transition-colors"
+                variant="secondary"
+                size="icon"
+                className="w-8 h-8 rounded-full hover:text-blue-600"
                 aria-label="Assign task"
               >
                 <PlusCircle className="h-5 w-5" />
-              </button>
+              </Button>
             )}
           </div>
         </section>

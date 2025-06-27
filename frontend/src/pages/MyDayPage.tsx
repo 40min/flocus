@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Save, PlusCircle } from 'lucide-react';
+import Button from 'components/Button';
 import { createDailyPlan, updateDailyPlan } from '../services/dailyPlanService';
 import { DailyPlanResponse, TimeWindowAllocation, TimeWindowResponse } from '../types/dailyPlan';
 import Timeline from '../components/Timeline';
@@ -293,20 +294,20 @@ const MyDayPage: React.FC = () => {
                   </div>
                 )}
                 <div className="flex justify-start gap-4 mt-8">
-                  <button
-                    className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                  <Button
+                    variant="slate" size="medium"
                     onClick={() => setIsTimeWindowModalOpen(true)}
-                  >
+                    className="flex items-center gap-2" >
                     <PlusCircle size={18} />
                     Add Time Window
-                  </button>
-                  <button
-                    className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                  </Button>
+                  <Button
+                    variant="slate" size="medium"
                     onClick={handleSaveDailyPlan}
-                  >
+                    className="flex items-center gap-2" >
                     <Save size={18} />
                     Save
-                  </button>
+                  </Button>
                 </div>
               </section>
             </main>
@@ -403,13 +404,14 @@ const MyDayPage: React.FC = () => {
                           ))}
                       </div>
                       <div className="space-y-2 mt-8 text-left">
-                        <button
-                          className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                        <Button
+                          variant="slate" size="medium"
                           onClick={handleSavePlan}
+                          className="flex items-center gap-2"
                         >
                           <Save size={18} />
                           Save Plan
-                        </button>
+                        </Button>
                       </div>
                     </>
                   ) : (
@@ -419,13 +421,14 @@ const MyDayPage: React.FC = () => {
                         Create a plan from a Day Template or start from scratch to organize your tasks and boost your
                         productivity.
                       </p>
-                      <button
-                        className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
+                      <Button
+                        variant="slate" size="medium"
                         onClick={() => setIsTemplateModalOpen(true)}
+                        className="flex items-center gap-2"
                       >
                         <PlusCircle size={18} />
                         Create Plan
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>

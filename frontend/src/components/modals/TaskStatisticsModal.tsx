@@ -1,5 +1,6 @@
 import React from 'react';
 import Modal from './Modal';
+import Button from 'components/Button';
 import { Task } from 'types/task';
 import { formatDateTime, formatDurationFromMinutes } from 'lib/utils';
 import { CalendarDays, PlayCircle, StopCircle, Timer } from 'lucide-react';
@@ -54,13 +55,9 @@ const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({ isOpen, onClo
           <span className={statValueClass}>{formatDurationFromMinutes(statistics?.lasts_min)}</span>
         </div>
         <div className="flex justify-end pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
+          <Button variant="primary" size="medium" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

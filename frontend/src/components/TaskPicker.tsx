@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Task } from '../types/task';
 import { useTasksByCategory } from '../hooks/useTasks';
+import Button from './Button';
 
 interface TaskPickerProps {
   categoryId: string;
@@ -52,9 +53,9 @@ const TaskPicker: React.FC<TaskPickerProps> = ({
           </ul>
         )}
         <div className="mt-4 flex justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors">
+          <Button type="button" onClick={onClose} variant="secondary" size="medium">
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

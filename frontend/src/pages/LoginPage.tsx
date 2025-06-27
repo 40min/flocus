@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { loginUser } from '../services/authService';
+import Button from 'components/Button';
+import Input from 'components/Input';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 
 const loginSchema = z.object({
@@ -65,10 +67,9 @@ const LoginPage: React.FC = () => {
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                 Username
               </label>
-              <input
+              <Input
                 id="username"
                 type="text"
-                className="form-input-custom"
                 placeholder="Enter your username"
                 {...register('username')}
               />
@@ -78,10 +79,9 @@ const LoginPage: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
-              <input
+              <Input
                 id="password"
                 type="password"
-                className="form-input-custom"
                 placeholder="Enter your password"
                 {...register('password')}
               />
@@ -105,11 +105,11 @@ const LoginPage: React.FC = () => {
           )}
 
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="btn-standard w-full"
-            >
+              variant="slate"
+              className="w-full">
               {isSubmitting ? (
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -117,7 +117,7 @@ const LoginPage: React.FC = () => {
                 </svg>
               ) : null}
               {isSubmitting ? 'Signing in...' : 'Sign in'}
-            </button>
+            </Button>
           </div>
         </form>
 

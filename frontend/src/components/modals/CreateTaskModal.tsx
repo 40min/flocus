@@ -9,6 +9,7 @@ import { Category } from 'types/category';
 import { useSharedTimerContext } from 'context/SharedTimerContext';
 import * as taskService from 'services/taskService';
 import { useLlmSuggestions } from 'hooks/useLlmSuggestions';
+import Button from 'components/Button';
 import Modal from './Modal';
 import { utcToLocal, localToUtc } from 'lib/utils';
 import { Sparkles, Bot } from 'lucide-react';
@@ -161,20 +162,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               <p className="font-semibold mb-1">Suggestion:</p>
               <p>{titleSuggestion}</p>
               <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={applyTitleSuggestion}
-                  className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
+                <Button type="button" onClick={applyTitleSuggestion} variant="primary" size="small">
                   Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={rejectTitleSuggestion}
-                  className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
-                >
+                </Button>
+                <Button type="button" onClick={rejectTitleSuggestion} variant="secondary" size="small">
                   Reject
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -219,20 +212,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               <p className="font-semibold mb-1">Suggestion:</p>
               <p>{descriptionSuggestion}</p>
               <div className="flex justify-end gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={applyDescriptionSuggestion}
-                  className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
+                <Button type="button" onClick={applyDescriptionSuggestion} variant="primary" size="small">
                   Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={rejectDescriptionSuggestion}
-                  className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
-                >
+                </Button>
+                <Button type="button" onClick={rejectDescriptionSuggestion} variant="secondary" size="small">
                   Reject
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -279,10 +264,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           </div>
         </div>
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors">Cancel</button>
-          <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50 transition-colors">
+          <Button type="button" onClick={onClose} variant="secondary" size="medium">Cancel</Button>
+          <Button type="submit" disabled={isSubmitting} variant="slate" size="medium">
             {isSubmitting ? (editingTask ? 'Updating...' : 'Creating...') : (editingTask ? 'Update Task' : 'Create Task')}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

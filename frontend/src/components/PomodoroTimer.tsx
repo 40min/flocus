@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
-import Button from './Button'; // Import the Button component
+import Button from 'components/Button';
 
 const PomodoroTimer: React.FC = () => {
   const {
@@ -56,20 +56,22 @@ const PomodoroTimer: React.FC = () => {
                         </>
                       )}
                       <div className="flex gap-2 justify-center mt-4">
-                        <button
+                        <Button
                           onClick={handleReset}
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-background-DEFAULT hover:bg-border-DEFAULT border border-border-DEFAULT hover:border-border-dark shadow-sm hover:shadow-md transition-all duration-200 text-text-secondary"
+                          variant="secondary"
+                          size="icon"
                           aria-label="Reset timer"
                         >
                           <RotateCcw className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={handleSkip}
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 size-9 h-8 w-8 rounded-full bg-background-DEFAULT hover:bg-border-DEFAULT border border-border-DEFAULT hover:border-border-dark shadow-sm hover:shadow-md transition-all duration-200 text-text-secondary"
+                          variant="secondary"
+                          size="icon"
                           aria-label="Skip break"
                         >
                           <SkipForward className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>

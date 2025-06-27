@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Button from 'components/Button';
+import Input from 'components/Input';
 import * as z from 'zod';
 import { registerUser } from '../services/authService';
 import { RetroGrid } from '../components/magicui/RetroGrid';
@@ -84,11 +86,10 @@ const RegisterPage: React.FC = () => {
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                 Username
               </label>
-              <input
+              <Input
                 id="username"
                 type="text"
                 {...register('username')}
-                className="form-input-custom"
                 placeholder="Choose a username"
               />
               {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
@@ -97,11 +98,10 @@ const RegisterPage: React.FC = () => {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
                 {...register('email')}
-                className="form-input-custom"
                 placeholder="Enter your email"
               />
               {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
@@ -110,11 +110,10 @@ const RegisterPage: React.FC = () => {
               <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
                 First Name
               </label>
-              <input
+              <Input
                 id="first_name"
                 type="text"
                 {...register('first_name')}
-                className="form-input-custom"
                 placeholder="Enter your first name"
               />
               {errors.first_name && <p className="text-red-500 text-sm">{errors.first_name.message}</p>}
@@ -123,11 +122,10 @@ const RegisterPage: React.FC = () => {
               <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
                 Last Name
               </label>
-              <input
+              <Input
                 id="last_name"
                 type="text"
                 {...register('last_name')}
-                className="form-input-custom"
                 placeholder="Enter your last name"
               />
               {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name.message}</p>}
@@ -136,11 +134,10 @@ const RegisterPage: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
-              <input
+              <Input
                 id="password"
                 type="password"
                 {...register('password')}
-                className="form-input-custom"
                 placeholder="Choose a strong password"
               />
               {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
@@ -178,11 +175,11 @@ const RegisterPage: React.FC = () => {
           )}
 
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200"
-            >
+              variant="slate"
+              className="w-full">
               {isSubmitting ? (
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -190,7 +187,7 @@ const RegisterPage: React.FC = () => {
                 </svg>
               ) : null}
               {isSubmitting ? 'Creating account...' : 'Create account'}
-            </button>
+            </Button>
           </div>
         </form>
 

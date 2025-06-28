@@ -12,6 +12,7 @@ import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { ChevronRight, Trash2, Plus, Edit } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
+import { NotFoundError } from '../lib/errors';
 import Button from '../components/Button';
 import Input from '../components/Input';
 
@@ -168,7 +169,8 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
     onSuccess: (savedTemplate: DayTemplateResponse) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       queryClient.invalidateQueries({ queryKey: ['template', savedTemplate.id] });
-      reset(undefined, { keepValues: true, keepDirty: false }); // Reset dirty state after successful save
+      // Reset form with saved values and mark as not dirty
+      reset({ name: savedTemplate.name, description: savedTemplate.description || '' }, { keepDirty: false });
       setTemplateTimeWindows(savedTemplate.time_windows || []); // Update time windows from saved data
       // Do not navigate, stay on the current edit page
     },
@@ -211,6 +213,7 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
   };
 
   const isLoading = isLoadingTemplate || isLoadingCategories || isSubmitting;
+const isSaving = createTemplateMutation.isPending || updateTemplateMutation.isPending;
   const error = templateError;
 
   return (
@@ -345,20 +348,20 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
                   navigate('/templates');
                 }
               } else {
-                navigate('/templates');
+                navigate(-1);
               }
             }}
-            disabled={isLoading}
+            disabled={isSaving}
           >
             Cancel
           </Button>
           <Button
             type="submit"
             variant={hasUnsavedChanges || isCreatingNew ? 'primary' : 'secondary'}
-            className={hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-gray-700 hover:bg-gray-900'}
-            disabled={isLoading || (!hasUnsavedChanges && !isCreatingNew) || !!errors.name}
+            className={hasUnsavedChanges ? 'bg-green-500 hover:bg-green-600 save-button-unsaved' : 'bg-slate-700 hover:bg-slate-900'}
+            disabled={isSaving || (!hasUnsavedChanges && !isCreatingNew) || !!errors.name}
           >
-            {isSubmitting ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}
+            {isSaving ? 'Saving...' : (hasUnsavedChanges || isCreatingNew ? 'Save Changes' : 'Saved')}
           </Button>
         </div>
       </form>

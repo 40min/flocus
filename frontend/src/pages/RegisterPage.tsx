@@ -6,6 +6,7 @@ import Button from 'components/Button';
 import Input from 'components/Input';
 import * as z from 'zod';
 import { registerUser } from '../services/authService';
+import { ApiError } from '../lib/errors';
 import { RetroGrid } from '../components/magicui/RetroGrid';
 import { AxiosError } from 'axios';
 
@@ -38,7 +39,11 @@ const RegisterPage: React.FC = () => {
       await registerUser(data);
       setSuccessMessage('Registration successful! Please log in.');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+        return;
+      }
       let errorMessage = 'Registration failed. Please try again.';
       if (err instanceof AxiosError) {
         const detail = err.response?.data?.detail;

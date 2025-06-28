@@ -1,5 +1,7 @@
 import api from './api';
+import axios from 'axios';
 import { User } from '../types/user';
+import { ApiError, NotFoundError } from '../lib/errors';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 export const getAllUsers = async (): Promise<User[]> => {
@@ -7,6 +9,9 @@ export const getAllUsers = async (): Promise<User[]> => {
     const response = await api.get<User[]>(`${API_ENDPOINTS.USERS_BASE}/`);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(error.response.data?.detail || 'Failed to fetch users', error.response.status);
+    }
     throw error;
   }
 };
@@ -16,6 +21,9 @@ export const getCurrentUser = async (): Promise<User> => {
     const response = await api.get<User>(API_ENDPOINTS.USERS_ME);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(error.response.data?.detail || 'Failed to fetch current user', error.response.status);
+    }
     throw error;
   }
 };

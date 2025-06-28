@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '../types/category';
+import { ApiError } from '../lib/errors';
 import { createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 import { useCategories } from '../hooks/useCategories';
 import Button from '../components/Button';
@@ -75,8 +76,12 @@ const CategoriesPage: React.FC = () => {
       setEditingCategory(null);
       reset(); // Reset form to default values
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-    } catch (err) {
-      setFormError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        setFormError(err.message);
+      } else {
+        setFormError(editingCategory ? 'Failed to update category.' : 'Failed to create category.');
+      }
       console.error(err);
     }
   };

@@ -110,7 +110,7 @@ const CategoriesPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+
     try {
       await deleteCategory(id);
       queryClient.invalidateQueries({ queryKey: ['categories'] });

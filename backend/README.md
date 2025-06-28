@@ -103,26 +103,12 @@ BACKUP_DIRECTORY=/path/to/your/backup/location
 chmod 700 /path/to/your/backup/location
 ```
 
-### Manual Execution
+### Database Backup
 
-To manually run the backup script, execute the following command from the project root directory:
-
-```bash
-python backend/scripts/backup_database.py
-```
-
-### Automated Backups with Cron
-
-For automated daily backups, you can configure a `cron` job. Open your crontab for editing:
+To run the database backup script, execute the following command from the project root directory:
 
 ```bash
-crontab -e
-```
-
-Add the following line to schedule a daily backup (e.g., at 2:00 AM):
-
-```cron
-0 2 * * * /usr/bin/python /Users/40min/www/flocus/backend/scripts/backup_database.py >> /var/log/flocus_backup.log 2>&1
+make backup-db
 ```
 
 **Note:**

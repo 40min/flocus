@@ -1,6 +1,6 @@
 # Makefile for Flocus Project
 
-.PHONY: start-backend start-frontend test-backend test-frontend test start
+.PHONY: start-backend start-frontend test-backend test-frontend test start backup-db install-backend install-frontend install
 
 # Default target
 all: help
@@ -16,6 +16,7 @@ help:
 	@echo "  make install-backend - Installs backend dependencies (uv sync)"
 	@echo "  make install-frontend - Installs frontend dependencies (npm install)"
 	@echo "  make install         - Installs all dependencies"
+	@echo "  make backup-db       - Runs the database backup script"
 
 # Backend commands
 start-backend:
@@ -43,6 +44,11 @@ test-frontend:
 install-frontend:
 	@echo "Installing frontend dependencies..."
 	@cd frontend && npm install
+
+# Database backup command
+backup-db:
+	@echo "Running database backup script..."
+	@cd backend && PYTHONPATH=$$(pwd) uv run python scripts/backup_database.py
 
 # Combined commands
 start: start-backend start-frontend

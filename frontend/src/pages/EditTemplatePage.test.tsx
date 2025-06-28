@@ -121,18 +121,19 @@ describe('EditTemplatePage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add new time window' }));
 
       // Fill and submit time window modal
-      const modal = await screen.findByRole('dialog', { name: /create new time window/i });
       fireEvent.change(screen.getByLabelText('Description (Optional)', { selector: '#twDescription' }), { target: { value: 'New TW' } });
       fireEvent.change(screen.getByLabelText('Start Time'), { target: { value: '08:00' } });
       fireEvent.change(screen.getByLabelText('End Time'), { target: { value: '09:00' } });
       fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat1' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add Time Window' }));
 
-      await waitFor(() => expect(screen.queryByRole('dialog', { name: /create new time window/i })).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: /add new time window/i })).not.toBeInTheDocument());
       expect(screen.getByText('New TW')).toBeInTheDocument();
       expect(screen.getByText('Work')).toBeInTheDocument();
       expect(screen.getByText('(08:00 - 09:00)')).toBeInTheDocument();
 
+      // Fill the main template name
+      fireEvent.change(screen.getByLabelText('Template Name'), { target: { value: 'New Template With TW' } });
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
       await waitFor(() => {
@@ -182,7 +183,9 @@ describe('EditTemplatePage', () => {
           time_windows: [{ id: 'tw1', description: 'Morning work', start_time: 540, end_time: 660, category_id: 'cat1' }],
         });
       });
-      expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument(); // Button should show 'Saved'
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument(); // Button should show 'Saved'
+      });
     });
 
     it('allows adding a new time window to an existing template', async () => {
@@ -196,7 +199,7 @@ describe('EditTemplatePage', () => {
       renderComponent('/templates/edit/template1', 'template1');
 
       fireEvent.click(screen.getByRole('button', { name: 'Add new time window' }));
-      const modal = await screen.findByRole('dialog', { name: /create new time window/i });
+      const modal = await screen.findByRole('dialog', { name: /add new time window/i });
 
       fireEvent.change(screen.getByLabelText('Description (Optional)', { selector: '#twDescription' }), { target: { value: 'Evening Read' } });
       fireEvent.change(screen.getByLabelText('Start Time'), { target: { value: '20:00' } });
@@ -204,7 +207,7 @@ describe('EditTemplatePage', () => {
       fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'cat2' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add Time Window' }));
 
-      await waitFor(() => expect(screen.queryByRole('dialog', { name: /create new time window/i })).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: /add new time window/i })).not.toBeInTheDocument());
       expect(screen.getByText('Evening Read')).toBeInTheDocument();
       expect(screen.getByText('Personal')).toBeInTheDocument();
       expect(screen.getByText('(20:00 - 21:00)')).toBeInTheDocument();

@@ -169,7 +169,8 @@ const [editingTimeWindow, setEditingTimeWindow] = useState<TimeWindow | null>(nu
     onSuccess: (savedTemplate: DayTemplateResponse) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       queryClient.invalidateQueries({ queryKey: ['template', savedTemplate.id] });
-      reset(undefined, { keepValues: true, keepDirty: false }); // Reset dirty state after successful save
+      // Reset form with saved values and mark as not dirty
+      reset({ name: savedTemplate.name, description: savedTemplate.description || '' }, { keepDirty: false });
       setTemplateTimeWindows(savedTemplate.time_windows || []); // Update time windows from saved data
       // Do not navigate, stay on the current edit page
     },

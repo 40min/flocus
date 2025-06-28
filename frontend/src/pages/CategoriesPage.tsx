@@ -12,12 +12,28 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 
 const colorOptions = [
+  { name: 'Slate', value: '#64748B', bgColor: 'bg-slate-500', textColor: 'text-slate-700', ringColor: 'ring-slate-500' },
+  { name: 'Gray', value: '#6B7280', bgColor: 'bg-gray-500', textColor: 'text-gray-700', ringColor: 'ring-gray-500' },
+  { name: 'Zinc', value: '#71717A', bgColor: 'bg-zinc-500', textColor: 'text-zinc-700', ringColor: 'ring-zinc-500' },
+  { name: 'Neutral', value: '#737373', bgColor: 'bg-neutral-500', textColor: 'text-neutral-700', ringColor: 'ring-neutral-500' },
+  { name: 'Stone', value: '#78716C', bgColor: 'bg-stone-500', textColor: 'text-stone-700', ringColor: 'ring-stone-500' },
   { name: 'Red', value: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-700', ringColor: 'ring-red-500' },
   { name: 'Orange', value: '#F97316', bgColor: 'bg-orange-500', textColor: 'text-orange-700', ringColor: 'ring-orange-500' },
-  { name: 'Yellow', value: '#F59E0B', bgColor: 'bg-yellow-500', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500' },
+  { name: 'Amber', value: '#F59E0B', bgColor: 'bg-amber-500', textColor: 'text-amber-700', ringColor: 'ring-amber-500' },
+  { name: 'Yellow', value: '#EAB308', bgColor: 'bg-yellow-500', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500' },
+  { name: 'Lime', value: '#84CC16', bgColor: 'bg-lime-500', textColor: 'text-lime-700', ringColor: 'ring-lime-500' },
   { name: 'Green', value: '#22C55E', bgColor: 'bg-green-500', textColor: 'text-green-700', ringColor: 'ring-green-500' },
+  { name: 'Emerald', value: '#10B981', bgColor: 'bg-emerald-500', textColor: 'text-emerald-700', ringColor: 'ring-emerald-500' },
+  { name: 'Teal', value: '#14B8A6', bgColor: 'bg-teal-500', textColor: 'text-teal-700', ringColor: 'ring-teal-500' },
+  { name: 'Cyan', value: '#06B6D4', bgColor: 'bg-cyan-500', textColor: 'text-cyan-700', ringColor: 'ring-cyan-500' },
+  { name: 'Sky', value: '#0EA5E9', bgColor: 'bg-sky-500', textColor: 'text-sky-700', ringColor: 'ring-sky-500' },
   { name: 'Blue', value: '#3B82F6', bgColor: 'bg-blue-500', textColor: 'text-blue-700', ringColor: 'ring-blue-500' },
   { name: 'Indigo', value: '#6366F1', bgColor: 'bg-indigo-500', textColor: 'text-indigo-700', ringColor: 'ring-indigo-500' },
+  { name: 'Violet', value: '#8B5CF6', bgColor: 'bg-violet-500', textColor: 'text-violet-700', ringColor: 'ring-violet-500' },
+  { name: 'Purple', value: '#A855F7', bgColor: 'bg-purple-500', textColor: 'text-purple-700', ringColor: 'ring-purple-500' },
+  { name: 'Fuchsia', value: '#D946EF', bgColor: 'bg-fuchsia-500', textColor: 'text-fuchsia-700', ringColor: 'ring-fuchsia-500' },
+  { name: 'Pink', value: '#EC4899', bgColor: 'bg-pink-500', textColor: 'text-pink-700', ringColor: 'ring-pink-500' },
+  { name: 'Rose', value: '#F43F5E', bgColor: 'bg-rose-500', textColor: 'text-rose-700', ringColor: 'ring-rose-500' },
 ];
 
 const categoryFormSchema = z.object({

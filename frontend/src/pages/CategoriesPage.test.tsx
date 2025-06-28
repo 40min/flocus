@@ -239,6 +239,6 @@ describe('CategoriesPage', () => {
     await screen.findByText('Create New Category');
     expect(screen.getByLabelText('Name')).toHaveValue(''); // Should be reset
     expect(screen.getByLabelText(/description/i)).toHaveValue(''); // Should be reset
-    expect(screen.getByTitle('Red')).toHaveClass('ring-2'); // Default color should be selected
+    expect(screen.getByTitle('Slate')).toHaveClass('ring-2'); // Default color should be selected
   });
 });

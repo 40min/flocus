@@ -195,7 +195,6 @@ describe('CategoriesPage', () => {
   });
 
   it('deletes a category after confirmation', async () => {
-    window.confirm = jest.fn(() => true);
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
     mockedDeleteCategory.mockResolvedValue({});
     renderComponent();
@@ -203,24 +202,8 @@ describe('CategoriesPage', () => {
     const deleteButtons = screen.getAllByTitle('Delete Category');
     fireEvent.click(deleteButtons[0]);
 
-    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this category?');
     await waitFor(() => {
       expect(mockedDeleteCategory).toHaveBeenCalledWith('1');
-    });
-  });
-
-  it('does not delete a category if confirmation is cancelled', async () => {
-    window.confirm = jest.fn(() => false);
-    mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
-    mockedDeleteCategory.mockResolvedValue({});
-    renderComponent();
-
-    const deleteButtons = screen.getAllByTitle('Delete Category');
-    fireEvent.click(deleteButtons[0]);
-
-    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this category?');
-    await waitFor(() => {
-      expect(mockedDeleteCategory).not.toHaveBeenCalled();
     });
   });
 

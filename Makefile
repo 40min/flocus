@@ -24,7 +24,7 @@ start-backend:
 
 test-backend:
 	@echo "Running backend tests..."
-	@cd backend && uv run pytest
+	@cd backend && PYTHONPATH=$(PWD) uv run pytest
 
 install-backend:
 	@echo "Installing backend dependencies..."

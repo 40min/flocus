@@ -82,3 +82,50 @@ curl http://localhost:8000/users/
 
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{"email": "test@example.com", "first_name": "Test", "last_name": "User"}' http://localhost:8000/users/
+```
+
+## Database Backup
+
+The `backend/scripts/backup_database.py` script is designed to create a backup of your MongoDB database. It connects to the database using the `MONGODB_URL` environment variable and saves a compressed archive of the database to a specified directory.
+
+### Configuration
+
+The backup script requires the `BACKUP_DIRECTORY` environment variable to be set. This variable specifies the absolute path where database backups will be stored.
+
+Example in `.env` file:
+```
+BACKUP_DIRECTORY=/path/to/your/backup/location
+```
+
+**Security Note:** It is crucial to set strict filesystem permissions on your `BACKUP_DIRECTORY` to protect sensitive data. We recommend setting permissions to `700` (read, write, and execute for owner only) to prevent unauthorized access.
+
+```bash
+chmod 700 /path/to/your/backup/location
+```
+
+### Manual Execution
+
+To manually run the backup script, execute the following command from the project root directory:
+
+```bash
+python backend/scripts/backup_database.py
+```
+
+### Automated Backups with Cron
+
+For automated daily backups, you can configure a `cron` job. Open your crontab for editing:
+
+```bash
+crontab -e
+```
+
+Add the following line to schedule a daily backup (e.g., at 2:00 AM):
+
+```cron
+0 2 * * * /usr/bin/python /Users/40min/www/flocus/backend/scripts/backup_database.py >> /var/log/flocus_backup.log 2>&1
+```
+
+**Note:**
+- Replace `/usr/bin/python` with the actual path to your Pythonexecutable if it's different.
+- Ensure the path to `backup_database.py` is absolute.
+- The `>> /var/log/flocus_backup.log 2>&1` part redirects both standard output and standard error to a log file, which is useful for monitoring backup operations.

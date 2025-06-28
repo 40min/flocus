@@ -59,3 +59,4 @@ prd/
 designs/
 mcp_servers/*
 tasks/
+backend/backups/*

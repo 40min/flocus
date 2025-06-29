@@ -23,7 +23,7 @@ class DayTemplateService:
         self.category_service = category_service
 
     async def _fetch_and_map_categories(
-        self, category_ids: Set[ObjectId], current_user_id: ObjectId
+        self, category_ids: Set[ObjectId], current_user_id: ObjectId, include_deleted: bool = False
     ) -> Dict[ObjectId, CategoryResponse]:
         """
         Fetches categories by a set of IDs and returns a map of ObjectId to CategoryResponse.
@@ -34,7 +34,7 @@ class DayTemplateService:
 
         category_list_ids = list(category_ids)
         fetched_category_responses = await self.category_service.get_categories_by_ids(
-            category_ids=category_list_ids, current_user_id=current_user_id
+            category_ids=category_list_ids, current_user_id=current_user_id, include_deleted=include_deleted
         )
 
         # Validate that all requested categories were found
@@ -95,7 +95,9 @@ class DayTemplateService:
             tw.category_id for tw in day_template_model.time_windows if tw.category_id
         }
 
-        categories_map = await self._fetch_and_map_categories(category_ids_in_template, current_user_id)
+        categories_map = await self._fetch_and_map_categories(
+            category_ids_in_template, current_user_id, include_deleted=True
+        )
         return DayTemplateMapper.to_response(day_template_model, categories_map)
 
     async def get_all_day_templates(self, current_user_id: ObjectId) -> List[DayTemplateResponse]:
@@ -109,7 +111,9 @@ class DayTemplateService:
                 if tw.category_id:
                     all_category_ids.add(tw.category_id)
 
-        all_categories_map = await self._fetch_and_map_categories(all_category_ids, current_user_id)
+        all_categories_map = await self._fetch_and_map_categories(
+            all_category_ids, current_user_id, include_deleted=True
+        )
         return DayTemplateMapper.to_response_list(day_templates_models, all_categories_map)
 
     async def update_day_template(

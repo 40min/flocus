@@ -202,10 +202,10 @@ async def test_create_day_template_non_existent_category_in_time_window(
         headers=auth_headers_user_one,
         json=day_template_data.model_dump(mode="json"),
     )
-    assert response.status_code == 400, response.text  # Service returns 400 for not found/accessible categories
+    assert response.status_code == 404, response.text  # Service returns 404 for not found/accessible categories
     # The exact error message depends on service implementation.
     # It might be a generic validation error or a specific "Category not found".
-    assert "One or more categories not found or not accessible" in response.json()["detail"]
+    assert "Category with ID 'Categories not found or not accessible" in response.json()["detail"]
     assert non_existent_category_id in response.json()["detail"]
 
 
@@ -235,8 +235,8 @@ async def test_create_day_template_category_in_time_window_unowned(
         json=day_template_data.model_dump(mode="json"),
     )
     # Expecting 404 if service treats unowned as not found, or 403 if specific ownership check fails for category
-    assert response.status_code == 400, response.text  # Service returns 400 for not found/accessible categories
-    assert "One or more categories not found or not accessible" in response.json()["detail"]
+    assert response.status_code == 404, response.text  # Service returns 404 for not found/accessible categories
+    assert "Category with ID 'Categories not found or not accessible" in response.json()["detail"]
     assert str(user_two_category.id) in response.json()["detail"]
 
 
@@ -553,6 +553,117 @@ async def test_get_day_template_by_id_not_owner(
     assert response.json()["detail"] == "DayTemplate not found"  # Adjusted error message
 
 
+async def test_get_day_template_with_soft_deleted_category(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: Category,
+    test_db,
+):
+    """
+    Test retrieving a day template that references a soft-deleted category.
+    The day template should still be returned successfully, with the category details.
+    """
+    # 1. Create a day template with a category
+    embedded_tw_data = {
+        "description": "TW with Soft-Deleted Category",
+        "start_time": 100,
+        "end_time": 200,
+        "category_id": str(user_one_category.id),
+    }
+    day_template_data = DayTemplateCreateRequest(
+        name="Template with Soft-Deleted Category",
+        description="This template references a category that will be soft-deleted",
+        time_windows=[embedded_tw_data],
+    )
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=day_template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201, create_response.text
+    created_day_template = DayTemplateResponse(**create_response.json())
+
+    # 2. Soft-delete the category
+    delete_category_response = await async_client.delete(
+        f"{API_V1_STR}/categories/{user_one_category.id}",
+        headers=auth_headers_user_one,
+    )
+    assert delete_category_response.status_code == 204, delete_category_response.text
+
+    # 3. Attempt to retrieve the day template
+    get_response = await async_client.get(
+        f"{DAY_TEMPLATES_ENDPOINT}/{created_day_template.id}",
+        headers=auth_headers_user_one,
+    )
+    assert get_response.status_code == 200, get_response.text
+    retrieved_template = DayTemplateResponse(**get_response.json())
+
+    # 4. Assert that the day template is returned and contains the category details
+    assert retrieved_template.id == created_day_template.id
+    assert retrieved_template.name == created_day_template.name
+    assert len(retrieved_template.time_windows) == 1
+    retrieved_tw = retrieved_template.time_windows[0]
+    assert retrieved_tw.category.id == user_one_category.id
+    assert retrieved_tw.category.name == user_one_category.name
+    assert retrieved_tw.category.is_deleted is True
+
+
+async def test_update_day_template_only_name_retains_categories(
+    async_client: AsyncClient,
+    test_user_one: User,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: Category,
+    test_db,
+):
+    """
+    Test updating only the name of a day template, ensuring existing time windows
+    and their associated categories are retained in the response.
+    """
+    # 1. Create a day template with a category
+    embedded_tw_data = {
+        "description": "Original TW",
+        "start_time": 300,
+        "end_time": 400,
+        "category_id": str(user_one_category.id),
+    }
+    day_template_data = DayTemplateCreateRequest(
+        name="Original Template Name",
+        description="Original Description",
+        time_windows=[embedded_tw_data],
+    )
+    create_response = await async_client.post(
+        DAY_TEMPLATES_ENDPOINT,
+        headers=auth_headers_user_one,
+        json=day_template_data.model_dump(mode="json"),
+    )
+    assert create_response.status_code == 201, create_response.text
+    created_day_template = DayTemplateResponse(**create_response.json())
+
+    # 2. Update only the name of the day template
+    new_name = "Updated Template Name"
+    update_payload = {"name": new_name}
+    update_response = await async_client.patch(
+        f"{DAY_TEMPLATES_ENDPOINT}/{created_day_template.id}",
+        headers=auth_headers_user_one,
+        json=update_payload,
+    )
+    assert update_response.status_code == 200, update_response.text
+    updated_day_template = DayTemplateResponse(**update_response.json())
+
+    # 3. Assert that the name is updated and original time windows/categories are retained
+    assert updated_day_template.id == created_day_template.id
+    assert updated_day_template.name == new_name
+    assert updated_day_template.description == created_day_template.description  # Description should be unchanged
+    assert len(updated_day_template.time_windows) == 1
+    updated_tw = updated_day_template.time_windows[0]
+    assert updated_tw.description == embedded_tw_data["description"]
+    assert updated_tw.start_time == embedded_tw_data["start_time"]
+    assert updated_tw.end_time == embedded_tw_data["end_time"]
+    assert updated_tw.category.id == user_one_category.id
+    assert updated_tw.category.name == user_one_category.name
+
+
 async def test_get_day_template_by_id_unauthenticated(
     async_client: AsyncClient,
     user_one_day_template_model: DayTemplateModel,
@@ -806,8 +917,8 @@ async def test_update_day_template_non_existent_category_in_time_window(
         headers=auth_headers_user_one,
         json=update_payload,
     )
-    assert response.status_code == 400, response.text  # Service returns 400
-    assert "One or more categories not found or not accessible" in response.json()["detail"]
+    assert response.status_code == 404, response.text  # Service returns 404
+    assert "Category with ID 'Categories not found or not accessible" in response.json()["detail"]
     assert non_existent_category_id in response.json()["detail"]
 
 
@@ -836,8 +947,8 @@ async def test_update_day_template_category_in_time_window_unowned(
         headers=auth_headers_user_one,
         json=update_payload,
     )
-    assert response.status_code == 400, response.text  # Service returns 400
-    assert "One or more categories not found or not accessible" in response.json()["detail"]
+    assert response.status_code == 404, response.text  # Service returns 404
+    assert "Category with ID 'Categories not found or not accessible" in response.json()["detail"]
     assert str(user_two_category.id) in response.json()["detail"]
 
 
@@ -1213,6 +1324,6 @@ async def test_update_day_template_invalid_time_window(
         json=update_data,
     )
     # Expecting 400 as service returns this for not found/accessible categories
-    assert update_response.status_code == 400, update_response.text
-    assert "One or more categories not found or not accessible" in update_response.json()["detail"]
+    assert update_response.status_code == 404, update_response.text
+    assert "Category with ID 'Categories not found or not accessible" in update_response.json()["detail"]
     assert str(user_two_category.id) in update_response.json()["detail"]

@@ -49,30 +49,37 @@ class CategoryService:
         return [CategoryMapper.to_response(category) for category in categories]
 
     async def get_categories_by_ids(
-        self, category_ids: List[ObjectId], current_user_id: ObjectId
+        self, category_ids: List[ObjectId], current_user_id: ObjectId, include_deleted: bool = False
     ) -> List[CategoryResponse]:
-        """
-        Fetches multiple categories by their IDs for a given user.
-        Ensures all categories belong to the user and all requested IDs are found.
-        """
+
         if not category_ids:
             return []
 
-        categories = await self.engine.find(
-            Category,
-            Category.id.in_(category_ids),
+        # Remove duplicates while preserving order
+        unique_category_ids = list(dict.fromkeys(category_ids))
+
+        # Build query conditions
+        query_conditions = [
+            Category.id.in_(unique_category_ids),
             Category.user == current_user_id,
-            Category.is_deleted == False,  # noqa: E712
-        )
+        ]
 
-        # Ensure all fetched categories indeed belong to the current user (double check, already in query)
-        for category in categories:
-            if category.user != current_user_id:
-                # This case should ideally not be hit if the query is correct
-                raise NotOwnerException(
-                    resource="category", detail_override="Attempted to access categories not owned by user."
-                )
+        if not include_deleted:
+            query_conditions.append(Category.is_deleted == False)  # noqa: E712
 
+        # Fetch categories
+        categories = await self.engine.find(Category, *query_conditions)
+
+        # Validate all requested categories were found
+        found_ids = {category.id for category in categories}
+        missing_ids = set(unique_category_ids) - found_ids
+
+        if missing_ids:
+            raise CategoryNotFoundException(
+                f"Categories not found or not accessible: {[str(id) for id in missing_ids]}"
+            )
+
+        # Convert to response objects
         return [CategoryMapper.to_response(category) for category in categories]
 
     async def update_category(

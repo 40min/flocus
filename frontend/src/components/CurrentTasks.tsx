@@ -2,15 +2,31 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDraggable } from '@dnd-kit/core';
-import { Clock, GripVertical } from 'lucide-react';
+import { Clock, GripVertical, Pause, Play, Trash2 } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
-import { Task } from '../types/task';
+import { Task, TaskUpdateRequest } from '../types/task';
 import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
+import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
+import Button from './Button';
 
 const TaskCard = ({ task }: { task: Task }) => {
-  const { currentTaskId } = useSharedTimerContext();
+  const {
+    currentTaskId,
+    isActive,
+    handleStartPause,
+    resetForNewTask,
+    setCurrentTaskId,
+    setCurrentTaskName,
+    setCurrentTaskDescription,
+    setOnTaskChanged,
+    setIsActive,
+    stopCurrentTask,
+  } = useSharedTimerContext();
+
+  const { mutateAsync: updateTask } = useUpdateTask();
+  const { mutate: deleteTask } = useDeleteTask();
   const isActiveTask = currentTaskId === task.id;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -30,6 +46,29 @@ const TaskCard = ({ task }: { task: Task }) => {
     low: 'bg-accent-DEFAULT/10 text-accent-dark border-accent-DEFAULT/30',
   };
   const priority = task.priority.toLowerCase() as 'high' | 'medium' | 'low';
+
+  const handleStart = async () => {
+    await resetForNewTask();
+    setCurrentTaskId(task.id);
+    setCurrentTaskName(task.title);
+    setCurrentTaskDescription(task.description);
+    setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
+    await updateTask({ taskId: task.id, taskData: { status: 'in_progress' } });
+    setIsActive(true);
+  };
+
+  const handlePause = () => {
+    handleStartPause();
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete the task "${task.title}"?`)) {
+      if (currentTaskId === task.id) {
+        await stopCurrentTask();
+      }
+      deleteTask(task.id);
+    }
+  };
 
   return (
     <li className="list-none" ref={setNodeRef} style={style}>
@@ -65,6 +104,37 @@ const TaskCard = ({ task }: { task: Task }) => {
                 <div className="flex items-center gap-1 text-xs text-text-secondary">
                   <Clock className="h-3 w-3" />
                   <span>{task.statistics?.lasts_min ? `${Math.floor(task.statistics.lasts_min / 60)}h ${task.statistics.lasts_min % 60}m` : '0h 0m'}</span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    onClick={handleStart}
+                    disabled={isActive}
+                    variant="ghost"
+                    size="icon"
+                    title="Start task"
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handlePause}
+                    disabled={!isActive || !isActiveTask}
+                    variant="ghost"
+                    size="icon"
+                    title="Pause task"
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Pause className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleDelete}
+                    variant="ghost"
+                    size="icon"
+                    title="Delete task"
+                    className="text-slate-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>

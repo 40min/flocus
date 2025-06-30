@@ -146,7 +146,11 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const handleStartPause = useCallback(async () => {
     if (currentTaskId && onTaskChanged) {
-      await onTaskChanged(currentTaskId, { status: isActive ? 'pending' : 'in_progress' });
+      if (isActive) { // Pausing the timer
+        await onTaskChanged(currentTaskId, { status: 'pending' });
+      } else { // Starting or resuming the timer
+        await onTaskChanged(currentTaskId, { status: 'in_progress' });
+      }
     }
     setIsActive(prev => !prev);
   }, [isActive, currentTaskId, onTaskChanged]);

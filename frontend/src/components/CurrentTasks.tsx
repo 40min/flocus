@@ -56,7 +56,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props} target="_blank" rel="noopener noreferrer" />,
+                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }} />,
                     }}
                   >
                     {task.description || ''}

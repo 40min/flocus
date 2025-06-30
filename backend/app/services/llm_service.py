@@ -30,7 +30,10 @@ class LLMService:
                 if description is None:
                     raise LLMInputValidationError("Description is required for 'improve_description' action.")
                 text_to_improve = description
-                base_prompt_override = "Improve the following task description to make it more concise and informative:"
+                base_prompt_override = (
+                    "Improve the following task description to make it more concise and informative. "
+                    "Ensure the output is in markdown format, preserving any existing markdown links or formatting."
+                )
                 improved_text = await self.improve_text(text_to_improve, base_prompt_override)
                 response.improved_description = improved_text
             case LLMActionType.GENERATE_DESCRIPTION_FROM_TITLE:
@@ -38,7 +41,8 @@ class LLMService:
                     raise LLMInputValidationError("Title is required for 'generate_description_from_title' action.")
                 text_to_improve = f"Task Title: {title}"
                 base_prompt_override = (
-                    "Based on the following task title, generate a concise and informative task description:"
+                    "Based on the following task title, generate a concise and informative task description. "
+                    "Ensure the output is in markdown format, including any relevant links or formatting."
                 )
                 improved_text = await self.improve_text(text_to_improve, base_prompt_override)
                 response.improved_description = improved_text

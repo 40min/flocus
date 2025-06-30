@@ -75,7 +75,33 @@ describe('CurrentTasks', () => {
       currentTaskId: 'task1', // Task One is active
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    // eslint-disable-next-line testing-library/no-node-access
     const taskOneCard = screen.getByLabelText('Drag task: Task One').parentElement;
     expect(taskOneCard).toHaveClass('cursor-not-allowed', 'opacity-70');
+  });
+
+  it('renders a task with a long description and a markdown link', () => {
+    const longDescriptionTask: Task[] = [
+      {
+        id: 'task3',
+        title: 'Task with Link',
+        description: 'This is a long description with a link to [Google](https://www.google.com). It should not be truncated.',
+        status: 'pending',
+        priority: 'low',
+        user_id: 'user1',
+      },
+    ];
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: longDescriptionTask });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    // Use regex to match the text because ReactMarkdown breaks it into multiple elements
+    expect(screen.getByText(/This is a long description with a link to/, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/It should not be truncated./, { exact: false })).toBeInTheDocument();
+
+    const linkElement = screen.getByRole('link', { name: 'Google' });
+    expect(linkElement).toBeInTheDocument();
+    expect(linkElement).toHaveAttribute('href', 'https://www.google.com');
+    expect(linkElement).toHaveAttribute('target', '_blank');
+    expect(linkElement).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

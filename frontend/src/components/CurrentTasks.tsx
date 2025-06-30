@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useDraggable } from '@dnd-kit/core';
 import { Clock, GripVertical } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
@@ -50,7 +52,16 @@ const TaskCard = ({ task }: { task: Task }) => {
                     {priority}
                   </span>
                 </div>
-                <p className="text-xs text-text-secondary mb-3 line-clamp-2">{task.description || ''}</p>
+                <div className="text-xs text-text-secondary mb-3">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props} target="_blank" rel="noopener noreferrer" />,
+                    }}
+                  >
+                    {task.description || ''}
+                  </ReactMarkdown>
+                </div>
                 <div className="flex items-center gap-1 text-xs text-text-secondary">
                   <Clock className="h-3 w-3" />
                   <span>{task.statistics?.lasts_min ? `${Math.floor(task.statistics.lasts_min / 60)}h ${task.statistics.lasts_min % 60}m` : '0h 0m'}</span>

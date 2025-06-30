@@ -53,18 +53,7 @@ const PomodoroTimer: React.FC = () => {
                           {currentTaskName && (
                             <p className="text-xl font-semibold text-text-DEFAULT mb-2">{currentTaskName}</p>
                           )}
-                          {currentTaskDescription && (
-                            <div className="text-xs text-text-secondary mb-2 max-h-20 overflow-y-auto px-4">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }} />,
-                                }}
-                              >
-                                {currentTaskDescription}
-                              </ReactMarkdown>
-                            </div>
-                          )}
+
                           <div className="text-5xl md:text-6xl font-bold font-mono text-text-DEFAULT">
                             {formatTime(timeRemaining)}
                           </div>

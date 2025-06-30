@@ -13,6 +13,7 @@ jest.mock('../hooks/useTasks');
 // Variables to hold mock functions for SharedTimerContext
 const mockSetCurrentTaskId = jest.fn();
 const mockSetCurrentTaskName = jest.fn();
+const mockSetCurrentTaskDescription = jest.fn();
 const mockSetOnTaskChanged = jest.fn();
 const mockHandleStartPause = jest.fn();
 const mockResetForNewTask = jest.fn();
@@ -24,6 +25,7 @@ jest.mock('../context/SharedTimerContext', () => ({
     currentTaskId: undefined,
     setCurrentTaskId: mockSetCurrentTaskId,
     setCurrentTaskName: mockSetCurrentTaskName,
+    setCurrentTaskDescription: mockSetCurrentTaskDescription,
     setOnTaskChanged: mockSetOnTaskChanged,
     isActive: false,
     handleStartPause: mockHandleStartPause,
@@ -59,6 +61,7 @@ describe('DashboardPage - handleDragEnd', () => {
     // Reset mocks before each test
     mockSetCurrentTaskId.mockClear();
     mockSetCurrentTaskName.mockClear();
+    mockSetCurrentTaskDescription.mockClear();
     mockSetOnTaskChanged.mockClear();
     mockHandleStartPause.mockClear();
     mockResetForNewTask.mockClear();
@@ -75,13 +78,13 @@ describe('DashboardPage - handleDragEnd', () => {
             id: 'tw1',
             start_time: '09:00',
             end_time: '10:00',
-            tasks: [{ id: 'task1', title: 'Existing Task', status: 'PENDING' }],
+            tasks: [{ id: 'task1', title: 'Existing Task', status: 'PENDING', description: 'description for task 1' }],
           },
           {
             id: 'tw2',
             start_time: '10:00',
             end_time: '11:00',
-            tasks: [{ id: 'task2', title: 'New Task To Drag', status: 'PENDING' }],
+            tasks: [{ id: 'task2', title: 'New Task To Drag', status: 'PENDING', description: 'description for task 2' }],
           },
         ],
       },
@@ -95,6 +98,7 @@ describe('DashboardPage - handleDragEnd', () => {
       currentTaskId: undefined,
       setCurrentTaskId: mockSetCurrentTaskId,
       setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
       setOnTaskChanged: mockSetOnTaskChanged,
       isActive: false,
       handleStartPause: mockHandleStartPause,
@@ -109,6 +113,7 @@ describe('DashboardPage - handleDragEnd', () => {
       currentTaskId: 'task1', // Simulate task1 is already active
       setCurrentTaskId: mockSetCurrentTaskId,
       setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
       setOnTaskChanged: mockSetOnTaskChanged,
       isActive: true, // Assuming the timer is active with the current task
       handleStartPause: mockHandleStartPause,
@@ -145,6 +150,7 @@ describe('DashboardPage - handleDragEnd', () => {
     // Also verify that the new task is set (optional, but good for completeness)
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
+    expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith('description for task 2');
   });
 
   it('should reset and start timer if not active when a new task is dragged', async () => {
@@ -170,6 +176,7 @@ describe('DashboardPage - handleDragEnd', () => {
     expect(mockResetForNewTask).toHaveBeenCalledTimes(1);
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
+    expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith('description for task 2');
     // Removed: expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
   });
   it('should call updateTask with in_progress status when a task is dragged to pomodoro zone and timer is not active', async () => {
@@ -281,6 +288,7 @@ describe('DashboardPage - handleDragEnd', () => {
       currentTaskId: previousTaskId, // Simulate previous task is active
       setCurrentTaskId: mockSetCurrentTaskId,
       setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
       setOnTaskChanged: mockSetOnTaskChanged,
       isActive: true, // Timer is active with the previous task
       handleStartPause: mockHandleStartPause,

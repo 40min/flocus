@@ -41,9 +41,11 @@ interface SharedTimerContextType {
   modeText: Record<Mode, string>;
   currentTaskId: string | undefined;
   currentTaskName: string | undefined;
+  currentTaskDescription: string | undefined;
   onTaskChanged: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setCurrentTaskDescription: React.Dispatch<React.SetStateAction<string | undefined>>;
   setOnTaskChanged: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
   stopCurrentTask: () => Promise<void>;
   resetForNewTask: () => Promise<void>;
@@ -58,6 +60,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
+  const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(undefined);
   const [onTaskChanged, setOnTaskChanged] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
 
   const stopCurrentTask = useCallback(async () => {
@@ -70,6 +73,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
+    setCurrentTaskDescription(undefined);
     setOnTaskChanged(undefined);
   }, [currentTaskId, onTaskChanged]);
 
@@ -197,9 +201,11 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     modeText,
     currentTaskId,
     currentTaskName,
+    currentTaskDescription,
     onTaskChanged,
     setCurrentTaskId,
     setCurrentTaskName,
+    setCurrentTaskDescription,
     setOnTaskChanged,
     stopCurrentTask,
     resetForNewTask,

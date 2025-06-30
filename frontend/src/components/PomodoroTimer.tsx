@@ -1,5 +1,7 @@
 import React from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
@@ -17,6 +19,7 @@ const PomodoroTimer: React.FC = () => {
     isBreak,
     timerColor,
     currentTaskName,
+    currentTaskDescription,
   } = useSharedTimerContext();
 
   const { setNodeRef, isOver } = useDroppable({
@@ -49,6 +52,18 @@ const PomodoroTimer: React.FC = () => {
                         <>
                           {currentTaskName && (
                             <p className="text-xl font-semibold text-text-DEFAULT mb-2">{currentTaskName}</p>
+                          )}
+                          {currentTaskDescription && (
+                            <div className="text-xs text-text-secondary mb-2 max-h-20 overflow-y-auto px-4">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }} />,
+                                }}
+                              >
+                                {currentTaskDescription}
+                              </ReactMarkdown>
+                            </div>
                           )}
                           <div className="text-5xl md:text-6xl font-bold font-mono text-text-DEFAULT">
                             {formatTime(timeRemaining)}
@@ -93,9 +108,22 @@ const PomodoroTimer: React.FC = () => {
               </Button>
             </div>
             <div className="text-center space-y-2">
-              <p className="text-text-light text-sm md:text-base font-medium">
+              <p className="text-text-light text-xs md:text-sm font-medium">
                 Completed: {pomodorosCompleted}
               </p>
+              {currentTaskDescription && (
+                <div className="text-sm text-text-secondary mt-4 max-h-20 overflow-y-auto px-4">
+                  <p className="font-semibold">Description:</p>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }} />,
+                    }}
+                  >
+                    {currentTaskDescription}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
           </div>
 

@@ -4,11 +4,11 @@ import remarkGfm from 'remark-gfm';
 import { useDraggable } from '@dnd-kit/core';
 import { Clock, GripVertical, Pause, Play, Trash2 } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
-import { Task, TaskUpdateRequest } from '../types/task';
+import { Task } from '../types/task';
 import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
-import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
+import { useDeleteTask } from 'hooks/useTasks';
 import Button from './Button';
 
 const TaskCard = ({ task }: { task: Task }) => {
@@ -16,16 +16,9 @@ const TaskCard = ({ task }: { task: Task }) => {
     currentTaskId,
     isActive,
     handleStartPause,
-    resetForNewTask,
-    setCurrentTaskId,
-    setCurrentTaskName,
-    setCurrentTaskDescription,
-    setOnTaskChanged,
-    setIsActive,
     stopCurrentTask,
   } = useSharedTimerContext();
 
-  const { mutateAsync: updateTask } = useUpdateTask();
   const { mutate: deleteTask } = useDeleteTask();
   const isActiveTask = currentTaskId === task.id;
 
@@ -46,20 +39,6 @@ const TaskCard = ({ task }: { task: Task }) => {
     low: 'bg-accent-DEFAULT/10 text-accent-dark border-accent-DEFAULT/30',
   };
   const priority = task.priority.toLowerCase() as 'high' | 'medium' | 'low';
-
-  const handleStart = async () => {
-    await resetForNewTask();
-    setCurrentTaskId(task.id);
-    setCurrentTaskName(task.title);
-    setCurrentTaskDescription(task.description);
-    setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
-    await updateTask({ taskId: task.id, taskData: { status: 'in_progress' } });
-    setIsActive(true);
-  };
-
-  const handlePause = () => {
-    handleStartPause();
-  };
 
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete the task "${task.title}"?`)) {
@@ -107,7 +86,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Button
-                    onClick={handleStart}
+                    onClick={handleStartPause}
                     disabled={isActive}
                     variant="ghost"
                     size="icon"
@@ -117,7 +96,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                     <Play className="h-4 w-4" />
                   </Button>
                   <Button
-                    onClick={handlePause}
+                    onClick={handleStartPause}
                     disabled={!isActive || !isActiveTask}
                     variant="ghost"
                     size="icon"

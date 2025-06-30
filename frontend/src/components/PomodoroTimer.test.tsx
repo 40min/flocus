@@ -91,4 +91,58 @@ describe('PomodoroTimer', () => {
 
     expect(screen.getByText('Completed: 1')).toBeInTheDocument();
   });
+
+  it('displays the task name and description when provided', () => {
+    const taskName = 'My Test Task';
+    const taskDescription = 'This is a detailed description of my test task.';
+    mockUseSharedTimerContext.mockReturnValue({
+      ...mockContextValue,
+      currentTaskName: taskName,
+      currentTaskDescription: taskDescription,
+    });
+
+    render(<PomodoroTimer />);
+
+    expect(screen.getByText(taskName)).toBeInTheDocument();
+
+    // The description is rendered in two places
+    const descriptionElements = screen.getAllByText(taskDescription);
+    expect(descriptionElements).toHaveLength(1);
+
+    // The "Description:" label should also be present
+    expect(screen.getByText('Description:')).toBeInTheDocument();
+  });
+
+  it('does not display the task description section when no description is provided', () => {
+    mockUseSharedTimerContext.mockReturnValue({
+      ...mockContextValue,
+      currentTaskName: 'A task without description',
+      currentTaskDescription: undefined,
+    });
+
+    render(<PomodoroTimer />);
+
+    expect(screen.getByText('A task without description')).toBeInTheDocument();
+    expect(screen.queryByText('Description:')).not.toBeInTheDocument();
+  });
+
+  it('renders markdown content in the task description', () => {
+    const markdownDescription = 'A description with a [link](http://example.com) and **bold text**.';
+    mockUseSharedTimerContext.mockReturnValue({
+      ...mockContextValue,
+      currentTaskDescription: markdownDescription,
+    });
+
+    render(<PomodoroTimer />);
+
+    // Check for the link
+    const links = screen.getAllByRole('link', { name: /link/i });
+    expect(links.length).toBe(1);
+    expect(links[0]).toHaveAttribute('href', 'http://example.com');
+
+    // Check for the bold text
+    const boldElements = screen.getAllByText('bold text');
+    expect(boldElements.length).toBe(1);
+    expect(boldElements[0].tagName).toBe('STRONG'); // Assuming ReactMarkdown renders bold as <strong>
+  });
 });

@@ -50,9 +50,7 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
     defaultValues: initialData,
   });
 
-  useEffect(() => {
-    reset(initialData);
-  }, [initialData, reset]);
+
 
   const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime } = data;

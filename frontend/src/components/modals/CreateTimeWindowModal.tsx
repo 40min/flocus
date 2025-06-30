@@ -53,9 +53,7 @@ if (existingTimeWindows.length > 0) {
     defaultValues: initialData,
   });
 
-  useEffect(() => {
-    reset(initialData);
-  }, [initialData, reset]);
+
 
   const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime, categoryId } = data;

@@ -1,18 +1,22 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CurrentTasks from './CurrentTasks';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { DndContext } from '@dnd-kit/core';
 import { Task } from 'types/task';
 import { TimeWindow } from 'types/timeWindow';
+import { useDeleteTask } from 'hooks/useTasks';
 
 jest.mock('../hooks/useCurrentTimeWindow');
 jest.mock('../context/SharedTimerContext');
+jest.mock('hooks/useTasks');
 
 const mockedUseCurrentTimeWindow = useCurrentTimeWindow as jest.Mock;
 const mockedUseSharedTimerContext = useSharedTimerContext as jest.Mock;
+const mockedUseDeleteTask = useDeleteTask as jest.Mock;
 
 const mockTimeWindow: TimeWindow = {
   id: 'tw1',
@@ -30,8 +34,6 @@ const mockTasks: Task[] = [
   { id: 'task2', title: 'Task Two', status: 'pending', priority: 'high', user_id: 'user1', statistics: { lasts_min: 60 } },
 ];
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 const queryClient = new QueryClient();
 
 const renderWithDnd = (component: React.ReactElement) => {
@@ -45,10 +47,26 @@ const renderWithDnd = (component: React.ReactElement) => {
 };
 
 describe('CurrentTasks', () => {
+  const mockHandleStartPause = jest.fn();
+  const mockStopCurrentTask = jest.fn();
+  const mockDeleteTask = jest.fn();
+
   beforeEach(() => {
     mockedUseSharedTimerContext.mockReturnValue({
       currentTaskId: null,
+      isActive: false,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
     });
+    mockedUseDeleteTask.mockReturnValue({
+      mutate: mockDeleteTask,
+    });
+    jest.clearAllMocks();
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('shows "no works planned" message when there is no current time window', () => {
@@ -79,6 +97,9 @@ describe('CurrentTasks', () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
     mockedUseSharedTimerContext.mockReturnValue({
       currentTaskId: 'task1', // Task One is active
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
     // eslint-disable-next-line testing-library/no-node-access
@@ -109,5 +130,113 @@ describe('CurrentTasks', () => {
     expect(linkElement).toHaveAttribute('href', 'https://www.google.com');
     expect(linkElement).toHaveAttribute('target', '_blank');
     expect(linkElement).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('calls handleStartPause when "Start task" button is clicked for a non-active task', () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const startButton = screen.getAllByRole('button', { name: 'Start task' })[0];
+    fireEvent.click(startButton);
+
+    expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables "Start task" button when a task is active', () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: 'task1',
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+    });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const startButton = screen.getAllByRole('button', { name: 'Start task' })[0];
+    expect(startButton).toBeDisabled();
+  });
+
+  it('calls handleStartPause when "Pause task" button is clicked for the active task', () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: 'task1',
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+    });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
+    fireEvent.click(pauseButton);
+
+    expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables "Pause task" button when timer is not active or it is not the active task', () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    // Case 1: Timer not active
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: 'task1',
+      isActive: false,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+    });
+    const { rerender } = renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    let pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
+    expect(pauseButton).toBeDisabled();
+
+    // Case 2: Timer active, but different task is active
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: 'another-task-id',
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+    });
+    rerender(<CurrentTasks dailyPlan={{} as any} />);
+    pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
+    expect(pauseButton).toBeDisabled();
+  });
+
+  it('calls deleteTask when "Delete task" button is clicked and confirmed', async () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
+    fireEvent.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete the task "Task One"?');
+    await waitFor(() => expect(mockDeleteTask).toHaveBeenCalledWith('task1'));
+    expect(mockStopCurrentTask).not.toHaveBeenCalled();
+  });
+
+  it('calls stopCurrentTask and then deleteTask when "Delete task" is clicked for the active task and confirmed', async () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: 'task1',
+      isActive: true,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+    });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
+    fireEvent.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete the task "Task One"?');
+    await waitFor(() => expect(mockStopCurrentTask).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockDeleteTask).toHaveBeenCalledWith('task1'));
+  });
+
+  it('does not call deleteTask if confirmation is cancelled', () => {
+    jest.spyOn(window, 'confirm').mockReturnValue(false);
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+
+    const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
+    fireEvent.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete the task "Task One"?');
+    expect(mockDeleteTask).not.toHaveBeenCalled();
+    expect(mockStopCurrentTask).not.toHaveBeenCalled();
   });
 });

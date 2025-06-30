@@ -146,14 +146,15 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const handleStartPause = useCallback(async () => {
     if (currentTaskId && onTaskChanged) {
-      if (isActive) { // Pausing the timer
-        await onTaskChanged(currentTaskId, { status: 'pending' });
-      } else { // Starting or resuming the timer
-        await onTaskChanged(currentTaskId, { status: 'in_progress' });
-      }
+      // Determine the new status based on the action being taken (pausing or resuming)
+      // If isActive is true, we are about to pause, so new status is 'pending'.
+      // If isActive is false, we are about to resume, so new status is 'in_progress'.
+      const newStatus = isActive ? 'pending' : 'in_progress';
+      await onTaskChanged(currentTaskId, { status: newStatus });
     }
-    setIsActive(prev => !prev);
-  }, [isActive, currentTaskId, onTaskChanged]);
+    // Toggle isActive state after the API call has been made.
+    setIsActive(prevIsActive => !prevIsActive);
+  }, [isActive, currentTaskId, onTaskChanged, setIsActive]); // Added setIsActive to dependency array as it's used directly
 
   const handleReset = useCallback(async () => {
     await stopCurrentTask();

@@ -30,11 +30,17 @@ const mockTasks: Task[] = [
   { id: 'task2', title: 'Task Two', status: 'pending', priority: 'high', user_id: 'user1', statistics: { lasts_min: 60 } },
 ];
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
 const renderWithDnd = (component: React.ReactElement) => {
   return render(
-    <DndContext onDragEnd={() => {}}>
-      {component}
-    </DndContext>
+    <QueryClientProvider client={queryClient}>
+      <DndContext onDragEnd={() => {}}>
+        {component}
+      </DndContext>
+    </QueryClientProvider>
   );
 };
 

@@ -979,7 +979,9 @@ async def test_improve_text_with_llm_improve_description(
     assert response_data.improved_description == "This is an improved description."
     assert response_data.improved_title is None
     mock_improve_text.assert_called_once_with(
-        "original description", "Improve the following task description to make it more concise and informative:"
+        "original description",
+        "Improve the following task description to make it more concise and informative. "
+        "Ensure the output is in markdown format, preserving any existing markdown links or formatting.",
     )
 
 
@@ -1001,7 +1003,8 @@ async def test_improve_text_with_llm_generate_description_from_title(
     assert response_data.improved_title is None
     mock_improve_text.assert_called_once_with(
         "Task Title: original title",
-        "Based on the following task title, generate a concise and informative task description:",
+        "Based on the following task title, generate a concise and informative task description. "
+        "Ensure the output is in markdown format, including any relevant links or formatting.",
     )
 
 

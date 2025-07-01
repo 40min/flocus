@@ -94,14 +94,19 @@ class TestLLMService:
     async def test_process_llm_action_improve_description_success(self, llm_service, mock_llm_client):
         mock_llm_client.generate_text.return_value = "Improved Description"
         with patch("app.services.llm_service.settings", spec=Settings) as mock_settings:
+            # This mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT is not actually used by this action type
+            # as the prompt is overridden in the service layer.
+            # However, we keep it here to reflect the original test structure.
             mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = (
-                "Improve the following task description to make it more concise and informative:"
+                "Improve the following task description to make it more concise and informative:"  # Original
             )
             response = await llm_service.process_llm_action(action="improve_description", description="Old Description")
             assert response.improved_description == "Improved Description"
-            mock_llm_client.generate_text.assert_called_once_with(
-                f"{mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT}\n\n---\n\nOld Description"
+            expected_prompt = (
+                "Improve the following task description to make it more concise and informative. "
+                "Ensure the output is in markdown format, preserving any existing markdown links or formatting."
             )
+            mock_llm_client.generate_text.assert_called_once_with(f"{expected_prompt}\n\n---\n\nOld Description")
 
     async def test_process_llm_action_improve_description_no_description(self, llm_service):
         with pytest.raises(LLMInputValidationError, match="Description is required for 'improve_description' action."):
@@ -110,14 +115,18 @@ class TestLLMService:
     async def test_process_llm_action_generate_description_from_title_success(self, llm_service, mock_llm_client):
         mock_llm_client.generate_text.return_value = "Generated Description"
         with patch("app.services.llm_service.settings", spec=Settings) as mock_settings:
+            # This mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT is not actually used by this action type
+            # as the prompt is overridden in the service layer.
             mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT = (
-                "Based on the following task title, generate a concise and informative task description:"
+                "Based on the following task title, generate a concise and informative task description:"  # Original
             )
             response = await llm_service.process_llm_action(action="generate_description_from_title", title="New Task")
             assert response.improved_description == "Generated Description"
-            mock_llm_client.generate_text.assert_called_once_with(
-                f"{mock_settings.LLM_TEXT_IMPROVEMENT_PROMPT}\n\n---\n\nTask Title: New Task"
+            expected_prompt = (
+                "Based on the following task title, generate a concise and informative task description. "
+                "Ensure the output is in markdown format, including any relevant links or formatting."
             )
+            mock_llm_client.generate_text.assert_called_once_with(f"{expected_prompt}\n\n---\n\nTask Title: New Task")
 
     async def test_process_llm_action_generate_description_from_title_no_title(self, llm_service):
         with pytest.raises(

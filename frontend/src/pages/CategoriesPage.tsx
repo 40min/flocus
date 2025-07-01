@@ -57,11 +57,7 @@ const CategoriesPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-slate-800">Categories</h1>
-        <Button onClick={handleAddCategoryClick} variant="primary" size="medium">
-          <Plus className="h-5 w-5 mr-2" />
-          Add New Category
-        </Button>
+        <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
       </div>
 
       {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
@@ -76,6 +72,15 @@ const CategoriesPage: React.FC = () => {
       <div className="bg-white shadow-sm rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-800">All Categories</h2>
+          <Button
+            onClick={handleAddCategoryClick}
+            variant="slate"
+            size="medium"
+            className="flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Add New Category
+          </Button>
         </div>
         <ul className="divide-y divide-slate-200">
           {categories.length === 0 ? (
@@ -88,8 +93,8 @@ const CategoriesPage: React.FC = () => {
                   <div className="flex items-center">
                     <span className={`h-4 w-4 rounded-full mr-3 ${bgColor}`} title={colorName}></span>
                     <div>
-                      <p className="text-lg font-medium text-slate-900">{category.name}</p>
-                      {category.description && <p className="text-sm text-slate-500">{category.description}</p>}
+                      <p className="text-sm font-medium text-slate-900">{category.name}</p>
+                      {category.description && <p className="text-sm text-slate-600">{category.description}</p>}
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">

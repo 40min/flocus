@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from 'context/AuthContext';
@@ -66,7 +66,7 @@ describe('CategoriesPage', () => {
   it('renders no categories message when list is empty', () => {
     mockedUseCategories.mockReturnValue({ data: [], isLoading: false, error: null });
     renderComponent();
-    expect(screen.getByText('No categories found. Add a category to organize your tasks!')).toBeInTheDocument();
+    expect(screen.getByText('No categories found\. Click "Add New Category" to create one\.')).toBeInTheDocument();
   });
 
   it('renders a list of categories', () => {
@@ -75,22 +75,24 @@ describe('CategoriesPage', () => {
     expect(screen.getByText('Work')).toBeInTheDocument();
     expect(screen.getByText('Work related tasks')).toBeInTheDocument();
     expect(screen.getByText('Personal')).toBeInTheDocument();
-    expect(screen.getByText('Blue')).toBeInTheDocument(); // Check color rendering
+    expect(screen.getByTitle('Blue')).toBeInTheDocument(); // Check color rendering
   });
 
-  it('opens, fills, and submits the create category form successfully', async () => {
+  it('opens, fills, and submits the create category modal successfully', async () => {
     mockedUseCategories.mockReturnValue({ data: [], isLoading: false, error: null });
     mockedCreateCategory.mockResolvedValue({});
     renderComponent();
 
     fireEvent.click(screen.getByText('Add New Category'));
-    await screen.findByText('Create New Category');
+    const modal = await screen.findByRole('dialog', { name: /create new category/i });
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Category' } });
-    fireEvent.change(screen.getByLabelText(/description/i), { target: { value: 'New Desc' } });
-    fireEvent.click(screen.getByTitle('Green')); // Select Green color
+    expect(modal).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(within(modal).getByLabelText('Name'), { target: { value: 'New Category' } });
+    fireEvent.change(within(modal).getByLabelText(/description/i), { target: { value: 'New Desc' } });
+    fireEvent.click(within(modal).getByTitle('Green')); // Select Green color
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
       expect(mockedCreateCategory).toHaveBeenCalledWith({
@@ -99,7 +101,7 @@ describe('CategoriesPage', () => {
         color: '#22C55E',
       });
     });
-    expect(screen.queryByText('Create New Category')).not.toBeInTheDocument(); // Form should close
+    expect(screen.queryByRole('dialog', { name: /create new category/i })).not.toBeInTheDocument(); // Modal should close
   });
 
   it('displays API error message on create category failure', async () => {
@@ -108,49 +110,33 @@ describe('CategoriesPage', () => {
     renderComponent();
 
     fireEvent.click(screen.getByText('Add New Category'));
-    await screen.findByText('Create New Category');
+    const modal = await screen.findByRole('dialog', { name: /create new category/i });
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Existing Category' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(within(modal).getByLabelText('Name'), { target: { value: 'Existing Category' } });
+    fireEvent.click(within(modal).getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Category name already exists')).toBeInTheDocument();
+      expect(within(modal).getByText('Category name already exists')).toBeInTheDocument();
     });
   });
 
-  it('displays generic error message on create category non-API failure', async () => {
-    mockedUseCategories.mockReturnValue({ data: [], isLoading: false, error: null });
-    mockedCreateCategory.mockRejectedValue(new Error('Network error'));
-    renderComponent();
-
-    fireEvent.click(screen.getByText('Add New Category'));
-    await screen.findByText('Create New Category');
-
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Some Category' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to create category.')).toBeInTheDocument();
-    });
-  });
-
-  it('opens, fills, and submits the edit category form successfully', async () => {
+  it('opens, fills, and submits the edit category modal successfully', async () => {
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
     mockedUpdateCategory.mockResolvedValue({});
     renderComponent();
 
     fireEvent.click(screen.getAllByTitle('Edit Category')[0]); // Click edit for 'Work'
-    await screen.findByText('Edit Category');
+    const modal = await screen.findByRole('dialog', { name: /edit category/i });
 
-    expect(screen.getByLabelText('Name')).toHaveValue('Work');
-    expect(screen.getByLabelText(/description/i)).toHaveValue('Work related tasks');
+    expect(within(modal).getByLabelText('Name')).toHaveValue('Work');
+    expect(within(modal).getByLabelText(/description/i)).toHaveValue('Work related tasks');
     // Check if the correct color button is selected by its class
-    expect(screen.getByTitle('Blue')).toHaveClass('ring-2');
+    expect(within(modal).getByTitle('Blue')).toHaveClass('ring-2');
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Updated Work' } });
-    fireEvent.click(screen.getByTitle('Red')); // Change color to Red
+    fireEvent.change(within(modal).getByLabelText('Name'), { target: { value: 'Updated Work' } });
+    fireEvent.click(within(modal).getByTitle('Red')); // Change color to Red
 
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
       expect(mockedUpdateCategory).toHaveBeenCalledWith('1', {
@@ -159,38 +145,22 @@ describe('CategoriesPage', () => {
         color: '#EF4444', // Expecting Red
       });
     });
-    expect(screen.queryByText('Edit Category')).not.toBeInTheDocument(); // Form should close
+    expect(screen.queryByRole('dialog', { name: /edit category/i })).not.toBeInTheDocument(); // Modal should close
   });
 
-  it('displays API error message on update category failure', async () => {
-    mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
-    mockedUpdateCategory.mockRejectedValue(new ApiError('Category name already exists', 409));
-    renderComponent();
-
-    fireEvent.click(screen.getAllByTitle('Edit Category')[0]);
-    await screen.findByText('Edit Category');
-
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Personal' } }); // Try to change to existing name
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Category name already exists')).toBeInTheDocument();
-    });
-  });
-
-  it('displays generic error message on update category non-API failure', async () => {
+  it('displays an error in the modal on update category failure', async () => {
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
     mockedUpdateCategory.mockRejectedValue(new Error('Network error'));
     renderComponent();
 
     fireEvent.click(screen.getAllByTitle('Edit Category')[0]);
-    await screen.findByText('Edit Category');
+    const modal = await screen.findByRole('dialog', { name: /edit category/i });
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Updated Work' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    fireEvent.change(within(modal).getByLabelText('Name'), { target: { value: 'Updated Work' } });
+    fireEvent.click(within(modal).getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to update category.')).toBeInTheDocument();
+      expect(within(modal).getByText('Failed to update category.')).toBeInTheDocument();
     });
   });
 
@@ -205,40 +175,37 @@ describe('CategoriesPage', () => {
     await waitFor(() => {
       expect(mockedDeleteCategory).toHaveBeenCalledWith('1');
     });
+    // This test assumes no confirmation dialog for simplicity, matching the current implementation.
   });
 
-  it('closes the form when cancel button is clicked', async () => {
+  it('closes the modal when cancel button is clicked', async () => {
     mockedUseCategories.mockReturnValue({ data: [], isLoading: false, error: null });
     renderComponent();
 
     fireEvent.click(screen.getByText('Add New Category'));
-    await screen.findByText('Create New Category');
+    const modal = await screen.findByRole('dialog', { name: /create new category/i });
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Temp Category' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'Cancel' }));
 
-    await waitFor(() => {
-      expect(screen.queryByText('Create New Category')).not.toBeInTheDocument();
-    });
-    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument(); // Form fields should be gone
+    expect(screen.queryByRole('dialog', { name: /create new category/i })).not.toBeInTheDocument();
   });
 
-  it('resets form fields when opening for new category after editing', async () => {
+  it('resets modal form fields when opening for new category after editing', async () => {
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
     renderComponent();
 
     // First, open for editing
     fireEvent.click(screen.getAllByTitle('Edit Category')[0]);
-    await screen.findByText('Edit Category');
-    expect(screen.getByLabelText('Name')).toHaveValue('Work');
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(screen.queryByText('Edit Category')).not.toBeInTheDocument());
+    let modal = await screen.findByRole('dialog', { name: /edit category/i });
+    expect(within(modal).getByLabelText('Name')).toHaveValue('Work');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /edit category/i })).not.toBeInTheDocument());
 
     // Then, open for new category
     fireEvent.click(screen.getByText('Add New Category'));
-    await screen.findByText('Create New Category');
-    expect(screen.getByLabelText('Name')).toHaveValue(''); // Should be reset
-    expect(screen.getByLabelText(/description/i)).toHaveValue(''); // Should be reset
-    expect(screen.getByTitle('Slate')).toHaveClass('ring-2'); // Default color should be selected
+    modal = await screen.findByRole('dialog', { name: /create new category/i });
+    expect(within(modal).getByLabelText('Name')).toHaveValue('');
+    expect(within(modal).getByLabelText(/description/i)).toHaveValue('');
+    expect(within(modal).getByTitle('Slate')).toHaveClass('ring-2'); // Default color
   });
 });

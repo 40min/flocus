@@ -50,6 +50,7 @@ describe('CurrentTasks', () => {
   const mockHandleStartPause = jest.fn();
   const mockStopCurrentTask = jest.fn();
   const mockDeleteTask = jest.fn();
+  const mockOnStartTask = jest.fn();
 
   beforeEach(() => {
     mockedUseSharedTimerContext.mockReturnValue({
@@ -71,14 +72,14 @@ describe('CurrentTasks', () => {
 
   it('shows "no works planned" message when there is no current time window', () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: null, currentTasks: [] });
-    renderWithDnd(<CurrentTasks dailyPlan={null} />);
+    renderWithDnd(<CurrentTasks dailyPlan={null} onStartTask={mockOnStartTask} />);
     expect(screen.getByText("Today's Tasks")).toBeInTheDocument();
     expect(screen.getByText('No works planned for this time.')).toBeInTheDocument();
   });
 
   it('shows "no tasks" message when there is a time window but no tasks', () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: [] });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />); // Pass dummy plan to trigger hook
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />); // Pass dummy plan to trigger hook
     expect(screen.getByText("Today's Tasks")).toBeInTheDocument();
     expect(screen.getByText('No tasks for the current time window.')).toBeInTheDocument();
     expect(screen.getByText('Drag tasks to the timer to start focusing')).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe('CurrentTasks', () => {
 
   it('renders a list of tasks when they are available', () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
     expect(screen.getByText('Task One')).toBeInTheDocument();
     expect(screen.getByText('Task Two')).toBeInTheDocument();
     expect(screen.getByText('0h 30m')).toBeInTheDocument(); // Check duration formatting
@@ -101,7 +102,7 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
     // eslint-disable-next-line testing-library/no-node-access
     const taskOneCard = screen.getByLabelText('Drag task: Task One').parentElement;
     expect(taskOneCard).toHaveClass('cursor-not-allowed', 'opacity-70');
@@ -119,7 +120,7 @@ describe('CurrentTasks', () => {
       },
     ];
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: longDescriptionTask });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     // Use regex to match the text because ReactMarkdown breaks it into multiple elements
     expect(screen.getByText(/This is a long description with a link to/, { exact: false })).toBeInTheDocument();
@@ -132,14 +133,14 @@ describe('CurrentTasks', () => {
     expect(linkElement).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
-  it('calls handleStartPause when "Start task" button is clicked for a non-active task', () => {
+  it('calls onStartTask when "Start task" button is clicked for a non-active task', () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const startButton = screen.getAllByRole('button', { name: 'Start task' })[0];
     fireEvent.click(startButton);
 
-    expect(mockHandleStartPause).toHaveBeenCalledTimes(1);
+    expect(mockOnStartTask).toHaveBeenCalledWith('task1');
   });
 
   it('disables "Start task" button when a task is active', () => {
@@ -150,7 +151,7 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const startButton = screen.getAllByRole('button', { name: 'Start task' })[0];
     expect(startButton).toBeDisabled();
@@ -164,7 +165,7 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
     fireEvent.click(pauseButton);
@@ -181,7 +182,7 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    const { rerender } = renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    const { rerender } = renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
     let pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
     expect(pauseButton).toBeDisabled();
 
@@ -192,14 +193,14 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    rerender(<CurrentTasks dailyPlan={{} as any} />);
+    rerender(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
     pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
     expect(pauseButton).toBeDisabled();
   });
 
   it('calls deleteTask when "Delete task" button is clicked and confirmed', async () => {
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
     fireEvent.click(deleteButton);
@@ -217,7 +218,7 @@ describe('CurrentTasks', () => {
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
     });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
     fireEvent.click(deleteButton);
@@ -230,7 +231,7 @@ describe('CurrentTasks', () => {
   it('does not call deleteTask if confirmation is cancelled', () => {
     jest.spyOn(window, 'confirm').mockReturnValue(false);
     mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
-    renderWithDnd(<CurrentTasks dailyPlan={{} as any} />);
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onStartTask={mockOnStartTask} />);
 
     const deleteButton = screen.getAllByRole('button', { name: 'Delete task' })[0];
     fireEvent.click(deleteButton);

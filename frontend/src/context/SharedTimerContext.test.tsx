@@ -202,10 +202,10 @@ describe('SharedTimerContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
-      expect(mockOnTaskComplete).toHaveBeenCalledTimes(2); // Called on start and on completion
-      expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "in_progress" }); // First call on start
-      expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "pending" }); // Second call on completion
     });
+    expect(mockOnTaskComplete).toHaveBeenCalledTimes(2); // Called on start and on completion
+    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "in_progress" }); // First call on start
+    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "pending" }); // Second call on completion
 
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('05:00');
     expect(screen.getByTestId('pomodoros-completed')).toHaveTextContent('1');

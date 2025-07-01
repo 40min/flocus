@@ -15,37 +15,39 @@ const DashboardPage: React.FC = () => {
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const taskId = event.active.id as string;
-
-    // If the dragged task is the currently active task, do nothing.
+  const activateAndStartTask = async (taskId: string) => {
     if (taskId === currentTaskId) {
       return;
     }
 
-    if (event.over?.id === 'pomodoro-drop-zone') {
-      let draggedTask;
-
-      if (dailyPlan) {
-        for (const timeWindow of dailyPlan.time_windows) {
-          const foundTask = timeWindow.tasks.find(task => task.id === taskId);
-          if (foundTask) {
-            draggedTask = foundTask;
-            break;
-          }
+    if (dailyPlan) {
+      let taskToStart;
+      for (const timeWindow of dailyPlan.time_windows) {
+        const foundTask = timeWindow.tasks.find(task => task.id === taskId);
+        if (foundTask) {
+          taskToStart = foundTask;
+          break;
         }
       }
 
-      if (draggedTask) {
+      if (taskToStart) {
         await resetForNewTask();
         setCurrentTaskId(taskId);
-        setCurrentTaskName(draggedTask.title);
-        setCurrentTaskDescription(draggedTask.description);
+        setCurrentTaskName(taskToStart.title);
+        setCurrentTaskDescription(taskToStart.description);
         setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
 
         await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
         setIsActive(true);
       }
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const taskId = event.active.id as string;
+
+    if (event.over?.id === 'pomodoro-drop-zone') {
+      await activateAndStartTask(taskId);
     }
   };
 
@@ -75,7 +77,7 @@ const DashboardPage: React.FC = () => {
                   ) : isError ? (
                     <p className="text-red-500">Error loading daily plan.</p>
                   ) : (
-                    <CurrentTasks dailyPlan={dailyPlan} />
+                    <CurrentTasks dailyPlan={dailyPlan} onStartTask={activateAndStartTask} />
                   )}
                 </div>
               </aside>

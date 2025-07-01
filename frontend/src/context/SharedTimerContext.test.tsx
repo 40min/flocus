@@ -43,19 +43,15 @@ const TestComponent: React.FC<TestComponentProps> = ({
   } = useSharedTimerContext();
 
   useEffect(() => {
-    act(() => { // Wrap initial state setting in act
-      if (initialTaskId) setCurrentTaskId(initialTaskId);
-      if (initialTaskName) setCurrentTaskName(initialTaskName);
-      if (initialTaskDescription) setCurrentTaskDescription(initialTaskDescription);
-    });
+    if (initialTaskId) setCurrentTaskId(initialTaskId);
+    if (initialTaskName) setCurrentTaskName(initialTaskName);
+    if (initialTaskDescription) setCurrentTaskDescription(initialTaskDescription);
 
-    act(() => { // Wrap this state update in act
-      if (onTaskChangedMock) {
-        setOnTaskChanged(() => onTaskChangedMock);
-      } else {
-        setOnTaskChanged(() => jest.fn().mockResolvedValue({} as Task));
-      }
-    });
+    if (onTaskChangedMock) {
+      setOnTaskChanged(() => onTaskChangedMock);
+    } else {
+      setOnTaskChanged(() => jest.fn().mockResolvedValue({} as Task));
+    }
   }, [setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, setOnTaskChanged, onTaskChangedMock, initialTaskId, initialTaskName, initialTaskDescription]);
 
   return (

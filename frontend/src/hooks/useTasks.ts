@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllTasks, updateTask } from '../services/taskService';
+import { deleteTask, getAllTasks, updateTask } from '../services/taskService';
 
 export const useTasks = () => {
   return useQuery({
@@ -22,6 +22,17 @@ export const useUpdateTask = () => {
     mutationFn: ({ taskId, taskData }: { taskId: string; taskData: any }) => updateTask(taskId, taskData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+};
+
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
     },
   });
 };

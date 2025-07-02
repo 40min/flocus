@@ -7,45 +7,48 @@ import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useUpdateTask } from '../hooks/useTasks';
 
-import { TaskUpdateRequest } from '../types/task';
-
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskChanged, setCurrentTaskName, setCurrentTaskDescription, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
+  const { setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const taskId = event.active.id as string;
-
-    // If the dragged task is the currently active task, do nothing.
+  const activateAndStartTask = async (taskId: string) => {
     if (taskId === currentTaskId) {
       return;
     }
 
-    if (event.over?.id === 'pomodoro-drop-zone') {
-      let draggedTask;
-
-      if (dailyPlan) {
-        for (const timeWindow of dailyPlan.time_windows) {
-          const foundTask = timeWindow.tasks.find(task => task.id === taskId);
-          if (foundTask) {
-            draggedTask = foundTask;
-            break;
-          }
+    if (dailyPlan) {
+      let taskToStart;
+      for (const timeWindow of dailyPlan.time_windows) {
+        const foundTask = timeWindow.tasks.find(task => task.id === taskId);
+        if (foundTask) {
+          taskToStart = foundTask;
+          break;
         }
       }
 
-      if (draggedTask) {
-        await resetForNewTask();
-        setCurrentTaskId(taskId);
-        setCurrentTaskName(draggedTask.title);
-        setCurrentTaskDescription(draggedTask.description);
-        setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
+      if (taskToStart) {
+        try {
+          await resetForNewTask();
+          setCurrentTaskId(taskId);
+          setCurrentTaskName(taskToStart.title);
+          setCurrentTaskDescription(taskToStart.description);
 
-        await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
-        setIsActive(true);
+          await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
+          setIsActive(true);
+        } catch (error) {
+          console.error('Failed to start task:', error);
+        }
       }
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const taskId = event.active.id as string;
+
+    if (event.over?.id === 'pomodoro-drop-zone') {
+      await activateAndStartTask(taskId);
     }
   };
 
@@ -75,7 +78,7 @@ const DashboardPage: React.FC = () => {
                   ) : isError ? (
                     <p className="text-red-500">Error loading daily plan.</p>
                   ) : (
-                    <CurrentTasks dailyPlan={dailyPlan} />
+                    <CurrentTasks dailyPlan={dailyPlan} onSelectTask={activateAndStartTask} />
                   )}
                 </div>
               </aside>

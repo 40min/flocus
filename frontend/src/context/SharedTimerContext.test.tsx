@@ -1,21 +1,32 @@
 import React, { useEffect } from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { SharedTimerProvider, useSharedTimerContext } from './SharedTimerContext';
-import { Task, TaskUpdateRequest } from '../types/task';
+import { useUpdateTask } from '../hooks/useTasks';
+
+jest.mock('../hooks/useTasks');
 
 const WORK_DURATION = 25 * 60;
 const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
 
 // Test component with better error handling
 interface TestComponentProps {
-  onTaskChangedMock?: jest.Mock;
   resetForNewTaskMock?: jest.Mock;
+  initialTaskId?: string;
+  initialTaskName?: string;
+  initialTaskDescription?: string;
 }
 
-const TestComponent: React.FC<TestComponentProps> = ({ onTaskChangedMock, resetForNewTaskMock }) => {
+const TestComponent: React.FC<TestComponentProps> = ({
+  resetForNewTaskMock,
+  initialTaskId,
+  initialTaskName,
+  initialTaskDescription,
+}) => {
   const {
     mode,
     currentTaskId: contextTaskId,
+    currentTaskName: contextTaskName,
+    currentTaskDescription: contextTaskDescription,
     timeRemaining,
     isActive,
     pomodorosCompleted,
@@ -24,22 +35,23 @@ const TestComponent: React.FC<TestComponentProps> = ({ onTaskChangedMock, resetF
     handleSkip,
     formatTime,
     setCurrentTaskId,
-    setOnTaskChanged,
+    setCurrentTaskName,
+    setCurrentTaskDescription,
     resetForNewTask,
+    stopCurrentTask,
   } = useSharedTimerContext();
 
   useEffect(() => {
-    setCurrentTaskId('test-task-id');
-    if (onTaskChangedMock) {
-      setOnTaskChanged(() => onTaskChangedMock);
-    } else {
-      setOnTaskChanged(() => jest.fn().mockResolvedValue({} as Task));
-    }
-  }, [setCurrentTaskId, setOnTaskChanged, onTaskChangedMock]);
+    if (initialTaskId) setCurrentTaskId(initialTaskId);
+    if (initialTaskName) setCurrentTaskName(initialTaskName);
+    if (initialTaskDescription) setCurrentTaskDescription(initialTaskDescription);
+  }, [setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, initialTaskId, initialTaskName, initialTaskDescription]);
 
   return (
     <div>
       <span data-testid="current-task-id">{contextTaskId}</span>
+      <span data-testid="current-task-name">{contextTaskName}</span>
+      <span data-testid="current-task-description">{contextTaskDescription}</span>
       <span data-testid="mode">{mode}</span>
       <span data-testid="time-remaining">{formatTime(timeRemaining)}</span>
       <span data-testid="is-active">{isActive.toString()}</span>
@@ -48,6 +60,7 @@ const TestComponent: React.FC<TestComponentProps> = ({ onTaskChangedMock, resetF
       <button onClick={handleReset}>Reset</button>
       <button onClick={handleSkip}>Skip</button>
       <button onClick={resetForNewTaskMock || resetForNewTask}>Reset For New Task</button>
+      <button onClick={stopCurrentTask}>Stop Current Task</button>
     </div>
   );
 };
@@ -57,6 +70,7 @@ describe('SharedTimerContext', () => {
     jest.useFakeTimers();
     localStorage.clear();
     jest.clearAllMocks();
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue({}) });
   });
 
   afterEach(() => {
@@ -71,12 +85,16 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
     expect(screen.getByTestId('mode')).toHaveTextContent('work');
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
     expect(screen.getByTestId('is-active')).toHaveTextContent('false');
     expect(screen.getByTestId('pomodoros-completed')).toHaveTextContent('0');
+    expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+    expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+    expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
   });
 
   it('throws an error if useSharedTimerContext is used outside SharedTimerProvider', () => {
@@ -92,29 +110,30 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    // Start timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
     });
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('true'));
 
-    // Advance time
     await act(async () => {
       jest.advanceTimersByTime(2000);
+      await Promise.resolve();
     });
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('24:58');
 
-    // Pause timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
     });
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('false'));
 
-    // Time should not advance when paused
     await act(async () => {
       jest.advanceTimersByTime(2000);
+      await Promise.resolve();
     });
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('24:58');
   });
@@ -126,19 +145,18 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    // Start and advance timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
-    });
-    await act(async () => {
       jest.advanceTimersByTime(5000);
+      await Promise.resolve();
     });
 
-    // Reset timer
     await act(async () => {
       fireEvent.click(screen.getByText('Reset'));
+      await Promise.resolve();
     });
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
@@ -147,27 +165,33 @@ describe('SharedTimerContext', () => {
   });
 
   it('switches from work to short break after timer finishes', async () => {
+    const mockUpdateTask = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
+
     await act(async () => {
       render(
         <SharedTimerProvider>
-          <TestComponent />
+          <TestComponent initialTaskId="test-task-id" />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    // Start timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
     });
 
-    // Complete work session
     await act(async () => {
       jest.advanceTimersByTime(WORK_DURATION * 1000);
+      await Promise.resolve();
     });
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
     });
+    expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'in_progress' } });
+    expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'pending' } });
 
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('05:00');
     expect(screen.getByTestId('pomodoros-completed')).toHaveTextContent('1');
@@ -181,9 +205,13 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    fireEvent.click(screen.getByText('Skip'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Skip'));
+      await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
@@ -208,6 +236,7 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
     await waitFor(() => {
@@ -235,103 +264,117 @@ describe('SharedTimerContext', () => {
           <TestComponent />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('08:10');
     });
   });
-
-  it('calls onTaskChanged callback when work session finishes', async () => {
-    const mockOnTaskComplete = jest.fn()
-      .mockImplementation((taskId: string, taskData: TaskUpdateRequest): Promise<Task> =>
-        Promise.resolve({} as Task)
-      );
-
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent onTaskChangedMock={mockOnTaskComplete} />
-        </SharedTimerProvider>
-      );
-    });
-
-    // Start timer
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-    });
-
-    // Complete work session
-    await act(async () => {
-      jest.advanceTimersByTime(WORK_DURATION * 1000);
-    });
-
-    await waitFor(() => {
-      expect(mockOnTaskComplete).toHaveBeenCalledTimes(2); // Called on start and on completion
-    });
-
-    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "in_progress" }); // First call on start
-    expect(mockOnTaskComplete).toHaveBeenCalledWith("test-task-id", { status: "pending" }); // Second call on completion
-
-    await waitFor(() => {
-      expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
-    });
-  });
 });
 
 describe('SharedTimerContext - Task interaction', () => {
-  const onTaskChangedMock = jest.fn().mockResolvedValue({} as Task);
-
   beforeEach(() => {
     jest.useFakeTimers();
     localStorage.clear();
-    onTaskChangedMock.mockClear();
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue({}) });
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('updates task status on start/pause but does not unassign task', async () => {
+  it('sets current task details', async () => {
     await act(async () => {
       render(
         <SharedTimerProvider>
-          <TestComponent onTaskChangedMock={onTaskChangedMock} />
+          <TestComponent initialTaskId="task-123" initialTaskName="My Task" initialTaskDescription="Task Description" />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    // TestComponent sets currentTaskId to 'test-task-id' via useEffect
+    await waitFor(() => {
+      expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-123');
+      expect(screen.getByTestId('current-task-name')).toHaveTextContent('My Task');
+      expect(screen.getByTestId('current-task-description')).toHaveTextContent('Task Description');
+    });
+  });
+
+  it('calls stopCurrentTask, which unassigns the task and updates its status to pending', async () => {
+    const mockUpdateTask = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
+
+    await act(async () => {
+      render(
+        <SharedTimerProvider>
+          <TestComponent
+            initialTaskId="task-to-stop"
+            initialTaskName="Task to Stop"
+            initialTaskDescription="Description to stop"
+          />
+        </SharedTimerProvider>
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-to-stop');
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Stop Current Task'));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'task-to-stop', taskData: { status: 'pending' } });
+      expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+      expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+      expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
+    });
+  });
+
+  it('updates task status on start/pause but does not unassign task', async () => {
+    const mockUpdateTask = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
+
+    await act(async () => {
+      render(
+        <SharedTimerProvider>
+          <TestComponent initialTaskId="test-task-id" />
+        </SharedTimerProvider>
+      );
+      await Promise.resolve();
+    });
+
     await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('test-task-id'));
 
-    // 1. Start timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
     });
     await waitFor(() => {
-      expect(onTaskChangedMock).toHaveBeenCalledWith('test-task-id', { status: 'in_progress' });
+      expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'in_progress' } });
+      expect(screen.getByTestId('is-active')).toHaveTextContent('true');
     });
-    expect(onTaskChangedMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('is-active')).toHaveTextContent('true');
 
-    // 2. Pause timer
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
     });
     await waitFor(() => {
-      expect(onTaskChangedMock).toHaveBeenCalledWith('test-task-id', { status: 'pending' });
+      expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'pending' } });
+      expect(screen.getByTestId('is-active')).toHaveTextContent('false');
     });
-    expect(onTaskChangedMock).toHaveBeenCalledTimes(2);
-    expect(screen.getByTestId('is-active')).toHaveTextContent('false');
 
-    // Verify task is still assigned
     expect(screen.getByTestId('current-task-id')).toHaveTextContent('test-task-id');
   });
 
   it('calls resetForNewTask, which unassigns the task and resets the timer to work mode', async () => {
-    const onTaskChangedMock = jest.fn().mockResolvedValue({} as Task);
+    const mockUpdateTask = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
 
-    // Set initial state in localStorage to simulate a non-work mode and some time remaining
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
       mode: 'shortBreak',
       timeRemaining: 100,
@@ -343,24 +386,27 @@ describe('SharedTimerContext - Task interaction', () => {
     await act(async () => {
       render(
         <SharedTimerProvider>
-          <TestComponent onTaskChangedMock={onTaskChangedMock} />
+          <TestComponent initialTaskId="task-to-reset" />
         </SharedTimerProvider>
       );
+      await Promise.resolve();
     });
 
-    // Wait for initial render to settle and currentTaskId to be set by TestComponent's useEffect
-    await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('test-task-id'));
+    await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-to-reset'));
 
-    // Click the button to trigger resetForNewTask
-    fireEvent.click(screen.getByText('Reset For New Task'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Reset For New Task'));
+      await Promise.resolve();
+    });
 
-    // Assert on the DOM elements
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('work');
+      expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
+      expect(screen.getByTestId('is-active')).toHaveTextContent('false');
+      expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+      expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+      expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
+      expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'task-to-reset', taskData: { status: 'pending' } });
     });
-    expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
-    expect(screen.getByTestId('is-active')).toHaveTextContent('false');
-    expect(screen.getByTestId('current-task-id')).toHaveTextContent(''); // Should be empty now
-    expect(onTaskChangedMock).toHaveBeenCalledWith('test-task-id', { status: 'pending' }); // Verify the task status update
   });
 });

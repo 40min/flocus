@@ -8,7 +8,7 @@ import * as taskService from 'services/taskService';
 import { Task } from 'types/task';
 import { Category } from 'types/category';
 import { User } from 'types/user';
-import { useTasks, useTasksByCategory } from 'hooks/useTasks';
+import { useTasks, useTasksByCategory, useUpdateTask } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
 import { SharedTimerProvider } from 'context/SharedTimerContext';
 
@@ -79,6 +79,10 @@ const renderTasksPage = (
     data: categoriesData, // Corrected: use 'data' to match the actual hook
     isLoading: categoriesLoading,
     error: categoriesError,
+  });
+
+  (useUpdateTask as jest.Mock).mockReturnValue({
+    mutateAsync: jest.fn(),
   });
 
   return render(

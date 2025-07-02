@@ -2,20 +2,29 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDraggable } from '@dnd-kit/core';
-import { Clock, GripVertical } from 'lucide-react';
+import { Clock, GripVertical, Pause, Play, Trash2 } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
 import { Task } from '../types/task';
 import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
+import { useDeleteTask } from 'hooks/useTasks';
+import Button from './Button';
 
-const TaskCard = ({ task }: { task: Task }) => {
-  const { currentTaskId } = useSharedTimerContext();
-  const isActiveTask = currentTaskId === task.id;
+const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: string) => void }) => {
+  const {
+    currentTaskId,
+    isActive,
+    handleStartPause,
+    stopCurrentTask,
+  } = useSharedTimerContext();
+
+  const { mutate: deleteTask } = useDeleteTask();
+  const isSelectedTask = currentTaskId === task.id;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
-    disabled: isActiveTask,
+    disabled: isSelectedTask,
   });
 
   const style = transform
@@ -31,9 +40,18 @@ const TaskCard = ({ task }: { task: Task }) => {
   };
   const priority = task.priority.toLowerCase() as 'high' | 'medium' | 'low';
 
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete the task "${task.title}"?`)) {
+      if (currentTaskId === task.id) {
+        await stopCurrentTask();
+      }
+      deleteTask(task.id);
+    }
+  };
+
   return (
     <li className="list-none" ref={setNodeRef} style={style}>
-      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isActiveTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
+      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isSelectedTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
         <div
           className="bg-background-card text-text-DEFAULT flex flex-col gap-6 rounded-xl border py-6 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-300 border-border-DEFAULT hover:border-border-dark focus-within:ring-2 focus-within:ring-primary/20"
           aria-label={`Drag task: ${task.title}`}
@@ -66,6 +84,43 @@ const TaskCard = ({ task }: { task: Task }) => {
                   <Clock className="h-3 w-3" />
                   <span>{task.statistics?.lasts_min ? `${Math.floor(task.statistics.lasts_min / 60)}h ${task.statistics.lasts_min % 60}m` : '0h 0m'}</span>
                 </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    onClick={() => {
+                      if (isSelectedTask) {
+                        handleStartPause();
+                      } else {
+                        onSelectTask(task.id);
+                      }
+                    }}
+                    disabled={!isSelectedTask || isActive}
+                    variant="ghost"
+                    size="icon"
+                    title="Start task"
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleStartPause}
+                    disabled={!isSelectedTask || !isActive }
+                    variant="ghost"
+                    size="icon"
+                    title="Pause task"
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Pause className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleDelete}
+                    variant="ghost"
+                    size="icon"
+                    title="Delete task"
+                    className="text-slate-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -77,9 +132,10 @@ const TaskCard = ({ task }: { task: Task }) => {
 
 interface CurrentTasksProps {
   dailyPlan: DailyPlanResponse | null | undefined;
+  onSelectTask: (taskId: string) => void;
 }
 
-const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan }) => {
+const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onSelectTask }) => {
   const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(dailyPlan || null);
 
   return (
@@ -99,7 +155,7 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan }) => {
               <p className="text-text-secondary text-sm">No tasks for the current time window.</p>
             ) : (
               currentTasks.map((task: Task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} />
               ))
             )}
           </ul>

@@ -17,12 +17,26 @@ const DURATION_MAP: Record<Mode, number> = {
   longBreak: LONG_BREAK_DURATION,
 };
 
+// Default state constants
+const DEFAULT_TIMER_STATE = {
+  mode: 'work' as Mode,
+  timeRemaining: WORK_DURATION,
+  isActive: false,
+  pomodorosCompleted: 0,
+  currentTaskId: undefined as string | undefined,
+  currentTaskName: undefined as string | undefined,
+  currentTaskDescription: undefined as string | undefined,
+};
+
 interface TimerState {
   mode: Mode;
   timeRemaining: number;
   isActive: boolean;
   pomodorosCompleted: number;
-  timestamp?: number;
+  currentTaskId?: string;
+  currentTaskName?: string;
+  currentTaskDescription?: string;
+  timestamp: number;
 }
 
 interface SharedTimerContextType {
@@ -50,16 +64,58 @@ interface SharedTimerContextType {
   resetForNewTask: () => Promise<void>;
 }
 
+// --- State initialization from localStorage ---
+function getInitialTimerState() {
+  try {
+    const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!serializedState) return DEFAULT_TIMER_STATE;
+
+    const state: TimerState = JSON.parse(serializedState);
+    const timeSinceLastSave = Date.now() - state.timestamp;
+
+    if (timeSinceLastSave > EXPIRATION_THRESHOLD) {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      return DEFAULT_TIMER_STATE;
+    }
+
+    let restoredState = {
+      mode: state.mode,
+      timeRemaining: state.timeRemaining,
+      isActive: false, // Default to inactive after reload
+      pomodorosCompleted: state.pomodorosCompleted,
+      currentTaskId: state.currentTaskId,
+      currentTaskName: state.currentTaskName,
+      currentTaskDescription: state.currentTaskDescription,
+    };
+
+    // Handle timer continuation if it was active
+    if (state.isActive) {
+      const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
+      const newTime = state.timeRemaining - elapsedSeconds;
+      restoredState.timeRemaining = newTime > 0 ? newTime : 0;
+      restoredState.isActive = newTime > 0;
+    }
+
+    return restoredState;
+  } catch (error) {
+    console.error('Failed to restore timer state:', error);
+    return DEFAULT_TIMER_STATE;
+  }
+}
+
+const initialState = getInitialTimerState();
+
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
 
 export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<Mode>('work');
-  const [timeRemaining, setTimeRemaining] = useState(WORK_DURATION);
-  const [isActive, setIsActive] = useState(false);
-  const [pomodorosCompleted, setPomodorosCompleted] = useState(0);
-  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
-  const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
-  const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(undefined);
+  const [mode, setMode] = useState<Mode>(initialState.mode);
+  const [timeRemaining, setTimeRemaining] = useState(initialState.timeRemaining);
+  const [isActive, setIsActive] = useState(initialState.isActive);
+  const [pomodorosCompleted, setPomodorosCompleted] = useState(initialState.pomodorosCompleted);
+  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(initialState.currentTaskId);
+  const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(initialState.currentTaskName);
+  const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(initialState.currentTaskDescription);
+
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const stopCurrentTask = useCallback(async () => {
@@ -91,35 +147,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [mode, pomodorosCompleted, stopCurrentTask]);
 
-  useEffect(() => {
-    try {
-      const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!serializedState) return;
-      const state: TimerState & { timestamp: number } = JSON.parse(serializedState);
-      const timeSinceLastSave = Date.now() - state.timestamp;
-
-      if (timeSinceLastSave > EXPIRATION_THRESHOLD) {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        return;
-      }
-
-      setMode(state.mode);
-      setPomodorosCompleted(state.pomodorosCompleted);
-      setIsActive(state.isActive);
-
-      if (state.isActive) {
-        const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
-        const newTime = state.timeRemaining - elapsedSeconds;
-        setTimeRemaining(newTime > 0 ? newTime : 0);
-        if (newTime <= 0) setIsActive(false);
-      } else {
-        setTimeRemaining(state.timeRemaining);
-      }
-    } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
-    }
-  }, []);
-
+  // Timer countdown effect
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeRemaining > 0) {
@@ -133,14 +161,25 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     return () => { if (interval) clearInterval(interval); };
   }, [isActive, timeRemaining, switchToNextMode]);
 
+  // Persist state to localStorage
   useEffect(() => {
-    const state: TimerState & { timestamp: number } = { mode, timeRemaining, isActive, pomodorosCompleted, timestamp: Date.now() };
+    const state: TimerState = {
+      mode,
+      timeRemaining,
+      isActive,
+      pomodorosCompleted,
+      currentTaskId,
+      currentTaskName,
+      currentTaskDescription,
+      timestamp: Date.now(),
+    };
+
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
     }
-  }, [mode, timeRemaining, isActive, pomodorosCompleted]);
+  }, [mode, timeRemaining, isActive, pomodorosCompleted, currentTaskId, currentTaskName, currentTaskDescription]);
 
   const handleStartPause = useCallback(async () => {
     if (currentTaskId) {

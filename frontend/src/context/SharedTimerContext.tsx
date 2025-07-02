@@ -1,5 +1,4 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
-import { TaskUpdateRequest } from '../types/task';
 import { useUpdateTask } from '../hooks/useTasks';
 
 const WORK_DURATION = 25 * 60;
@@ -103,11 +102,12 @@ function getInitialTimerState() {
   }
 }
 
-const initialState = getInitialTimerState();
+// const initialState = getInitialTimerState();
 
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
 
 export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const initialState = getInitialTimerState();
   const [mode, setMode] = useState<Mode>(initialState.mode);
   const [timeRemaining, setTimeRemaining] = useState(initialState.timeRemaining);
   const [isActive, setIsActive] = useState(initialState.isActive);

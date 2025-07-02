@@ -1,8 +1,8 @@
+import { useMenuState } from './hooks/useMenuState';
 import React from 'react';
-import { Route, Routes, Navigate, NavLink, Outlet } from 'react-router-dom';
+import { Route, Routes, Navigate, Outlet } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import flocusLogo from './assets/flocus_logo.png';
-import { Home, ListTodo, FileText, CalendarDays, Folder, Settings, LogOut } from 'lucide-react';
+
 import MyDayPage from './pages/MyDayPage';
 import DashboardPage from './pages/DashboardPage'; // New import
 import LoginPage from './pages/LoginPage';
@@ -10,6 +10,8 @@ import RegisterPage from './pages/RegisterPage';
 import TemplatesPage from './pages/TemplatesPage';
 import EditTemplatePage from './pages/EditTemplatePage';
 import { useAuth } from './context/AuthContext';
+import Sidebar from './components/layout/Sidebar';
+import { cn } from './lib/utils';
 import CategoriesPage from './pages/CategoriesPage';
 import TasksPage from './pages/TasksPage';
 import UserSettingsPage from './pages/UserSettingsPage';
@@ -33,6 +35,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Main layout for authenticated users
 const AppLayout: React.FC = () => {
+  const { isMenuOpen, toggleMenu } = useMenuState();
   const { logout } = useAuth();
 
   const handleLogout = () => {
@@ -42,115 +45,8 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen  text-slate-800">
-      <aside className="flex flex-col w-64 bg-background-card border-r border-slate-200 p-4 space-y-4 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <img src={flocusLogo} alt="Flocus Logo" className="size-10" />
-          <h1 className="text-slate-900 text-lg font-semibold">Flocus</h1>
-        </div>
-
-        <nav className="flex flex-col gap-1 flex-grow">
-          <NavLink
-            to="/dashboard"
-            end
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <Home size={20} /> : <Home size={20} />}
-                Dashboard
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to="/my-day"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <CalendarDays size={20} /> : <CalendarDays size={20} />}
-                My Day
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to="/tasks"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <ListTodo size={20} /> : <ListTodo size={20} />}
-                Tasks
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to="/templates"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <FileText size={20} /> : <FileText size={20} />}
-                Templates
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to="/categories"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <Folder size={20} /> : <Folder size={20} />}
-                Categories
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                isActive ? 'text-slate-900 bg-background-DEFAULT font-semibold' : 'text-slate-700 hover:bg-background-DEFAULT'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive ? <Settings size={20} /> : <Settings size={20} />}
-                Settings
-              </>
-            )}
-          </NavLink>
-        </nav>
-
-        <div className="pt-4 border-t border-slate-200">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-slate-700 hover:bg-background-DEFAULT rounded-lg transition-colors w-full text-sm font-medium">
-            <LogOut size={20} className="text-slate-700" />
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-8 overflow-y-auto">
+      <Sidebar isMenuOpen={isMenuOpen} toggleMenu={toggleMenu} handleLogout={handleLogout} />
+      <main className={cn("flex-1 p-8 overflow-y-auto transition-all duration-300 ease-in-out")}>
         <Outlet />
         {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
       </main>

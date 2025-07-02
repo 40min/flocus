@@ -81,7 +81,7 @@ function getInitialTimerState() {
     let restoredState = {
       mode: state.mode,
       timeRemaining: state.timeRemaining,
-      isActive: false, // Default to inactive after reload
+      isActive: state.isActive, // Restore isActive state from localStorage
       pomodorosCompleted: state.pomodorosCompleted,
       currentTaskId: state.currentTaskId,
       currentTaskName: state.currentTaskName,

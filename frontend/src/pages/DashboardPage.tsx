@@ -78,7 +78,7 @@ const DashboardPage: React.FC = () => {
                   ) : isError ? (
                     <p className="text-red-500">Error loading daily plan.</p>
                   ) : (
-                    <CurrentTasks dailyPlan={dailyPlan} onStartTask={activateAndStartTask} />
+                    <CurrentTasks dailyPlan={dailyPlan} onSelectTask={activateAndStartTask} />
                   )}
                 </div>
               </aside>

@@ -11,7 +11,7 @@ import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useDeleteTask } from 'hooks/useTasks';
 import Button from './Button';
 
-const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: string) => void }) => {
+const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: string) => void }) => {
   const {
     currentTaskId,
     isActive,
@@ -20,11 +20,11 @@ const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: str
   } = useSharedTimerContext();
 
   const { mutate: deleteTask } = useDeleteTask();
-  const isActiveTask = currentTaskId === task.id;
+  const isSelectedTask = currentTaskId === task.id;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
-    disabled: isActiveTask,
+    disabled: isSelectedTask,
   });
 
   const style = transform
@@ -51,7 +51,7 @@ const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: str
 
   return (
     <li className="list-none" ref={setNodeRef} style={style}>
-      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isActiveTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
+      <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isSelectedTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
         <div
           className="bg-background-card text-text-DEFAULT flex flex-col gap-6 rounded-xl border py-6 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-300 border-border-DEFAULT hover:border-border-dark focus-within:ring-2 focus-within:ring-primary/20"
           aria-label={`Drag task: ${task.title}`}
@@ -86,8 +86,14 @@ const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: str
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Button
-                    onClick={handleStartPause}
-                    disabled={!isActiveTask || isActive}
+                    onClick={() => {
+                      if (isSelectedTask) {
+                        handleStartPause();
+                      } else {
+                        onSelectTask(task.id);
+                      }
+                    }}
+                    disabled={!isSelectedTask || isActive}
                     variant="ghost"
                     size="icon"
                     title="Start task"
@@ -97,7 +103,7 @@ const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: str
                   </Button>
                   <Button
                     onClick={handleStartPause}
-                    disabled={!isActive || !isActiveTask}
+                    disabled={!isSelectedTask || !isActive }
                     variant="ghost"
                     size="icon"
                     title="Pause task"
@@ -126,10 +132,10 @@ const TaskCard = ({ task, onStartTask }: { task: Task; onStartTask: (taskId: str
 
 interface CurrentTasksProps {
   dailyPlan: DailyPlanResponse | null | undefined;
-  onStartTask: (taskId: string) => void;
+  onSelectTask: (taskId: string) => void;
 }
 
-const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onStartTask }) => {
+const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onSelectTask }) => {
   const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(dailyPlan || null);
 
   return (
@@ -149,7 +155,7 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onStartTask }) =
               <p className="text-text-secondary text-sm">No tasks for the current time window.</p>
             ) : (
               currentTasks.map((task: Task) => (
-                <TaskCard key={task.id} task={task} onStartTask={onStartTask} />
+                <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} />
               ))
             )}
           </ul>

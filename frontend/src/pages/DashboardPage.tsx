@@ -7,10 +7,8 @@ import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useUpdateTask } from '../hooks/useTasks';
 
-import { TaskUpdateRequest } from '../types/task';
-
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setOnTaskChanged, setCurrentTaskName, setCurrentTaskDescription, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
+  const { setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -31,14 +29,17 @@ const DashboardPage: React.FC = () => {
       }
 
       if (taskToStart) {
-        await resetForNewTask();
-        setCurrentTaskId(taskId);
-        setCurrentTaskName(taskToStart.title);
-        setCurrentTaskDescription(taskToStart.description);
-        setOnTaskChanged(() => (id: string, data: TaskUpdateRequest) => updateTask({ taskId: id, taskData: data }));
+        try {
+          await resetForNewTask();
+          setCurrentTaskId(taskId);
+          setCurrentTaskName(taskToStart.title);
+          setCurrentTaskDescription(taskToStart.description);
 
-        await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
-        setIsActive(true);
+          await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
+          setIsActive(true);
+        } catch (error) {
+          console.error('Failed to start task:', error);
+        }
       }
     }
   };

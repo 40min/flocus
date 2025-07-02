@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
-import { TaskUpdateRequest, Task } from '../types/task';
+import { TaskUpdateRequest } from '../types/task';
+import { useUpdateTask } from '../hooks/useTasks';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -42,11 +43,9 @@ interface SharedTimerContextType {
   currentTaskId: string | undefined;
   currentTaskName: string | undefined;
   currentTaskDescription: string | undefined;
-  onTaskChanged: ((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskDescription: React.Dispatch<React.SetStateAction<string | undefined>>;
-  setOnTaskChanged: React.Dispatch<React.SetStateAction<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>>;
   stopCurrentTask: () => Promise<void>;
   resetForNewTask: () => Promise<void>;
 }
@@ -61,12 +60,12 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(undefined);
   const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(undefined);
   const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(undefined);
-  const [onTaskChanged, setOnTaskChanged] = useState<((taskId: string, taskData: TaskUpdateRequest) => Promise<Task>) | undefined>(undefined);
+  const { mutateAsync: updateTask } = useUpdateTask();
 
   const stopCurrentTask = useCallback(async () => {
-    if (currentTaskId && onTaskChanged) {
+    if (currentTaskId) {
       try {
-        await onTaskChanged(currentTaskId, { status: 'pending' });
+        await updateTask({ taskId: currentTaskId, taskData: { status: 'pending' } });
       } catch (error) {
         console.error("Failed to update task status to 'pending':", error);
       }
@@ -74,8 +73,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setCurrentTaskId(undefined);
     setCurrentTaskName(undefined);
     setCurrentTaskDescription(undefined);
-    setOnTaskChanged(undefined);
-  }, [currentTaskId, onTaskChanged]);
+  }, [currentTaskId, updateTask]);
 
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
@@ -145,15 +143,20 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [mode, timeRemaining, isActive, pomodorosCompleted]);
 
   const handleStartPause = useCallback(async () => {
-    if (currentTaskId && onTaskChanged) {
-      if (isActive) { // Pausing the timer
-        await onTaskChanged(currentTaskId, { status: 'pending' });
-      } else { // Starting or resuming the timer
-        await onTaskChanged(currentTaskId, { status: 'in_progress' });
+    if (currentTaskId) {
+      try {
+        if (isActive) { // Pausing the timer
+          await updateTask({ taskId: currentTaskId, taskData: { status: 'pending' } });
+        } else { // Starting or resuming the timer
+          await updateTask({ taskId: currentTaskId, taskData: { status: 'in_progress' } });
+        }
+      } catch (error) {
+        console.error('Failed to update task status:', error);
+        return;
       }
     }
     setIsActive(prev => !prev);
-  }, [isActive, currentTaskId, onTaskChanged]);
+  }, [isActive, currentTaskId, updateTask]);
 
   const handleReset = useCallback(async () => {
     await stopCurrentTask();
@@ -206,11 +209,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     currentTaskId,
     currentTaskName,
     currentTaskDescription,
-    onTaskChanged,
     setCurrentTaskId,
     setCurrentTaskName,
     setCurrentTaskDescription,
-    setOnTaskChanged,
     stopCurrentTask,
     resetForNewTask,
     setIsActive,

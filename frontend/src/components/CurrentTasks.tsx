@@ -11,7 +11,7 @@ import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
 import Button from './Button';
 
-const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: string) => void }) => {
+export const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: string) => void }) => {
   const {
     currentTaskId,
     isActive,
@@ -55,14 +55,12 @@ const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: s
     <li className="list-none" ref={setNodeRef} style={style}>
       <div className={cn('transition-all duration-200', isDragging && 'opacity-50 shadow-2xl z-50 relative', isSelectedTask && 'cursor-not-allowed opacity-70')} tabIndex={0}>
         <div
-          className="bg-background-card text-text-DEFAULT flex flex-col gap-6 rounded-xl border py-6 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-lg transition-all duration-300 border-border-DEFAULT hover:border-border-dark focus-within:ring-2 focus-within:ring-primary/20"
-          aria-label={`Drag task: ${task.title}`}
-          {...listeners}
-          {...attributes}
+          className="bg-background-card text-text-DEFAULT flex flex-col gap-6 rounded-xl border py-6 shadow-sm hover:shadow-lg transition-all duration-300 border-border-DEFAULT hover:border-border-dark focus-within:ring-2 focus-within:ring-primary/20"
+          aria-label={`Task: ${task.title}`}
         >
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-1">
+              <div className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing" {...listeners} {...attributes}>
                 <GripVertical className="h-4 w-4 text-text-light" />
               </div>
               <div className="flex-1 min-w-0">
@@ -76,7 +74,7 @@ const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: s
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" target="_blank" rel="noopener noreferrer" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} />,
+                      a: ({ node, children, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" target="_blank" rel="noopener noreferrer" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()}>{children}</a>,
                     }}
                   >
                     {task.description || ''}
@@ -160,7 +158,7 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onSelectTask }) 
       </div>
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
-          <ul className="space-y-3 h-full overflow-y-auto pr-2">
+          <ul className="space-y-3 h-full overflow-y-auto pr-2 relative z-10">
             {currentTimeWindow === null ? (
               <p className="text-text-secondary text-sm">No works planned for this time.</p>
             ) : currentTasks.length === 0 ? (

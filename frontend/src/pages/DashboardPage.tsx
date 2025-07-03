@@ -1,17 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
-import CurrentTasks from '../components/CurrentTasks';
+import CurrentTasks, { TaskCard } from '../components/CurrentTasks';
 import PomodoroTimer from '../components/PomodoroTimer';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useUpdateTask } from '../hooks/useTasks';
+import { Task } from 'types/task';
 
 const DashboardPage: React.FC = () => {
   const { setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, resetForNewTask, currentTaskId, setIsActive } = useSharedTimerContext();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (dailyPlan) {
+      for (const timeWindow of dailyPlan.time_windows) {
+        const task = timeWindow.tasks.find(t => t.id === active.id);
+        if (task) {
+          setActiveTask(task);
+          break;
+        }
+      }
+    }
+  };
 
   const activateAndStartTask = async (taskId: string) => {
     if (taskId === currentTaskId) {
@@ -50,6 +65,7 @@ const DashboardPage: React.FC = () => {
     if (event.over?.id === 'pomodoro-drop-zone') {
       await activateAndStartTask(taskId);
     }
+    setActiveTask(null);
   };
 
   return (
@@ -63,7 +79,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </header>
       <main className="flex-1 px-6 md:px-12 pb-12">
-        <DndContext onDragEnd={handleDragEnd}>
+        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
               <section className="lg:col-span-7 xl:col-span-8 flex justify-center">
@@ -84,6 +100,9 @@ const DashboardPage: React.FC = () => {
               </aside>
             </div>
           </div>
+          <DragOverlay>
+            {activeTask ? <TaskCard task={activeTask} onSelectTask={() => {}} /> : null}
+          </DragOverlay>
         </DndContext>
       </main>
     </div>

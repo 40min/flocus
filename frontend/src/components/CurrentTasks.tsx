@@ -2,13 +2,13 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDraggable } from '@dnd-kit/core';
-import { Clock, GripVertical, Pause, Play, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, GripVertical, Pause, Play, Trash2 } from 'lucide-react';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
 import { Task } from '../types/task';
 import { DailyPlanResponse } from '../types/dailyPlan';
 import { cn } from '../lib/utils';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
-import { useDeleteTask } from 'hooks/useTasks';
+import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
 import Button from './Button';
 
 const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: string) => void }) => {
@@ -17,9 +17,11 @@ const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: s
     isActive,
     handleStartPause,
     stopCurrentTask,
+    handleMarkAsDone,
   } = useSharedTimerContext();
 
   const { mutate: deleteTask } = useDeleteTask();
+  const { isPending: isUpdating } = useUpdateTask();
   const isSelectedTask = currentTaskId === task.id;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -112,6 +114,16 @@ const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (taskId: s
                     <Pause className="h-4 w-4" />
                   </Button>
                   <Button
+                    onClick={() => handleMarkAsDone(task.id)}
+                    disabled={task.status === 'done' || isUpdating}
+                    variant="ghost"
+                    size="icon"
+                    title="Mark as Done"
+                    className="text-slate-400 hover:text-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                  <Button
                     onClick={handleDelete}
                     variant="ghost"
                     size="icon"
@@ -154,9 +166,9 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({ dailyPlan, onSelectTask }) 
             ) : currentTasks.length === 0 ? (
               <p className="text-text-secondary text-sm">No tasks for the current time window.</p>
             ) : (
-              currentTasks.map((task: Task) => (
-                <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} />
-              ))
+              currentTasks
+                .filter((task) => task.status !== 'done')
+                .map((task: Task) => <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} />)
             )}
           </ul>
         </div>

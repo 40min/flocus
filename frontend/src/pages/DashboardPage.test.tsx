@@ -5,6 +5,7 @@ import DashboardPage from './DashboardPage';
 import { SharedTimerProvider, useSharedTimerContext } from '../context/SharedTimerContext';
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 import { useUpdateTask } from '../hooks/useTasks';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock hooks
 jest.mock('../hooks/useDailyPlan');
@@ -16,6 +17,7 @@ const mockSetCurrentTaskName = jest.fn();
 const mockSetCurrentTaskDescription = jest.fn();
 const mockHandleStartPause = jest.fn();
 const mockResetForNewTask = jest.fn();
+const mockHandleMarkAsDone = jest.fn(); // Added mock for handleMarkAsDone
 
 // Mock SharedTimerContext
 jest.mock('../context/SharedTimerContext', () => ({
@@ -30,6 +32,7 @@ jest.mock('../context/SharedTimerContext', () => ({
     resetForNewTask: mockResetForNewTask,
     formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
     setIsActive: jest.fn(),
+    handleMarkAsDone: mockHandleMarkAsDone, // Added mock for handleMarkAsDone
   })),
 }));
 
@@ -54,6 +57,18 @@ jest.mock('@dnd-kit/core', () => ({
   })),
 }));
 
+const queryClient = new QueryClient();
+
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SharedTimerProvider>
+        {component}
+      </SharedTimerProvider>
+    </QueryClientProvider>
+  );
+};
+
 describe('DashboardPage - handleDragEnd', () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -62,6 +77,7 @@ describe('DashboardPage - handleDragEnd', () => {
     mockSetCurrentTaskDescription.mockClear();
     mockHandleStartPause.mockClear();
     mockResetForNewTask.mockClear();
+    mockHandleMarkAsDone.mockClear(); // Clear mock for handleMarkAsDone
 
     capturedOnDragEnd = () => { throw new Error("onDragEnd not captured in this test run") };
 
@@ -99,6 +115,7 @@ describe('DashboardPage - handleDragEnd', () => {
       resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
       setIsActive: jest.fn(),
+      handleMarkAsDone: mockHandleMarkAsDone,
     }));
   });
 
@@ -113,13 +130,10 @@ describe('DashboardPage - handleDragEnd', () => {
       resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
       setIsActive: jest.fn(),
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
@@ -141,11 +155,7 @@ describe('DashboardPage - handleDragEnd', () => {
 
   it('should reset and start timer if not active when a new task is dragged', async () => {
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
@@ -168,11 +178,7 @@ describe('DashboardPage - handleDragEnd', () => {
     const mockMutateAsync = jest.fn().mockResolvedValue({});
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockMutateAsync });
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
@@ -198,13 +204,10 @@ describe('DashboardPage - handleDragEnd', () => {
       resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn((seconds) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`),
       setIsActive: jest.fn(),
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: 'task2', data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
@@ -234,13 +237,10 @@ describe('DashboardPage - handleDragEnd', () => {
       resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn(),
       setIsActive: jest.fn(),
+      handleMarkAsDone: mockHandleMarkAsDone,
     }));
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: activeTaskId, data: { current: { title: 'Existing Task' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],
@@ -275,14 +275,11 @@ describe('DashboardPage - handleDragEnd', () => {
       resetForNewTask: mockResetForNewTask,
       formatTime: jest.fn(),
       setIsActive: jest.fn(),
+      handleMarkAsDone: mockHandleMarkAsDone,
     }));
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockMutateAsync });
 
-    render(
-      <SharedTimerProvider>
-        <DashboardPage />
-      </SharedTimerProvider>
-    );
+    renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
       active: { id: newTaskId, data: { current: { title: 'New Task To Drag' } }, rect: { current: { initial: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }, translated: null } } } as DragEndEvent['active'],

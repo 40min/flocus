@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { useUpdateTask } from '../hooks/useTasks';
+import { useQueryClient } from '@tanstack/react-query';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -61,6 +62,7 @@ interface SharedTimerContextType {
   setCurrentTaskDescription: React.Dispatch<React.SetStateAction<string | undefined>>;
   stopCurrentTask: () => Promise<void>;
   resetForNewTask: () => Promise<void>;
+  handleMarkAsDone: (taskId: string) => void;
 }
 
 // --- State initialization from localStorage ---
@@ -117,6 +119,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(initialState.currentTaskDescription);
 
   const { mutateAsync: updateTask } = useUpdateTask();
+  const queryClient = useQueryClient();
 
   const stopCurrentTask = useCallback(async () => {
     if (currentTaskId) {
@@ -214,6 +217,23 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     await switchToNextMode();
   }, [switchToNextMode]);
 
+  const handleMarkAsDone = useCallback(async (taskId: string) => {
+    if (currentTaskId === taskId) {
+      setIsActive(false);
+      setCurrentTaskId(undefined);
+      setCurrentTaskName(undefined);
+      setCurrentTaskDescription(undefined);
+    }
+    await updateTask(
+      { taskId: taskId, taskData: { status: 'done' } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
+        },
+      },
+    );
+  }, [currentTaskId, updateTask, queryClient]);
+
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
@@ -254,6 +274,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     stopCurrentTask,
     resetForNewTask,
     setIsActive,
+    handleMarkAsDone,
   };
 
   return (

@@ -2,8 +2,13 @@ import React, { useEffect } from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { SharedTimerProvider, useSharedTimerContext } from './SharedTimerContext';
 import { useUpdateTask } from '../hooks/useTasks';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 
 jest.mock('../hooks/useTasks');
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQueryClient: jest.fn(),
+}));
 
 const WORK_DURATION = 25 * 60;
 const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
@@ -14,6 +19,7 @@ interface TestComponentProps {
   initialTaskId?: string;
   initialTaskName?: string;
   initialTaskDescription?: string;
+  initialIsActive?: boolean;
 }
 
 const TestComponent: React.FC<TestComponentProps> = ({
@@ -21,6 +27,7 @@ const TestComponent: React.FC<TestComponentProps> = ({
   initialTaskId,
   initialTaskName,
   initialTaskDescription,
+  initialIsActive,
 }) => {
   const {
     mode,
@@ -39,13 +46,16 @@ const TestComponent: React.FC<TestComponentProps> = ({
     setCurrentTaskDescription,
     resetForNewTask,
     stopCurrentTask,
+    handleMarkAsDone,
+    setIsActive,
   } = useSharedTimerContext();
 
   useEffect(() => {
     if (initialTaskId) setCurrentTaskId(initialTaskId);
     if (initialTaskName) setCurrentTaskName(initialTaskName);
     if (initialTaskDescription) setCurrentTaskDescription(initialTaskDescription);
-  }, [setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, initialTaskId, initialTaskName, initialTaskDescription]);
+    if (initialIsActive !== undefined) setIsActive(initialIsActive);
+  }, [setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, initialTaskId, initialTaskName, initialTaskDescription, initialIsActive, setIsActive]);
 
   return (
     <div>
@@ -61,7 +71,21 @@ const TestComponent: React.FC<TestComponentProps> = ({
       <button onClick={handleSkip}>Skip</button>
       <button onClick={resetForNewTaskMock || resetForNewTask}>Reset For New Task</button>
       <button onClick={stopCurrentTask}>Stop Current Task</button>
+      <button onClick={() => handleMarkAsDone('task-to-mark-done')}>Mark as Done</button>
     </div>
+  );
+};
+
+const queryClient = new QueryClient();
+const mockedUseQueryClient = useQueryClient as jest.Mock;
+
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SharedTimerProvider>
+        {component}
+      </SharedTimerProvider>
+    </QueryClientProvider>
   );
 };
 
@@ -71,6 +95,9 @@ describe('SharedTimerContext', () => {
     localStorage.clear();
     jest.clearAllMocks();
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue({}) });
+    mockedUseQueryClient.mockReturnValue({
+      invalidateQueries: jest.fn(),
+    });
   });
 
   afterEach(() => {
@@ -79,14 +106,7 @@ describe('SharedTimerContext', () => {
   });
 
   it('provides initial timer state', async () => {
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
     expect(screen.getByTestId('mode')).toHaveTextContent('work');
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
@@ -104,60 +124,34 @@ describe('SharedTimerContext', () => {
   });
 
   it('starts and pauses the timer', async () => {
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByText('Start/Pause'));
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('true'));
 
-    await act(async () => {
+    act(() => {
       jest.advanceTimersByTime(2000);
-      await Promise.resolve();
     });
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('24:58');
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByText('Start/Pause'));
     await waitFor(() => expect(screen.getByTestId('is-active')).toHaveTextContent('false'));
 
-    await act(async () => {
+    act(() => {
       jest.advanceTimersByTime(2000);
-      await Promise.resolve();
     });
     expect(screen.getByTestId('time-remaining')).toHaveTextContent('24:58');
   });
 
   it('resets the timer', async () => {
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start/Pause'));
+    fireEvent.click(screen.getByText('Start/Pause'));
+    act(() => {
       jest.advanceTimersByTime(5000);
-      await Promise.resolve();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Reset'));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByText('Reset'));
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
     });
@@ -168,14 +162,7 @@ describe('SharedTimerContext', () => {
     const mockUpdateTask = jest.fn().mockResolvedValue({});
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent initialTaskId="test-task-id" />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent initialTaskId="test-task-id" />);
 
     await act(async () => {
       fireEvent.click(screen.getByText('Start/Pause'));
@@ -199,19 +186,9 @@ describe('SharedTimerContext', () => {
   });
 
   it('skips the current session', async () => {
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Skip'));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByText('Skip'));
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
@@ -231,14 +208,7 @@ describe('SharedTimerContext', () => {
     };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
@@ -259,14 +229,7 @@ describe('SharedTimerContext', () => {
     };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent />);
 
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('08:10');
@@ -278,26 +241,30 @@ describe('SharedTimerContext - Task interaction', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     localStorage.clear();
+    jest.clearAllMocks();
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue({}) });
+    mockedUseQueryClient.mockReturnValue({
+      invalidateQueries: jest.fn(),
+    });
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it('sets current task details', async () => {
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent initialTaskId="task-123" initialTaskName="My Task" initialTaskDescription="Task Description" />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(
+      <TestComponent initialTaskId="task-123" initialTaskName="My Task" initialTaskDescription="Task Description" />
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-123');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-name')).toHaveTextContent('My Task');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-description')).toHaveTextContent('Task Description');
     });
   });
@@ -306,18 +273,13 @@ describe('SharedTimerContext - Task interaction', () => {
     const mockUpdateTask = jest.fn().mockResolvedValue({});
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent
-            initialTaskId="task-to-stop"
-            initialTaskName="Task to Stop"
-            initialTaskDescription="Description to stop"
-          />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(
+      <TestComponent
+        initialTaskId="task-to-stop"
+        initialTaskName="Task to Stop"
+        initialTaskDescription="Description to stop"
+      />
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-to-stop');
@@ -330,8 +292,14 @@ describe('SharedTimerContext - Task interaction', () => {
 
     await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'task-to-stop', taskData: { status: 'pending' } });
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
     });
   });
@@ -340,14 +308,7 @@ describe('SharedTimerContext - Task interaction', () => {
     const mockUpdateTask = jest.fn().mockResolvedValue({});
     (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent initialTaskId="test-task-id" />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent initialTaskId="test-task-id" />);
 
     await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('test-task-id'));
 
@@ -357,6 +318,8 @@ describe('SharedTimerContext - Task interaction', () => {
     });
     await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'in_progress' } });
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('is-active')).toHaveTextContent('true');
     });
 
@@ -366,6 +329,8 @@ describe('SharedTimerContext - Task interaction', () => {
     });
     await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'test-task-id', taskData: { status: 'pending' } });
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('is-active')).toHaveTextContent('false');
     });
 
@@ -384,14 +349,7 @@ describe('SharedTimerContext - Task interaction', () => {
       timestamp: Date.now()
     }));
 
-    await act(async () => {
-      render(
-        <SharedTimerProvider>
-          <TestComponent initialTaskId="task-to-reset" />
-        </SharedTimerProvider>
-      );
-      await Promise.resolve();
-    });
+    renderWithProviders(<TestComponent initialTaskId="task-to-reset" />);
 
     await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-to-reset'));
 
@@ -402,12 +360,59 @@ describe('SharedTimerContext - Task interaction', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('mode')).toHaveTextContent('work');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('25:00');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('is-active')).toHaveTextContent('false');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+    });
+    await waitFor(() => {
       expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
+    });
+    await waitFor(() => {
       expect(mockUpdateTask).toHaveBeenCalledWith({ taskId: 'task-to-reset', taskData: { status: 'pending' } });
     });
+  });
+
+  it('calls handleMarkAsDone, which updates task status to "done" and resets current task if it was the active one', async () => {
+    const mockUpdateTask = jest.fn().mockResolvedValue({});
+    (useUpdateTask as jest.Mock).mockReturnValue({ mutateAsync: mockUpdateTask });
+    const mockQueryClient = {
+      invalidateQueries: jest.fn(),
+    };
+    mockedUseQueryClient.mockReturnValue(mockQueryClient); // Use the top-level mock
+
+    renderWithProviders(<TestComponent initialTaskId="task-to-mark-done" initialIsActive={true} />);
+
+    await waitFor(() => expect(screen.getByTestId('current-task-id')).toHaveTextContent('task-to-mark-done'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Mark as Done'));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateTask).toHaveBeenCalledWith(
+        { taskId: 'task-to-mark-done', taskData: { status: 'done' } },
+        expect.objectContaining({
+          onSuccess: expect.any(Function),
+        }),
+      );
+    });
+    // Manually call onSuccess to test query invalidation
+    const updateTaskCall = mockUpdateTask.mock.calls[0][1];
+    updateTaskCall.onSuccess();
+    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['dailyPlan', 'today'] });
+    expect(screen.getByTestId('is-active')).toHaveTextContent('false');
+    expect(screen.getByTestId('current-task-id')).toHaveTextContent('');
+    expect(screen.getByTestId('current-task-name')).toHaveTextContent('');
+    expect(screen.getByTestId('current-task-description')).toHaveTextContent('');
   });
 });

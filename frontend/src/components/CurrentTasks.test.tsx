@@ -57,7 +57,13 @@ describe('CurrentTasks', () => {
   const mockHandleStartPause = jest.fn();
   const mockStopCurrentTask = jest.fn();
   const mockDeleteTask = jest.fn();
+  const mockUpdateTask = jest.fn();
   const mockOnSelectTask = jest.fn();
+  const mockSetCurrentTaskId = jest.fn();
+  const mockSetIsActive = jest.fn();
+  const mockSetCurrentTaskName = jest.fn();
+  const mockSetCurrentTaskDescription = jest.fn();
+  const mockHandleMarkAsDone = jest.fn();
 
   beforeEach(() => {
     mockedUseSharedTimerContext.mockReturnValue({
@@ -65,12 +71,18 @@ describe('CurrentTasks', () => {
       isActive: false,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     mockedUseDeleteTask.mockReturnValue({
       mutate: mockDeleteTask,
     });
     mockedUseUpdateTask.mockReturnValue({
-      mutateAsync: jest.fn(),
+      mutate: mockUpdateTask,
+      isPending: false,
     });
     jest.clearAllMocks();
     jest.spyOn(window, 'confirm').mockReturnValue(true);
@@ -111,6 +123,11 @@ describe('CurrentTasks', () => {
       isActive: true,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
     // eslint-disable-next-line testing-library/no-node-access
@@ -150,6 +167,11 @@ describe('CurrentTasks', () => {
       isActive: true,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
 
@@ -164,6 +186,11 @@ describe('CurrentTasks', () => {
       isActive: true,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
 
@@ -181,6 +208,11 @@ describe('CurrentTasks', () => {
       isActive: false,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     const { rerender } = renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
     let pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
@@ -192,6 +224,11 @@ describe('CurrentTasks', () => {
       isActive: true,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     rerender(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
     pauseButton = screen.getAllByRole('button', { name: 'Pause task' })[0];
@@ -217,6 +254,11 @@ describe('CurrentTasks', () => {
       isActive: true,
       handleStartPause: mockHandleStartPause,
       stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
     });
     renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
 
@@ -239,5 +281,51 @@ describe('CurrentTasks', () => {
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete the task "Task One"?');
     expect(mockDeleteTask).not.toHaveBeenCalled();
     expect(mockStopCurrentTask).not.toHaveBeenCalled();
+  });
+
+  it('calls handleMarkAsDone when "Mark as Done" is clicked', async () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    mockedUseSharedTimerContext.mockReturnValue({
+      currentTaskId: null,
+      isActive: false,
+      handleStartPause: mockHandleStartPause,
+      stopCurrentTask: mockStopCurrentTask,
+      setCurrentTaskId: mockSetCurrentTaskId,
+      setIsActive: mockSetIsActive,
+      setCurrentTaskName: mockSetCurrentTaskName,
+      setCurrentTaskDescription: mockSetCurrentTaskDescription,
+      handleMarkAsDone: mockHandleMarkAsDone,
+    });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
+
+    const markAsDoneButton = screen.getAllByRole('button', { name: 'Mark as Done' })[0];
+    fireEvent.click(markAsDoneButton);
+
+    await waitFor(() => expect(mockHandleMarkAsDone).toHaveBeenCalledWith('task1'));
+  });
+
+  it('disables "Mark as Done" button if update is pending', () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: mockTasks });
+    mockedUseUpdateTask.mockReturnValue({
+      mutate: mockUpdateTask,
+      isPending: true, // Simulate pending update
+    });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
+    const markAsDoneButton = screen.getAllByRole('button', { name: 'Mark as Done' })[0];
+    expect(markAsDoneButton).toBeDisabled();
+  });
+
+  it('does not render tasks with status "done"', () => {
+    const tasksWithDone: Task[] = [
+      { id: 'task1', title: 'Task One', status: 'pending', priority: 'medium', user_id: 'user1' },
+      { id: 'task2', title: 'Task Two', status: 'done', priority: 'high', user_id: 'user1' },
+      { id: 'task3', title: 'Task Three', status: 'pending', priority: 'low', user_id: 'user1' },
+    ];
+    mockedUseCurrentTimeWindow.mockReturnValue({ currentTimeWindow: mockTimeWindow, currentTasks: tasksWithDone });
+    renderWithDnd(<CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />);
+
+    expect(screen.getByText('Task One')).toBeInTheDocument();
+    expect(screen.queryByText('Task Two')).not.toBeInTheDocument(); // Task Two should be filtered out
+    expect(screen.getByText('Task Three')).toBeInTheDocument();
   });
 });

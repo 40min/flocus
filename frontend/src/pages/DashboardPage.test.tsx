@@ -119,7 +119,7 @@ describe('DashboardPage - handleDragEnd', () => {
     }));
   });
 
-  it('should reset timer when a new task is dragged to pomodoro zone', async () => {
+  it('should NOT reset timer when a new task is dragged to pomodoro zone', async () => {
     (useSharedTimerContext as jest.Mock).mockReturnValue({
       currentTaskId: 'task1',
       setCurrentTaskId: mockSetCurrentTaskId,
@@ -147,13 +147,13 @@ describe('DashboardPage - handleDragEnd', () => {
       await capturedOnDragEnd(dragEndEvent);
     })
 
-    expect(mockResetForNewTask).toHaveBeenCalledTimes(1);
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
     expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith('description for task 2');
   });
 
-  it('should reset and start timer if not active when a new task is dragged', async () => {
+  it('should NOT reset and start timer if not active when a new task is dragged', async () => {
 
     renderWithProviders(<DashboardPage />);
 
@@ -169,7 +169,7 @@ describe('DashboardPage - handleDragEnd', () => {
       await capturedOnDragEnd(dragEndEvent);
     })
 
-    expect(mockResetForNewTask).toHaveBeenCalledTimes(1);
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
     expect(mockSetCurrentTaskId).toHaveBeenCalledWith('task2');
     expect(mockSetCurrentTaskName).toHaveBeenCalledWith('New Task To Drag');
     expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith('description for task 2');

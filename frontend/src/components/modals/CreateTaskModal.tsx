@@ -77,29 +77,48 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     resetSuggestions,
   } = useLlmSuggestions(getValues, setValue);
 
-  useEffect(() => {
+  const {
+    title: initialTitle,
+    description: initialDescription,
+    status: initialStatus,
+    priority: initialPriority,
+    category_id: initialCategoryId,
+  } = initialFormData;
+
+  const initialValues = React.useMemo(() => {
     if (editingTask) {
-      reset({
+      return {
         title: editingTask.title,
         description: editingTask.description || '',
         status: editingTask.status,
         priority: editingTask.priority,
         due_date: editingTask.due_date ? utcToLocal(editingTask.due_date) : null,
         category_id: editingTask.category_id || '',
-      });
-    } else {
-      reset({
-        title: initialFormData.title,
-        description: initialFormData.description || '',
-        status: initialFormData.status,
-        priority: initialFormData.priority,
-        due_date: null,
-        category_id: initialFormData.category_id || '',
-      });
+      };
     }
-    // Reset suggestions and loading states when modal opens or task changes
-    resetSuggestions();
-  }, [editingTask, initialFormData, isOpen, reset, resetSuggestions]);
+    return {
+      title: initialTitle,
+      description: initialDescription || '',
+      status: initialStatus,
+      priority: initialPriority,
+      due_date: null,
+      category_id: initialCategoryId || '',
+    };
+  }, [
+    editingTask,
+    initialTitle,
+    initialDescription,
+    initialStatus,
+    initialPriority,
+    initialCategoryId,
+  ]);
+
+  useEffect(() => {
+    if (isOpen) {
+      reset(initialValues);
+      resetSuggestions();
+    }
+  }, [isOpen, initialValues, reset, resetSuggestions]);
 
   const onSubmit = async (data: CreateTaskFormInputs) => {
     const payload = {

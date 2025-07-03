@@ -93,7 +93,7 @@ export const TaskCard = ({ task, onSelectTask }: { task: Task; onSelectTask: (ta
                         onSelectTask(task.id);
                       }
                     }}
-                    disabled={!isSelectedTask || isActive}
+                    disabled={isSelectedTask && isActive}
                     variant="ghost"
                     size="icon"
                     title="Start task"

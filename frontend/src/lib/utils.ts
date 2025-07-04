@@ -198,6 +198,31 @@ export function formatDurationFromMinutes(totalMinutes: number | undefined | nul
   return `${hours}h ${minutes}min`;
 }
 
+/**
+ * Format duration from seconds to human-readable string
+ * @param totalSeconds - Duration in seconds
+ * @returns Formatted duration string
+ */
+export function formatDurationFromSeconds(totalSeconds: number | undefined | null): string {
+  if (totalSeconds == null || !Number.isInteger(totalSeconds) || totalSeconds < 0) {
+    return 'N/A';
+  }
+
+  if (totalSeconds === 0) return '0s';
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
 // ===== TIME WINDOW UTILITIES =====
 
 /**

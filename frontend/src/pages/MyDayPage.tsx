@@ -9,6 +9,8 @@ import Timeline from '../components/Timeline';
 import { DayTemplateResponse } from '../types/dayTemplate';
 import Modal from '../components/modals/Modal';
 import TimeWindowBalloon from '../components/TimeWindowBalloon';
+import { formatDurationFromSeconds } from '../lib/utils';
+import { useDailyStats } from '../hooks/useDailyStats';
 import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
 import { Task } from '../types/task';
@@ -28,6 +30,7 @@ const MyDayPage: React.FC = () => {
   const { data: yesterdayPlan, isLoading: isLoadingYesterdayPlan } = useYesterdayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
   const { data: dayTemplates = [] } = useTemplates();
   const { data: categories = [] } = useCategories();
+  const { data: dailyStats } = useDailyStats();
 
   const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -247,6 +250,9 @@ const MyDayPage: React.FC = () => {
                   {format(new Date(dailyPlan.plan_date), 'EEEE, MMMM d')}
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">Plan your perfect day</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-sm md:text-base">Total time spent today: {formatDurationFromSeconds(dailyStats?.total_seconds_spent)}</p>
               </div>
             </header>
             <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">

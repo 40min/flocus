@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { useUpdateTask } from '../hooks/useTasks';
 import { useQueryClient } from '@tanstack/react-query';
+import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -104,8 +105,6 @@ function getInitialTimerState() {
   }
 }
 
-// const initialState = getInitialTimerState();
-
 const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
 
 export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -120,6 +119,21 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const { mutateAsync: updateTask } = useUpdateTask();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const stats = await getTodayStats();
+        if (stats) {
+          setPomodorosCompleted(stats.pomodoros_completed);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial pomodoro stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, []); // Empty dependency array to run only on mount
 
   const stopCurrentTask = useCallback(async () => {
     if (currentTaskId) {
@@ -144,6 +158,12 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
       setMode(nextMode);
       setTimeRemaining(DURATION_MAP[nextMode]);
+      try {
+        await incrementPomodoro();
+      } catch (error) {
+        console.error("Failed to increment pomodoro count:", error);
+        // Optionally, add logic to handle this failure, e.g., retry or notify user
+      }
     } else {
       setMode('work');
       setTimeRemaining(WORK_DURATION);

@@ -27,9 +27,9 @@ node_modules/
 .DS_Store
 
 # Task files
-tasks.json
 tasks/
-README-task-master.md
+architecture/
+
 /coverage
 /build
 .env.local
@@ -58,6 +58,4 @@ env/
 prd/
 designs/
 mcp_servers/*
-tasks/
-architecture/
 backend/backups/*

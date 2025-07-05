@@ -7,6 +7,7 @@ from odmantic import ObjectId
 from app.api.schemas.task import TaskPriority, TaskResponse, TaskStatus, TaskUpdateRequest
 from app.db.models.task import Task, TaskStatistics
 from app.services.task_service import TaskService
+from app.services.user_daily_stats_service import UserDailyStatsService
 
 
 @pytest.fixture
@@ -86,11 +87,17 @@ class TestTaskStatisticsCalculations:
         return ObjectId()
 
     @pytest.fixture
-    def task_service(self) -> tuple[TaskService, MagicMock]:
+    def mock_user_daily_stats_service(self):
+        mock = MagicMock(spec=UserDailyStatsService)
+        mock.increment_time = AsyncMock()
+        return mock
+
+    @pytest.fixture
+    def task_service(self, mock_user_daily_stats_service) -> tuple[TaskService, MagicMock]:
         engine_mock = MagicMock()
         engine_mock.find_one = AsyncMock()
         engine_mock.save = AsyncMock(side_effect=lambda obj: obj)
-        service = TaskService(engine=engine_mock)
+        service = TaskService(engine=engine_mock, user_daily_stats_service=mock_user_daily_stats_service)
         return service, engine_mock
 
     @pytest.fixture
@@ -221,3 +228,39 @@ class TestTaskStatisticsCalculations:
         # Statistics should be identical
         assert updated_task_response.statistics.model_dump() == initial_stats_dump
         engine_mock.save.assert_called_once()
+
+    async def test_update_from_in_progress_to_done_tracks_time(
+        self, task_service, user_id, task: Task, mock_user_daily_stats_service: MagicMock
+    ):
+        service, engine_mock = task_service
+        task.status = TaskStatus.IN_PROGRESS
+        task.updated_at = datetime.now(timezone.utc) - timedelta(seconds=45)
+        engine_mock.find_one.return_value = task
+
+        update_data = TaskUpdateRequest(status=TaskStatus.DONE)
+
+        time_now = datetime.now(timezone.utc)
+        with patch("app.services.task_service.datetime") as mock_dt:
+            mock_dt.now.return_value = time_now
+            await service.update_task(task.id, update_data, user_id)
+
+        mock_user_daily_stats_service.increment_time.assert_awaited_once()
+        args, kwargs = mock_user_daily_stats_service.increment_time.call_args
+        assert args[0] == user_id
+        assert isinstance(args[1], int)
+        # Check if the duration is approximately 45 seconds
+        assert 44 < args[1] < 46
+
+    async def test_update_from_pending_to_done_does_not_track_time(
+        self, task_service, user_id, task: Task, mock_user_daily_stats_service: MagicMock
+    ):
+        service, engine_mock = task_service
+        task.status = TaskStatus.PENDING
+        task.updated_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+        engine_mock.find_one.return_value = task
+
+        update_data = TaskUpdateRequest(status=TaskStatus.DONE)
+
+        await service.update_task(task.id, update_data, user_id)
+
+        mock_user_daily_stats_service.increment_time.assert_not_called()

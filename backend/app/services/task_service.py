@@ -15,13 +15,19 @@ from app.db.connection import get_database
 from app.db.models.category import Category
 from app.db.models.task import Task, TaskStatistics
 from app.mappers.task_mapper import TaskMapper
+from app.services.user_daily_stats_service import UserDailyStatsService
 
 UTC = timezone.utc
 
 
 class TaskService:
-    def __init__(self, engine: AIOEngine = Depends(get_database)):
+    def __init__(
+        self,
+        engine: AIOEngine = Depends(get_database),
+        user_daily_stats_service: UserDailyStatsService = Depends(UserDailyStatsService),
+    ):
         self.engine = engine
+        self.user_daily_stats_service = user_daily_stats_service
 
     async def _fetch_tasks_with_categories(
         self, tasks_models: List[Task], current_user_id: ObjectId
@@ -233,6 +239,13 @@ class TaskService:
                     task.statistics.was_started_at = now
                 task.statistics.was_taken_at = now
             elif old_status == TaskStatus.IN_PROGRESS and new_status != TaskStatus.IN_PROGRESS:  # Task was stopped
+                time_started_in_progress = (
+                    task.updated_at.replace(tzinfo=UTC) if task.updated_at.tzinfo is None else task.updated_at
+                )
+                duration_seconds = (now - time_started_in_progress).total_seconds()
+                if duration_seconds > 0:
+                    await self.user_daily_stats_service.increment_time(current_user_id, int(duration_seconds))
+
                 task.statistics.was_stopped_at = now
                 if task.statistics.was_taken_at:
                     # Ensure was_taken_at is timezone-aware for correct calculation

@@ -21,7 +21,7 @@ async def clean_stats_collection(test_db):
 async def test_get_today_stats_success(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], test_user_one: User
 ):
-    response = await async_client.get(f"{STATS_ENDPOINT}/today", headers=auth_headers_user_one)
+    response = await async_client.get(f"{STATS_ENDPOINT}/", headers=auth_headers_user_one)
     assert response.status_code == 200
     data = response.json()
     assert "date" in data
@@ -34,18 +34,18 @@ async def test_increment_time_spent(
 ):
     # First increment
     response1 = await async_client.post(
-        f"{STATS_ENDPOINT}/today/increment-time", headers=auth_headers_user_one, json={"seconds": 120}
+        f"{STATS_ENDPOINT}/increment-time", headers=auth_headers_user_one, json={"seconds": 120}
     )
     assert response1.status_code == 204
 
     # Second increment
     response2 = await async_client.post(
-        f"{STATS_ENDPOINT}/today/increment-time", headers=auth_headers_user_one, json={"seconds": 60}
+        f"{STATS_ENDPOINT}/increment-time", headers=auth_headers_user_one, json={"seconds": 60}
     )
     assert response2.status_code == 204
 
     # Verify total
-    response_get = await async_client.get(f"{STATS_ENDPOINT}/today", headers=auth_headers_user_one)
+    response_get = await async_client.get(f"{STATS_ENDPOINT}/", headers=auth_headers_user_one)
     assert response_get.status_code == 200
     assert response_get.json()["total_seconds_spent"] == 180
 
@@ -54,28 +54,28 @@ async def test_increment_pomodoros_completed(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], test_user_one: User
 ):
     # First increment
-    response1 = await async_client.post(f"{STATS_ENDPOINT}/today/increment-pomodoro", headers=auth_headers_user_one)
+    response1 = await async_client.post(f"{STATS_ENDPOINT}/increment-pomodoro", headers=auth_headers_user_one)
     assert response1.status_code == 204
 
     # Second increment
-    response2 = await async_client.post(f"{STATS_ENDPOINT}/today/increment-pomodoro", headers=auth_headers_user_one)
+    response2 = await async_client.post(f"{STATS_ENDPOINT}/increment-pomodoro", headers=auth_headers_user_one)
     assert response2.status_code == 204
 
     # Verify total
-    response_get = await async_client.get(f"{STATS_ENDPOINT}/today", headers=auth_headers_user_one)
+    response_get = await async_client.get(f"{STATS_ENDPOINT}/", headers=auth_headers_user_one)
     assert response_get.status_code == 200
     assert response_get.json()["pomodoros_completed"] == 2
 
 
 async def test_increment_time_with_invalid_payload(async_client: AsyncClient, auth_headers_user_one: dict[str, str]):
-    response = await async_client.post(f"{STATS_ENDPOINT}/today/increment-time", headers=auth_headers_user_one, json={})
+    response = await async_client.post(f"{STATS_ENDPOINT}/increment-time", headers=auth_headers_user_one, json={})
     assert response.status_code == 422
     response = await async_client.post(
-        f"{STATS_ENDPOINT}/today/increment-time", headers=auth_headers_user_one, json={"seconds": 0}
+        f"{STATS_ENDPOINT}/increment-time", headers=auth_headers_user_one, json={"seconds": 0}
     )
     assert response.status_code == 422
 
 
 async def test_unauthenticated_access_fails(async_client: AsyncClient):
-    response = await async_client.get(f"{STATS_ENDPOINT}/today")
+    response = await async_client.get(f"{STATS_ENDPOINT}/")
     assert response.status_code == 401

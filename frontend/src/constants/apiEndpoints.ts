@@ -20,7 +20,7 @@ export const API_ENDPOINTS = {
   DAILY_PLAN_UPDATE_BY_ID: (planId: string) => `/daily-plans/${planId}`,
   DAILY_PLAN_YESTERDAY: '/daily-plans/yesterday',
   DAILY_PLAN_TODAY: '/daily-plans/today',
-  DAILY_STATS_INCREMENT_TIME: '/today/increment-time',
-  DAILY_STATS_INCREMENT_POMODORO: '/today/increment-pomodoro',
-  DAILY_STATS_TODAY: '/today',
+  DAILY_STATS_INCREMENT_TIME: '/daily-stats/increment-time',
+  DAILY_STATS_INCREMENT_POMODORO: '/daily-stats/increment-pomodoro',
+  DAILY_STATS_TODAY: '/daily-stats',
 };

@@ -11,6 +11,7 @@ from app.api.schemas.task import TaskCreateRequest, TaskPriority, TaskResponse, 
 from app.core.config import settings
 from app.services.category_service import CategoryService
 from app.services.task_service import TaskService
+from app.services.user_daily_stats_service import UserDailyStatsService
 
 # TODO: Implement proper user authentication for MCP tools.
 MCP_USER_ID = os.getenv("MCP_USER_ID")
@@ -22,6 +23,9 @@ server = FastMCP("Flocus Backend MCP Server")
 motor_client = AsyncIOMotorClient(settings.MONGODB_URL)
 engine = AIOEngine(client=motor_client, database=settings.MONGODB_DATABASE_NAME)
 
+task_service = TaskService(engine=engine, user_daily_stats_service=UserDailyStatsService(engine=engine))
+category_service = CategoryService(engine=engine)
+
 
 @server.tool
 async def create_category(
@@ -30,9 +34,8 @@ async def create_category(
     color: Optional[str] = Field(None, description="Color of the category (e.g., #RRGGBB or color name)"),
 ) -> CategoryResponse:
     """Create a new category."""
-    service = CategoryService(engine)
     category_data = CategoryCreateRequest(name=name, description=description, color=color)
-    return await service.create_category(category_data=category_data, current_user_id=USER_ID)
+    return await category_service.create_category(category_data=category_data, current_user_id=USER_ID)
 
 
 @server.tool
@@ -40,15 +43,13 @@ async def get_category_by_id(
     category_id: str = Field(..., description="ID of the category to retrieve"),
 ) -> CategoryResponse:
     """Get a specific category by ID."""
-    service = CategoryService(engine)
-    return await service.get_category_by_id(category_id=ObjectId(category_id), current_user_id=USER_ID)
+    return await category_service.get_category_by_id(category_id=ObjectId(category_id), current_user_id=USER_ID)
 
 
 @server.tool
 async def get_all_categories() -> List[CategoryResponse]:
     """Get all categories for the current user."""
-    service = CategoryService(engine)
-    return await service.get_all_categories(current_user_id=USER_ID)
+    return await category_service.get_all_categories(current_user_id=USER_ID)
 
 
 @server.tool
@@ -58,9 +59,8 @@ async def update_category(
     description: Optional[str] = Field(None, description="New description for the category"),
 ) -> CategoryResponse:
     """Update an existing category."""
-    service = CategoryService(engine)
     category_data = CategoryUpdateRequest(name=name, description=description)
-    return await service.update_category(
+    return await category_service.update_category(
         category_id=ObjectId(category_id), category_data=category_data, current_user_id=USER_ID
     )
 
@@ -70,8 +70,7 @@ async def delete_category(
     category_id: str = Field(..., description="ID of the category to delete"),
 ) -> bool:
     """Delete a category."""
-    service = CategoryService(engine)
-    return await service.delete_category(category_id=ObjectId(category_id), current_user_id=USER_ID)
+    return await category_service.delete_category(category_id=ObjectId(category_id), current_user_id=USER_ID)
 
 
 @server.tool
@@ -84,7 +83,6 @@ async def create_task(
     category_id: Optional[str] = Field(None, description="ID of the category for the task"),
 ) -> TaskResponse:
     """Create a new task."""
-    service = TaskService(engine)
     task_data = TaskCreateRequest(
         title=title,
         description=description,
@@ -93,7 +91,7 @@ async def create_task(
         due_date=due_date,
         category_id=ObjectId(category_id) if category_id else None,
     )
-    return await service.create_task(task_data=task_data, current_user_id=USER_ID)
+    return await task_service.create_task(task_data=task_data, current_user_id=USER_ID)
 
 
 @server.tool
@@ -101,8 +99,7 @@ async def get_task_by_id(
     task_id: str = Field(..., description="ID of the task to retrieve"),
 ) -> TaskResponse:
     """Get a specific task by ID."""
-    service = TaskService(engine)
-    return await service.get_task_by_id(task_id=ObjectId(task_id), current_user_id=USER_ID)
+    return await task_service.get_task_by_id(task_id=ObjectId(task_id), current_user_id=USER_ID)
 
 
 @server.tool
@@ -116,8 +113,7 @@ async def get_all_tasks(
     sort_order: Optional[str] = Field("asc", description="Sort order ('asc' or 'desc')"),
 ) -> List[TaskResponse]:
     """Get all tasks for the current user with optional filters and sorting."""
-    service = TaskService(engine)
-    return await service.get_all_tasks(
+    return await task_service.get_all_tasks(
         current_user_id=USER_ID,
         status_filter=status_filter,
         priority_filter=priority_filter,
@@ -138,7 +134,6 @@ async def update_task(
     category_id: Optional[str] = Field(None, description="New category ID for the task"),
 ) -> TaskResponse:
     """Update an existing task."""
-    service = TaskService(engine)
     task_data = TaskUpdateRequest(
         title=title,
         description=description,
@@ -147,7 +142,7 @@ async def update_task(
         due_date=due_date,
         category_id=ObjectId(category_id) if category_id else None,
     )
-    return await service.update_task(task_id=ObjectId(task_id), task_data=task_data, current_user_id=USER_ID)
+    return await task_service.update_task(task_id=ObjectId(task_id), task_data=task_data, current_user_id=USER_ID)
 
 
 @server.tool
@@ -155,8 +150,7 @@ async def delete_task(
     task_id: str = Field(..., description="ID of the task to delete"),
 ) -> bool:
     """Delete a task."""
-    service = TaskService(engine)
-    return await service.delete_task(task_id=ObjectId(task_id), current_user_id=USER_ID)
+    return await task_service.delete_task(task_id=ObjectId(task_id), current_user_id=USER_ID)
 
 
 if __name__ == "__main__":

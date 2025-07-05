@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/today",
+    "/",
     response_model=UserDailyStatsResponse,
     summary="Get today's daily statistics",
 )
@@ -22,7 +22,7 @@ async def get_today_stats(
 
 
 @router.post(
-    "/today/increment-time",
+    "/increment-time",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Increment total time spent today",
 )
@@ -36,7 +36,7 @@ async def increment_time_spent(
 
 
 @router.post(
-    "/today/increment-pomodoro",
+    "/increment-pomodoro",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Increment completed Pomodoros today",
 )

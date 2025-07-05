@@ -277,8 +277,6 @@ describe('TasksPage', () => {
 
     fireEvent.click(statsButtons[0]); // Click stats icon for the first task
 
-    await waitFor(() => {
-      expect(screen.getByText(`Mocked TaskStatisticsModal for ${mockTasks[0].title}`)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(`Mocked TaskStatisticsModal for ${mockTasks[0].title}`)).toBeInTheDocument();
   });
 });

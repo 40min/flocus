@@ -9,6 +9,7 @@ import CreateTaskModal from 'components/modals/CreateTaskModal';
 import { useTasks, useTasksByCategory } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
 import { useSharedTimerContext } from 'context/SharedTimerContext';
+import TaskStatisticsModal from '../components/modals/TaskStatisticsModal';
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -79,8 +80,6 @@ const TasksPage: React.FC = () => {
     setSelectedTaskForStats(null);
   };
 
-  const TaskStatisticsModal = React.lazy(() => import('../components/modals/TaskStatisticsModal'));
-
   const handleDelete = async (id: string) => {
     if (id === currentTaskId) {
       await stopCurrentTask();
@@ -150,13 +149,11 @@ const TasksPage: React.FC = () => {
       />
 
       {isStatsModalOpen && selectedTaskForStats && (
-        <React.Suspense fallback={<div>Loading statistics...</div>}>
           <TaskStatisticsModal
             isOpen={isStatsModalOpen}
             onClose={closeStatsModal}
             task={selectedTaskForStats}
           />
-        </React.Suspense>
       )}
 
 

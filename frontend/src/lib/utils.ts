@@ -212,15 +212,20 @@ export function formatDurationFromSeconds(totalSeconds: number | undefined | nul
 
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
 
+  const parts = [];
   if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+    parts.push(`${hours}h`);
   }
   if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
+    parts.push(`${minutes}m`);
   }
-  return `${seconds}s`;
+
+  if (parts.length === 0) {
+    return `${totalSeconds}s`;
+  }
+
+  return parts.join(' ');
 }
 
 // ===== TIME WINDOW UTILITIES =====

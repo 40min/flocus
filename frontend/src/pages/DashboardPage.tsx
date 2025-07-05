@@ -7,6 +7,7 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/
 import { useSharedTimerContext } from '../context/SharedTimerContext';
 import { useUpdateTask } from '../hooks/useTasks';
 import { Task } from 'types/task';
+import DailyStats from 'components/DailyStats';
 
 const DashboardPage: React.FC = () => {
   const { setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, currentTaskId, setIsActive, isActive } = useSharedTimerContext();
@@ -72,11 +73,11 @@ const DashboardPage: React.FC = () => {
   return (
     <div className=" min-h-screen">
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
-        <div className="flex items-center justify-center md:justify-start">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-esteban italic font-semibold text-text-DEFAULT flex items-center gap-2">
-{format(new Date(), 'EEEE, MMMM do')}
-
+            {format(new Date(), 'EEEE, MMMM do')}
           </h1>
+          <DailyStats />
         </div>
       </header>
       <main className="flex-1 px-6 md:px-12 pb-12">

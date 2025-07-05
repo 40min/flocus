@@ -3,6 +3,7 @@ import {
   formatDateTime,
   formatDueDate,
   formatDurationFromMinutes,
+  formatDurationFromSeconds,
   formatMinutesToHHMM,
   hhMMToMinutes,
   localToUtc,
@@ -105,6 +106,27 @@ describe('utils', () => {
       expect(date.getMinutes()).toBe(30);
       expect(date.getSeconds()).toBe(0);
       expect(date.getMilliseconds()).toBe(0);
+    });
+  });
+
+  describe('formatDurationFromSeconds', () => {
+    it.each([
+      [undefined, 'N/A'],
+      [null, 'N/A'],
+      [0, '0s'],
+      [45, '45s'],
+      [59, '59s'],
+      [60, '1m'],
+      [61, '1m'],
+      [120, '2m'],
+      [121, '2m'],
+      [3599, '59m'],
+      [3600, '1h'],
+      [3660, '1h 1m'],
+      [3661, '1h 1m'],
+      [5432, '1h 30m'],
+    ])('should format %p seconds to "%s"', (input, expected) => {
+      expect(formatDurationFromSeconds(input as any)).toBe(expected);
     });
   });
 

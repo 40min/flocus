@@ -69,5 +69,4 @@ class TaskMapper(BaseMapper):
             if field in cls._nullable_fields or (field in cls._non_nullable_fields and value is not None):
                 setattr(task, field, value)
 
-        task.updated_at = datetime.now(UTC)
         return task

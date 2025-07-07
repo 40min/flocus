@@ -10,6 +10,7 @@ import { Task } from 'types/task';
 import { TimeWindow } from 'types/timeWindow';
 import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
 import { SharedTimerProvider } from '../context/SharedTimerContext';
+import { getTodayStats } from '../services/userDailyStatsService';
 
 jest.mock('../hooks/useCurrentTimeWindow');
 jest.mock('../context/SharedTimerContext', () => ({
@@ -17,6 +18,7 @@ jest.mock('../context/SharedTimerContext', () => ({
   useSharedTimerContext: jest.fn(),
 }));
 jest.mock('hooks/useTasks');
+jest.mock('../services/userDailyStatsService');
 
 const mockedUseCurrentTimeWindow = useCurrentTimeWindow as jest.Mock;
 const mockedUseSharedTimerContext = useSharedTimerContext as jest.Mock;
@@ -66,6 +68,7 @@ describe('CurrentTasks', () => {
   const mockHandleMarkAsDone = jest.fn();
 
   beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
     mockedUseSharedTimerContext.mockReturnValue({
       currentTaskId: null,
       isActive: false,

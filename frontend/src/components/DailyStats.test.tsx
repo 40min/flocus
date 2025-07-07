@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useDailyStats } from 'hooks/useDailyStats';
 import DailyStats from './DailyStats';
 import { UserDailyStats } from 'types/userDailyStats';
+import { getTodayStats } from '../services/userDailyStatsService';
 
 jest.mock('hooks/useDailyStats');
+jest.mock('../services/userDailyStatsService');
 const mockedUseDailyStats = useDailyStats as jest.Mock;
 
 const queryClient = new QueryClient();
@@ -16,6 +18,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('DailyStats', () => {
   beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
     jest.clearAllMocks();
   });
 

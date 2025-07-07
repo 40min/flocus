@@ -14,12 +14,14 @@ import { DayTemplateResponse } from 'types/dayTemplate';
 import { Category } from 'types/category';
 import { Task } from 'types/task';
 import { SharedTimerProvider } from 'context/SharedTimerContext';
+import { getTodayStats } from 'services/userDailyStatsService';
 
 // Mocks
 jest.mock('hooks/useDailyPlan');
 jest.mock('hooks/useTemplates');
 jest.mock('hooks/useCategories');
 jest.mock('services/dailyPlanService');
+jest.mock('services/userDailyStatsService');
 jest.mock('components/modals/EditDailyPlanTimeWindowModal', () => ({
   __esModule: true,
   default: ({ isOpen }: any) => (isOpen ? <div data-testid="edit-modal">Mock Edit Modal</div> : null),
@@ -101,6 +103,7 @@ const renderComponent = () => {
 
 describe('MyDayPage', () => {
   beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
     jest.clearAllMocks();
     queryClient.clear();
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false });

@@ -12,12 +12,14 @@ import { useTasks, useTasksByCategory, useUpdateTask } from 'hooks/useTasks';
 import { useCategories } from 'hooks/useCategories';
 import { SharedTimerProvider } from 'context/SharedTimerContext';
 import TaskStatisticsModal from '../components/modals/TaskStatisticsModal';
+import { getTodayStats } from 'services/userDailyStatsService';
 
 const mockedTaskStatisticsModal = TaskStatisticsModal as jest.MockedFunction<typeof TaskStatisticsModal>;
 
 jest.mock('services/taskService');
 jest.mock('hooks/useTasks');
 jest.mock('hooks/useCategories');
+jest.mock('services/userDailyStatsService');
 
 // Mock the TaskStatisticsModal
 jest.mock('../components/modals/TaskStatisticsModal', () => ({
@@ -118,6 +120,7 @@ describe('TasksPage', () => {
   let modalRoot: HTMLElement;
 
   beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
     modalRoot = document.createElement('div');
     modalRoot.setAttribute('id', 'modal-root');
     document.body.appendChild(modalRoot);

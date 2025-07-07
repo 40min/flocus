@@ -6,10 +6,12 @@ import { SharedTimerProvider, useSharedTimerContext } from '../context/SharedTim
 import { useTodayDailyPlan } from '../hooks/useDailyPlan';
 import { useUpdateTask } from '../hooks/useTasks';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getTodayStats } from '../services/userDailyStatsService';
 
 // Mock hooks
 jest.mock('../hooks/useDailyPlan');
 jest.mock('../hooks/useTasks');
+jest.mock('../services/userDailyStatsService');
 
 // Variables to hold mock functions for SharedTimerContext
 const mockSetCurrentTaskId = jest.fn();
@@ -71,6 +73,7 @@ const renderWithProviders = (component: React.ReactElement) => {
 
 describe('DashboardPage - handleDragEnd', () => {
   beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
     // Reset mocks before each test
     mockSetCurrentTaskId.mockClear();
     mockSetCurrentTaskName.mockClear();

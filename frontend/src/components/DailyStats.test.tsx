@@ -35,6 +35,7 @@ describe('DailyStats', () => {
   });
 
   it('renders error state correctly', () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockedUseDailyStats.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -44,6 +45,7 @@ describe('DailyStats', () => {
 
     render(<DailyStats />, { wrapper });
     expect(screen.getByText('Error')).toBeInTheDocument();
+    consoleErrorSpy.mockRestore();
   });
 
   it('renders stats correctly on successful fetch', () => {

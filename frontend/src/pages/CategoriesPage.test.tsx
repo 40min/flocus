@@ -105,6 +105,8 @@ describe('CategoriesPage', () => {
   });
 
   it('displays API error message on create category failure', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
     mockedUseCategories.mockReturnValue({ data: [], isLoading: false, error: null });
     mockedCreateCategory.mockRejectedValue(new ApiError('Category name already exists', 409));
     renderComponent();
@@ -118,6 +120,8 @@ describe('CategoriesPage', () => {
     await waitFor(() => {
       expect(within(modal).getByText('Category name already exists')).toBeInTheDocument();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('opens, fills, and submits the edit category modal successfully', async () => {
@@ -149,6 +153,8 @@ describe('CategoriesPage', () => {
   });
 
   it('displays an error in the modal on update category failure', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
     mockedUseCategories.mockReturnValue({ data: mockCategories, isLoading: false, error: null });
     mockedUpdateCategory.mockRejectedValue(new Error('Network error'));
     renderComponent();
@@ -159,9 +165,12 @@ describe('CategoriesPage', () => {
     fireEvent.change(within(modal).getByLabelText('Name'), { target: { value: 'Updated Work' } });
     fireEvent.click(within(modal).getByRole('button', { name: 'Update' }));
 
+
     await waitFor(() => {
       expect(within(modal).getByText('Failed to update category.')).toBeInTheDocument();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('deletes a category after confirmation', async () => {

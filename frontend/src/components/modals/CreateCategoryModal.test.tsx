@@ -110,6 +110,8 @@ describe('CreateCategoryModal', () => {
   });
 
   it('displays API error on create failure', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
     mockedCreateCategory.mockRejectedValueOnce(new ApiError('Category name already exists', 409));
     renderModal({});
 
@@ -117,6 +119,8 @@ describe('CreateCategoryModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText('Category name already exists')).toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('calls onClose when cancel button is clicked', () => {

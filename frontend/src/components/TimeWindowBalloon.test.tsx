@@ -5,6 +5,10 @@ import TimeWindowBalloon from './TimeWindowBalloon';
 import { TimeWindow } from 'types/timeWindow';
 import { Task } from 'types/task';
 import { SharedTimerProvider } from '../context/SharedTimerContext';
+import { getTodayStats } from 'services/userDailyStatsService';
+
+jest.mock('services/userDailyStatsService');
+
 
 const queryClient = new QueryClient();
 
@@ -34,7 +38,12 @@ describe('TimeWindowBalloon', () => {
       </QueryClientProvider>
     );
   };
-afterEach(() => {
+
+  beforeEach(() => {
+    (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
+  });
+
+  afterEach(() => {
     jest.restoreAllMocks();
   });
 

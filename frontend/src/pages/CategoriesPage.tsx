@@ -87,7 +87,7 @@ const CategoriesPage: React.FC = () => {
             <li className="p-6 text-center text-slate-500">No categories found. Click "Add New Category" to create one.</li>
           ) : (
             categories.map((category) => {
-              const { bgColor, textColor, name: colorName } = getColorDetails(category.color);
+              const { bgColor, name: colorName } = getColorDetails(category.color);
               return (
                 <li key={category.id} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors duration-150">
                   <div className="flex items-center">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Modal from 'components/modals/Modal';
 import { TimeWindowCreateRequest } from 'types/timeWindow';
 import { hhMMToMinutes, minutesToDate } from 'lib/utils';

@@ -106,7 +106,8 @@ const PomodoroTimer: React.FC = () => {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      a: ({ node, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }} />,
+                      a: ({ node, children, ...props }) => <a className="text-primary-DEFAULT underline hover:text-primary-dark" {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); window.open((props as React.AnchorHTMLAttributes<HTMLAnchorElement>).href, '_blank'); }}>{children}</a>,
+
                     }}
                   >
                     {currentTaskDescription}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Modal from './Modal';
 import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
 import { Category } from '../../types/category';

@@ -1,7 +1,7 @@
 import api from './api';
 import axios from 'axios';
 import { User } from '../types/user';
-import { ApiError, NotFoundError } from '../lib/errors';
+import { ApiError } from '../lib/errors';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
 export const getAllUsers = async (): Promise<User[]> => {

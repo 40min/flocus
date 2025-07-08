@@ -12,7 +12,6 @@ import { useCategories } from '../hooks/useCategories';
 import { formatMinutesToHHMM } from '../lib/utils';
 import { ChevronRight, Trash2, Plus, Edit } from 'lucide-react';
 import CreateTemplateTimeWindowModal from '../components/modals/CreateTemplateTimeWindowModal';
-import { NotFoundError } from '../lib/errors';
 import Button from '../components/Button';
 import Input from '../components/Input';
 

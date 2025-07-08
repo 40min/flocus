@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import AssignedTaskBalloon from './AssignedTaskBalloon';
-import { Task } from '../types/task';
+import { Task, TaskStatus } from '../types/task';
 import { Category } from '../types/category';
 
 describe('AssignedTaskBalloon', () => {
@@ -42,5 +42,16 @@ describe('AssignedTaskBalloon', () => {
   it('does not render the unassign button when onUnassign prop is not provided', () => {
     render(<AssignedTaskBalloon task={mockTask} />);
     expect(screen.queryByLabelText(`Unassign task: ${mockTask.title}`)).not.toBeInTheDocument();
+  });
+  // New tests for status icons
+  it.each([
+    ['pending' as TaskStatus, 'Pending'],
+    ['in_progress' as TaskStatus, 'In Progress'],
+    ['done' as TaskStatus, 'Done'],
+    ['blocked' as TaskStatus, 'Blocked'],
+  ])('renders the correct icon for "%s" status', (status, title) => {
+    const taskWithStatus: Task = { ...mockTask, status };
+    render(<AssignedTaskBalloon task={taskWithStatus} />);
+    expect(screen.getByTitle(title)).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ type: component
 layer: presentation
 owner: '@frontend-team'
 version: v1
-status: planned
+status: done
 created: 2025-07-08
 updated: 2025-07-08
 tags: [ui, task, my-day, daily-plan]
@@ -13,10 +13,10 @@ depends_on: []
 referenced_by: []
 ---
 ## Context
-The `TaskStatusBalloon` component is a small, self-contained UI element used on the "My Day" page within a `TimeWindowBalloon`. Its purpose is to provide a concise visual representation of a single task that has been assigned to that time window.
+The `AssignedTaskBalloon` component is a small, self-contained UI element used on the "My Day" page within a `TimeWindowBalloon`. Its purpose is to provide a concise visual representation of a single task that has been assigned to that time window.
 
 ## Structure
-The component is implemented in `frontend/src/components/TaskStatusBalloon.tsx`. It receives a `task` object as a prop and renders its title and status.
+The component is implemented in `frontend/src/components/AssignedTaskBalloon.tsx`. It receives a `task` object as a prop and renders its title and status.
 
 It contains a dedicated internal component, `TaskStatusIcon`, which is responsible for mapping a `TaskStatus` enum to a specific icon from the `lucide-react` library.
 

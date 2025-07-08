@@ -11,6 +11,43 @@ This project is organized into the following main directories:
 -   **`memory-bank/`**: Contains project documentation and context.
 -   **`bruno/`**: Contains Bruno API collection for testing endpoints.
 
+## Core Features
+
+This application provides a suite of tools to help you organize your day and focus on your tasks.
+
+### The Dashboard: Your Focus Hub
+
+The main dashboard is your central hub for focused work. It features:
+
+*   **Pomodoro Timer:** A fully-featured Pomodoro timer with configurable work (25 min), short break (5 min), and long break (15 min) cycles. The timer's state is saved locally, so you can refresh the page without losing your session.
+*   **Task List:** A list of tasks scheduled for the current time window.
+*   **Start a Focus Session:** Simply drag a task from the list and drop it onto the timer to begin a focus session.
+*   **Direct Task Controls:** Each task card has `Start`, `Pause`, and `Delete` buttons for quick actions without leaving the dashboard.
+
+### Daily Planning: The "My Day" Page
+
+The `/my-day` page is where you plan your schedule:
+
+*   **Create a Plan:** You can create a daily plan from scratch or use a pre-defined template.
+*   **Review Yesterday's Tasks:** If you don't have a plan for today, you can review yesterday's unfinished tasks and carry them over to the current day.
+*   **Time Windows:** Organize your day into categorized blocks of time. You can add, delete, and edit the start time, end time, and description for each window.
+*   **Assign Tasks:** Assign specific tasks to each time window. The task picker will intelligently show you tasks that match the time window's category.
+*   **Visual Timeline:** A vertical timeline provides an at-a-glance overview of your day's schedule.
+
+### Task and Category Management
+
+*   **Tasks Page (`/tasks`):** A dedicated page to create, view, and manage all your tasks. Task descriptions support clickable Markdown links.
+*   **Categories Page (`/categories`):** Create and manage categories with custom names, descriptions, and colors. Categories are used to organize both tasks and time windows.
+
+### Database Backup
+
+The application includes a script for backing up your MongoDB database. To run it, execute the following command from the project's root directory:
+
+```bash
+python backend/scripts/backup_database.py
+```
+This will create a timestamped backup of your collections in a `backups/` directory. Ensure your `.env` file in the `backend` directory is configured with the correct `DB_URL` and `BACKUP_DIRECTORY`.
+
 ## LLM Text Improvement
 
 This application integrates with Large Language Models (LLMs) to offer advanced text manipulation capabilities for your tasks. You can:

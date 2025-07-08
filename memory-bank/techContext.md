@@ -69,7 +69,7 @@
     *   **Unit Tests:** pytest for testing individual functions and classes.
     *   **Integration Tests:** Testing the interaction between different modules.
     *   **API Tests:** Testing API endpoints using pytest and a dedicated testing library (e.g., `requests`).
-*   **Database Tests:** Testing database interactions using mock data or a dedicated test database.
+    *   **Database Tests:** Testing database interactions using mock data or a dedicated test database.
 *   **Code Coverage:** Tools like `coverage.py` (Python) and Jest's built-in coverage reports (JavaScript) are used to measure test coverage.
 *   **Test-Driven Development (TDD):** Encouraged where applicable.
 
@@ -92,7 +92,7 @@
     *   **Test:** Running unit, integration, and API tests.
     *   **Code Analysis:** Performing static code analysis using linters (e.g., ESLint, pylint) and code formatters (e.g., Prettier, black).
     *   **Deployment (Future):** Deploying the application to the target environment (after successful tests and code analysis).
-*   **Notifications:** Notifications will be sent to the team on pipeline failures.
+    *   **Notifications:** Notifications will be sent to the team on pipeline failures.
 
 ## Task Model Enhancements (Task Statistics)
 
@@ -156,5 +156,28 @@ export interface TaskStatistics {
 ```
 The main `Task` interface includes `statistics?: TaskStatistics;`.
 
+## Implemented Feature: Backend Statistics Extension
+
+The backend now includes new user and timer-based statistical metrics. A new `user_daily_stats` collection stores daily aggregated stats per user, including `total_seconds_spent` and `pomodoros_completed`. This is managed by a new `UserDailyStatsService` and exposed through new API endpoints (`GET /today`, `POST /today/increment-time`, `POST /today/increment-pomodoro`).
+
+## Implemented Feature: Add Task Controls to Dashboard
+
+The `TaskCard` component within `frontend/src/components/CurrentTasks.tsx` has been enhanced to include `Start`, `Pause`, and `Delete` buttons. These controls are integrated with `SharedTimerContext` for timer state management and new React Query mutation hooks (`useUpdateTask`, `useDeleteTask`) for server-side task updates and deletions. Conditional rendering ensures buttons are enabled/disabled based on the active task and timer state.
+
+**Key Technical Details:**
+
+*   **`useDeleteTask` Hook:** A new mutation hook in `frontend/src/hooks/useTasks.ts` centralizes task deletion logic, invalidating `['tasks']` and `['dailyPlan', 'today']` queries on success.
+*   **`TaskCard` Logic:**
+    *   Consumes `currentTaskId` and `isActive` from `useSharedTimerContext`.
+    *   `handleStart` calls `resetForNewTask()`, sets context, calls `updateTask` mutation (status `in_progress`), and `setIsActive(true)`.
+    *   `handlePause` calls `handleStartPause()` from context.
+    *   `handleDelete` shows a confirmation, calls `stopCurrentTask()` if the deleted task is active, then calls `deleteTask` mutation.
+*   **API Interaction:** Leverages existing `PATCH /tasks/{id}` and `DELETE /tasks/{id}` endpoints. The delete operation assumes a "soft delete" (setting `is_deleted = true`) to preserve task statistics.
+
+## Implemented Feature: LLM-Powered Task Improvements
+
+The LLM-powered task improvement feature has been refactored. The `LLMService` is now decoupled from the `TaskService`, and a new stateless `POST /tasks/llm/improve-text` endpoint handles text improvement requests. This endpoint takes text and an action, calls the `LLMService`, and returns the improved text without database lookups.
+
 Created on 02.05.2025
 Updated on 02.06.2025
+Updated on 08.07.2025

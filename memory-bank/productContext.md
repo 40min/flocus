@@ -18,6 +18,20 @@
     -   Easy-to-use Pomodoro timer.
     -   Self-reflection prompts to encourage mindful work habits.
 
+## Implemented Features
+
+*   **Assign Tasks:** Allows assigning tasks to time windows.
+*   **Task Dashboard:** A new dashboard page with a Pomodoro timer.
+*   **Timescale:** A visual timeline on the "My Day" page.
+*   **Backup DB:** A script to back up the database.
+*   **Clickable links in task description:** Renders markdown links in task descriptions.
+*   **Day time windows editing:** Allows editing time windows on the "My Day" page.
+*   **Modal for categories:** Converts the categories page to use a modal form.
+*   **Show description on Pomodoro:** Shows the task description on the Pomodoro timer.
+*   **Task interruptions:** Centralizes task interruption logic.
+*   **Yesterday's tasks:** Allows viewing and carrying over yesterday's tasks.
+*   **Add tasks controls:** Adds controls to the task cards on the dashboard.
+
 ## Feature: Task Statistics
 
 To enhance task tracking and provide users with more insights into their workflow, tasks now include detailed statistics. These statistics are automatically calculated and updated by the system.
@@ -38,6 +52,36 @@ Within a new `statistics` object for each task, the following information is ava
 *   Data for future analysis and reporting on task effort and lifecycle.
 
 These statistics will be made available in the user interface for individual tasks and can be leveraged for future analytics features.
+
+## Feature: Daily User Statistics
+
+This feature implements new user and timer-based statistical metrics, including total time a user is active on the platform each day and completed Pomodoro work sessions per day. This data is stored in a new `user_daily_stats` collection and exposed via dedicated API endpoints.
+
+**User Benefits:**
+
+*   Comprehensive overview of daily productivity.
+*   Tracking of Pomodoro session completion for focus and time management.
+*   Foundation for future advanced analytics and reporting on user activity.
+
+## Feature: Add Task Controls to Dashboard
+
+This feature adds interactive controls (Start, Pause, Delete) directly to task cards on the Dashboard page. Users can now manage task states directly from the task list, improving workflow efficiency. The implementation leverages existing `SharedTimerContext` and new React Query mutation hooks for updating and deleting tasks, ensuring reactive UI updates and proper server-side state management.
+
+**User Benefits:**
+
+*   Direct task management from the dashboard, reducing clicks and context switching.
+*   Improved workflow efficiency by allowing immediate control over task states.
+*   Consistent and reliable state synchronization between UI, timer context, and backend.
+
+## Feature: LLM-Powered Task Improvements
+
+The LLM-powered task improvement feature has been refactored to be decoupled from the `TaskService` and now uses a stateless backend endpoint. The UI for this feature is integrated directly into the task editing modal, providing an inline approval flow for suggested improvements to task titles and descriptions.
+
+**User Benefits:**
+
+*   Streamlined workflow for improving task details with AI suggestions.
+*   Direct integration within the editing context, reducing context switching.
+*   Flexible and reusable API for generic text improvement.
 
 ## 1. Market Analysis
 

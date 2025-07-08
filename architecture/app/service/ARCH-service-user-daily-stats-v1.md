@@ -5,9 +5,9 @@ type: service
 layer: application
 owner: '@backend-team'
 version: v1
-status: planned
+status: current
 created: 2025-07-04
-updated: 2025-07-04
+updated: 2025-07-08
 tags: [statistics, backend, service]
 depends_on: [ARCH-data-user-daily-stats]
 referenced_by: [ARCH-api-user-daily-stats]
@@ -28,5 +28,5 @@ Key methods include:
 The service will use an `upsert` pattern (via `get_or_create_today`) to ensure that a user's daily statistics document is automatically created on the first relevant event of the day (e.g., first time increment). Subsequent updates will use MongoDB's efficient `$inc` operator to increment counters, ensuring high performance and atomicity.
 
 ## Evolution
-### Planned
-- v1: Initial planned design.
+### Historical
+- v1: Initial implementation.

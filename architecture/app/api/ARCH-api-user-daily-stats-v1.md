@@ -5,9 +5,9 @@ type: component
 layer: presentation
 owner: '@backend-team'
 version: v1
-status: planned
+status: current
 created: 2025-07-04
-updated: 2025-07-04
+updated: 2025-07-08
 tags: [statistics, backend, api]
 depends_on: [ARCH-service-user-daily-stats]
 referenced_by: []
@@ -47,5 +47,5 @@ The API will expose the following endpoints:
     *   **Response:** `204 No Content`
 
 ## Evolution
-### Planned
-- Initial implementation as described.
+### Historical
+- v1: Initial implementation as described.

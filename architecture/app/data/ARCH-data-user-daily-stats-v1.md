@@ -5,9 +5,9 @@ type: data_model
 layer: infrastructure
 owner: '@backend-team'
 version: v1
-status: planned
+status: current
 created: 2025-07-04
-updated: 2025-07-04
+updated: 2025-07-08
 tags: [statistics, backend, data_model]
 depends_on: []
 referenced_by: [ARCH-service-user-daily-stats]
@@ -41,5 +41,5 @@ class UserDailyStats(Model):
 The model includes a unique compound index on `(user_id, date)` to ensure that there is only one statistics document per user per day. The `date` field will store the beginning of the day in UTC.
 
 ## Evolution
-### Planned
-- v1: Initial planned design for daily time and Pomodoro tracking.
+### Historical
+- v1: Initial design for daily time and Pomodoro tracking.

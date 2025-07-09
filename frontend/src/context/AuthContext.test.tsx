@@ -57,7 +57,17 @@ describe('AuthContext', () => {
   });
 
   test('login action updates context and localStorage', async () => {
-    const mockUser: User = { id: '1', email: 'test@example.com', username: 'testuser', first_name: 'Test', last_name: 'User' };
+    const mockUser: User = {
+      id: '1',
+      email: 'test@example.com',
+      username: 'testuser',
+      first_name: 'Test',
+      last_name: 'User',
+      preferences: {
+        pomodoro_timeout_minutes: 25,
+        system_notifications_enabled: true,
+      },
+    };
     // Mock getCurrentUser to simulate successful user fetch
     const getCurrentUserSpy = jest.spyOn(userService, 'getCurrentUser').mockResolvedValue(mockUser);
 
@@ -84,7 +94,17 @@ describe('AuthContext', () => {
   });
 
   test('logout action clears context and localStorage', async () => {
-    const mockUser: User = { id: '1', email: 'test@example.com', username: 'testuser', first_name: 'Test', last_name: 'User' };
+    const mockUser: User = {
+      id: '1',
+      email: 'test@example.com',
+      username: 'testuser',
+      first_name: 'Test',
+      last_name: 'User',
+      preferences: {
+        pomodoro_timeout_minutes: 25,
+        system_notifications_enabled: true,
+      },
+    };
     const getCurrentUserSpy = jest.spyOn(userService, 'getCurrentUser').mockResolvedValue(mockUser);
 
     // First, log in
@@ -116,7 +136,17 @@ describe('AuthContext', () => {
   });
 
   test('loads token and user from localStorage on initial mount', async () => {
-    const mockStoredUser: User = { id: '2', email: 'stored@example.com', username: 'storeduser', first_name: 'Stored', last_name: 'User' };
+    const mockStoredUser: User = {
+      id: '2',
+      email: 'stored@example.com',
+      username: 'storeduser',
+      first_name: 'Stored',
+      last_name: 'User',
+      preferences: {
+        pomodoro_timeout_minutes: 25,
+        system_notifications_enabled: true,
+      },
+    };
     localStorageMock.setItem('access_token', 'stored-token');
     // AuthContext does not store user in localStorage, it fetches it.
     // So, we mock getCurrentUser for this scenario as well.

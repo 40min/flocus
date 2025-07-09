@@ -14,6 +14,13 @@ class UserBase(BaseModel):
     last_name: str = PydanticField(..., min_length=1, description="User's last name")
 
 
+class UserPreferencesSchema(BaseModel):
+    pomodoro_timeout_minutes: int
+    system_notifications_enabled: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserCreateRequest(UserBase):
     """Schema for user creation requests"""
 
@@ -25,6 +32,11 @@ class UserCreateRequest(UserBase):
         return value.lower()
 
 
+class UserPreferencesUpdateSchema(BaseModel):
+    pomodoro_timeout_minutes: Optional[int] = None
+    system_notifications_enabled: Optional[bool] = None
+
+
 class UserUpdateRequest(BaseModel):
     """Schema for user update requests"""
 
@@ -32,6 +44,7 @@ class UserUpdateRequest(BaseModel):
     first_name: Optional[str] = PydanticField(None, min_length=1)
     last_name: Optional[str] = PydanticField(None, min_length=1)
     password: Optional[str] = PydanticField(None, min_length=8)
+    preferences: Optional[UserPreferencesUpdateSchema] = None
 
     @field_serializer("email")
     def serialize_email_to_lower(self, value: Optional[EmailStr], info) -> Optional[EmailStr]:
@@ -45,6 +58,7 @@ class UserResponse(UserBase):
 
     id: ObjectId
     username: str
+    preferences: UserPreferencesSchema
 
     @field_serializer("id")
     def serialize_id_to_string(self, id_value: ObjectId, info) -> str:

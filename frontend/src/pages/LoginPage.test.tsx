@@ -22,6 +22,10 @@ const mockUser: User = {
   email: 'test@example.com',
   first_name: 'Test',
   last_name: 'User',
+  preferences: {
+    pomodoro_timeout_minutes: 25,
+    system_notifications_enabled: true,
+  },
 };
 
 const mockLogin = jest.fn();

@@ -1,6 +1,6 @@
 import api from './api';
 import axios from 'axios';
-import { User } from '../types/user';
+import { User, UserUpdatePayload } from '../types/user';
 import { ApiError } from '../lib/errors';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 
@@ -37,11 +37,14 @@ export const getUserById = async (id: string): Promise<User> => {
   }
 };
 
-export const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
+export const updateUser = async (id: string, userData: UserUpdatePayload): Promise<User> => {
   try {
     const response = await api.put<User>(API_ENDPOINTS.USER_BY_ID(id), userData);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(error.response.data?.detail || 'Failed to update user', error.response.status);
+    }
     throw error;
   }
 };

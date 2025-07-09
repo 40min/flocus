@@ -1,14 +1,15 @@
 ---
 id: TASK-2025-014
 title: "Frontend: Refactor User Settings UI for Preferences"
-status: ready
+status: done
 priority: high
 type: feature
 estimate: M
 parents: [TASK-2025-012]
 created: 2025-07-09
-updated: 2025-07-09
+updated: 2025-07-10
 arch_refs: [ARCH-feature-user-preferences]
+  - {date: 2025-07-10, user: "@Robotic-SSE-AI", action: "implemented feature and set status to done"}
 audit_log:
   - {date: 2025-07-09, user: "@AI-DocArchitect", action: "created with status ready"}
 ---
@@ -25,5 +26,5 @@ Refactor the User Settings page UI to connect to the new backend capabilities fo
 
 ## Definition of Done
 - All frontend code for the user preferences UI is implemented.
-- All related frontend tests are written and passing.
+- All related frontend tests covering new and updated functionality are written and passing.
 - The changes are reviewed and merged into the main branch.

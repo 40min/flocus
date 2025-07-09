@@ -94,6 +94,7 @@ describe('authService', () => {
       email: 'test@example.com',
       first_name: 'Test',
       last_name: 'User',
+      preferences: { pomodoro_timeout_minutes: 25, system_notifications_enabled: true },
     };
 
     it('should call api.post with correct endpoint and user data, and return user data on success', async () => {

@@ -97,6 +97,11 @@ class UserService:
 
         if user_data.first_name is not None:
             existing_user.first_name = user_data.first_name
+        if user_data.preferences:
+            prefs_update_data = user_data.preferences.model_dump(exclude_unset=True)
+            for key, value in prefs_update_data.items():
+                if hasattr(existing_user.preferences, key):
+                    setattr(existing_user.preferences, key, value)
         if user_data.last_name is not None:
             existing_user.last_name = user_data.last_name
         if user_data.password:  # Ensure password is not empty string before hashing
@@ -105,7 +110,9 @@ class UserService:
         updated_user = await self.db.save(existing_user)
         return updated_user
 
-    async def delete_user_by_id(self, user_id: ObjectId, current_user_id: ObjectId) -> None:  # Return type changed to None
+    async def delete_user_by_id(
+        self, user_id: ObjectId, current_user_id: ObjectId
+    ) -> None:  # Return type changed to None
         user_to_delete = await self.db.find_one(User, User.id == user_id)
         if user_to_delete is None:
             raise UserNotFoundException(detail="User not found for deletion")

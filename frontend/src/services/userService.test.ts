@@ -11,6 +11,7 @@ const mockUser: User = {
   email: 'test@example.com',
   first_name: 'Test',
   last_name: 'User',
+  preferences: { pomodoro_timeout_minutes: 25, system_notifications_enabled: true },
 };
 
 describe('userService', () => {
@@ -78,7 +79,11 @@ describe('userService', () => {
   describe('updateUser', () => {
     const userId = '1';
     const updatedUserData: UserUpdatePayload = { first_name: 'Updated' };
-    const mockUpdatedUser: User = { ...mockUser, ...updatedUserData };
+    const mockUpdatedUser: User = {
+      ...mockUser,
+      ...updatedUserData,
+      preferences: { ...mockUser.preferences, ...updatedUserData.preferences },
+    };
 
     it('should update a user successfully', async () => {
       (api.put as jest.Mock).mockResolvedValueOnce({ data: mockUpdatedUser });

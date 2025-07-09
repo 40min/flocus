@@ -1,14 +1,15 @@
 ---
 id: TASK-2025-013
 title: "Backend: Implement User Preferences Storage"
-status: ready
+status: done
 priority: high
 type: feature
 estimate: M
 parents: [TASK-2025-012]
 created: 2025-07-09
-updated: 2025-07-09
+updated: 2025-07-10
 arch_refs: [ARCH-feature-user-preferences]
+  - {date: 2025-07-10, user: "@Robotic-SSE-AI", action: "implemented feature and set status to done"}
 audit_log:
   - {date: 2025-07-09, user: "@AI-DocArchitect", action: "created with status ready"}
 ---
@@ -24,5 +25,5 @@ Extend the user data model and API to support storing and retrieving user prefer
 
 ## Definition of Done
 - All backend code for the user preferences feature is implemented.
-- All related backend tests are written and passing.
+- All related backend tests covering new and updated functionality are written and passing.
 - The changes are reviewed and merged into the main branch.

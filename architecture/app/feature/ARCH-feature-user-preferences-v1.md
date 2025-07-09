@@ -4,8 +4,8 @@ title: "Feature. User Preferences"
 type: feature
 layer: application
 owner: '@fullstack-team'
-version: v1
-status: planned
+version: v1.1
+status: current
 created: 2025-07-09
 updated: 2025-07-09
 tags: [user, settings, preferences]

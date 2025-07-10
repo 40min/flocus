@@ -4,8 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from app.api.schemas.user import UserCreateRequest, UserResponse, UserUpdateRequest
 from app.core.config import settings
-from app.core.dependencies import get_current_active_user_id, get_validated_user_id
-from app.db.models.user import User
+from app.core.dependencies import get_current_active_user_id, get_current_user, get_validated_user_id
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -17,8 +16,8 @@ async def register(
     user_data: UserCreateRequest,
     user_service: UserService = Depends(UserService),
 ):
-    created_user: User = await user_service.register_user(user_data=user_data)
-    return UserResponse.model_validate(created_user)
+    created_user: UserResponse = await user_service.register_user(user_data=user_data)
+    return created_user
 
 
 @router.post("/login", response_model=dict)  # response_model can be more specific if a schema exists
@@ -32,11 +31,9 @@ async def login(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),  # The middleware will handle token validation exceptions
-    user_service: UserService = Depends(UserService),
+    current_user: UserResponse = Depends(get_current_user),
 ):
-    current_user: User = await user_service.get_current_user_from_token(token=token)
-    return UserResponse.model_validate(current_user)
+    return current_user
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -44,8 +41,8 @@ async def get_user(
     user_id: ObjectId = Depends(get_validated_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    user: User = await user_service.get_user_by_id(user_id=user_id)
-    return UserResponse.model_validate(user)
+    user: UserResponse = await user_service.get_user_by_id(user_id=user_id)
+    return user
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -55,10 +52,10 @@ async def update_user(
     current_user_id: ObjectId = Depends(get_current_active_user_id),
     user_service: UserService = Depends(UserService),
 ):
-    updated_user: User = await user_service.update_user_by_id(
+    updated_user: UserResponse = await user_service.update_user_by_id(
         user_id=user_id, user_data=user_data, current_user_id=current_user_id
     )
-    return UserResponse.model_validate(updated_user)
+    return updated_user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -3,13 +3,13 @@ from bson.errors import InvalidId
 from fastapi import Depends, HTTPException, Path
 from fastapi.security import OAuth2PasswordBearer
 
+from app.api.schemas.user import UserResponse
 from app.clients.llm.base import LLMClient
 from app.clients.llm.google_gemini import GoogleGeminiClient
 from app.clients.llm.openai import OpenAIClient
 from app.core.config import settings
 from app.core.enums import LLMProvider
 from app.core.exceptions import LLMServiceError
-from app.db.models.user import User
 from app.services.llm_service import LLMService
 from app.services.user_service import UserService
 
@@ -18,14 +18,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme), user_service: UserService = Depends(UserService)
-) -> User:
+) -> UserResponse:
     """
     Dependency to get the current authenticated user from a token.
     """
     return await user_service.get_current_user_from_token(token)
 
 
-async def get_current_active_user_id(current_user: User = Depends(get_current_user)) -> ObjectId:
+async def get_current_active_user_id(current_user: UserResponse = Depends(get_current_user)) -> ObjectId:
     """
     Dependency to get the ID of the current authenticated and active user.
     Placeholder for active check if needed in future.

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getTodayDailyPlan, getYesterdayDailyPlan } from 'services/dailyPlanService';
+import { getTodayDailyPlan, getPrevDayDailyPlan } from 'services/dailyPlanService';
 
 export const useTodayDailyPlan = () => {
   return useQuery({
@@ -8,10 +8,10 @@ export const useTodayDailyPlan = () => {
   });
 };
 
-export const useYesterdayDailyPlan = (enabled: boolean) => {
+export const usePrevDayDailyPlan = (enabled: boolean) => {
   return useQuery({
-    queryKey: ['dailyPlan', 'yesterday'],
-    queryFn: getYesterdayDailyPlan,
+    queryKey: ['dailyPlan', 'prev-day'],
+    queryFn: getPrevDayDailyPlan,
     enabled,
   });
 };

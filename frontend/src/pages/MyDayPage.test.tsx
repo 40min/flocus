@@ -5,7 +5,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from 'context/AuthContext';
 import { MessageProvider, useMessage } from 'context/MessageContext';
 import MyDayPage from './MyDayPage';
-import { useTodayDailyPlan, useYesterdayDailyPlan } from 'hooks/useDailyPlan';
+import { useTodayDailyPlan, usePrevDayDailyPlan } from 'hooks/useDailyPlan';
 import { useTemplates } from 'hooks/useTemplates';
 import { useCategories } from 'hooks/useCategories';
 import * as dailyPlanService from 'services/dailyPlanService';
@@ -36,7 +36,7 @@ jest.mock('context/MessageContext', () => {
 });
 
 const mockedUseTodayDailyPlan = useTodayDailyPlan as jest.Mock;
-const mockedUseYesterdayDailyPlan = useYesterdayDailyPlan as jest.Mock;
+const mockedUsePrevDayDailyPlan = usePrevDayDailyPlan as jest.Mock;
 const mockedUseTemplates = useTemplates as jest.Mock;
 const mockedUseCategories = useCategories as jest.Mock;
 const mockedCreateDailyPlan = dailyPlanService.createDailyPlan as jest.Mock;
@@ -117,7 +117,7 @@ describe('MyDayPage', () => {
 
   it('renders loading state', async () => {
     mockedUseTodayDailyPlan.mockReturnValue({ data: null, isLoading: true });
-    mockedUseYesterdayDailyPlan.mockReturnValue({ data: null, isLoading: false });
+    mockedUsePrevDayDailyPlan.mockReturnValue({ data: null, isLoading: false });
     mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
     renderComponent();
     await waitFor(() => {
@@ -128,7 +128,7 @@ describe('MyDayPage', () => {
   describe('when no daily plan exists', () => {
     beforeEach(() => {
       mockedUseTodayDailyPlan.mockReturnValue({ data: null, isLoading: false });
-      mockedUseYesterdayDailyPlan.mockReturnValue({ data: null, isLoading: false });
+      mockedUsePrevDayDailyPlan.mockReturnValue({ data: null, isLoading: false });
     });
 
     it('renders create plan prompt when no templates are selected', async () => {
@@ -181,8 +181,8 @@ describe('MyDayPage', () => {
       });
     });
 
-    describe("when yesterday's plan exists and is not reviewed", () => {
-      const mockYesterdayPlan: DailyPlanResponse = {
+    describe("when previous day's plan exists and is not reviewed", () => {
+      const mockPrevDayPlan: DailyPlanResponse = {
         id: 'yesterday_plan',
         user_id: 'user1',
         plan_date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
@@ -208,7 +208,7 @@ describe('MyDayPage', () => {
 
 
       beforeEach(() => {
-        mockedUseYesterdayDailyPlan.mockReturnValue({ data: mockYesterdayPlan, isLoading: false });
+        mockedUsePrevDayDailyPlan.mockReturnValue({ data: mockPrevDayPlan, isLoading: false });
         mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
         mockedCreateDailyPlan.mockResolvedValue({});
       });
@@ -216,7 +216,7 @@ describe('MyDayPage', () => {
       it("shows review section with tasks from yesterday", async () => {
         renderComponent();
         await waitFor(() => {
-          expect(screen.getByText("Review: Yesterday's Tasks")).toBeInTheDocument();
+          expect(screen.getByText("Review: Previous Day's Tasks")).toBeInTheDocument();
         });
         expect(screen.getByText('Morning session')).toBeInTheDocument();
         expect(screen.getByText('Completed Task')).toBeInTheDocument();
@@ -258,14 +258,14 @@ it("hides review section when a template is selected", async () => {
         renderComponent();
 
         await waitFor(() => {
-          expect(screen.getByText("Review: Yesterday's Tasks")).toBeInTheDocument();
+          expect(screen.getByText("Review: Previous Day's Tasks")).toBeInTheDocument();
         });
 
         fireEvent.click(screen.getByRole('button', { name: 'Create Plan' }));
         fireEvent.click(screen.getByText('Work Day')); // Select a template
 
         await waitFor(() => {
-          expect(screen.queryByText("Review: Yesterday's Tasks")).not.toBeInTheDocument();
+          expect(screen.queryByText("Review: Previous Day's Tasks")).not.toBeInTheDocument();
         });
       });
     });
@@ -274,7 +274,7 @@ it("hides review section when a template is selected", async () => {
   describe('when a daily plan exists', () => {
     beforeEach(() => {
       mockedUseTodayDailyPlan.mockReturnValue({ data: JSON.parse(JSON.stringify(mockDailyPlan)), isLoading: false });
-      mockedUseYesterdayDailyPlan.mockReturnValue({ data: null, isLoading: false });
+      mockedUsePrevDayDailyPlan.mockReturnValue({ data: null, isLoading: false });
       mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
     });
 

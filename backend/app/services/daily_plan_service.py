@@ -1,16 +1,14 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException, status
-from odmantic import AIOEngine, ObjectId
+from odmantic import AIOEngine, ObjectId, query
 
-from app.api.schemas.daily_plan import (
-    DailyPlanCreateRequest, # Takes TimeWindowCreateRequest
-    DailyPlanResponse,
-    DailyPlanUpdateRequest, # Takes TimeWindowCreateRequest
-    PopulatedTimeWindowResponse, # Wrapper response schema for a time window item
-    TimeWindowCreateRequest,     # Flat input schema for a time window
-)
+from app.api.schemas.daily_plan import DailyPlanCreateRequest  # Takes TimeWindowCreateRequest
+from app.api.schemas.daily_plan import DailyPlanUpdateRequest  # Takes TimeWindowCreateRequest
+from app.api.schemas.daily_plan import PopulatedTimeWindowResponse  # Wrapper response schema for a time window item
+from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat input schema for a time window
+from app.api.schemas.daily_plan import DailyPlanResponse
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
 from app.core.exceptions import TaskCategoryMismatchException
@@ -23,6 +21,7 @@ from app.mappers.daily_plan_mapper import DailyPlanMapper
 from app.mappers.task_mapper import TaskMapper
 from app.services.category_service import CategoryService
 from app.services.task_service import TaskService
+from app.services.user_daily_stats_service import get_utc_today_start
 
 
 class DailyPlanService:
@@ -79,9 +78,7 @@ class DailyPlanService:
                     )
 
                 if task.category_id is not None and task.category_id != time_window_data.category_id:
-                    raise TaskCategoryMismatchException(
-                        detail="Task category does not match Time Window category."
-                    )
+                    raise TaskCategoryMismatchException(detail="Task category does not match Time Window category.")
 
     async def _map_plan_to_response(self, plan: DailyPlan, current_user_id: ObjectId) -> DailyPlanResponse:
         # 1. Gather all unique IDs from the plan
@@ -153,9 +150,7 @@ class DailyPlanService:
         if plan.plan_date.tzinfo is None or plan.plan_date.tzinfo.utcoffset(plan.plan_date) is None:
             plan.plan_date = plan.plan_date.replace(tzinfo=timezone.utc)
 
-        return DailyPlanMapper.to_response(
-            daily_plan_model=plan, populated_time_window_responses=response_time_windows
-        )
+        return DailyPlanMapper.to_response(daily_plan_model=plan, populated_time_window_responses=response_time_windows)
 
     async def create_daily_plan(
         self, plan_data: DailyPlanCreateRequest, current_user_id: ObjectId
@@ -246,14 +241,14 @@ class DailyPlanService:
         plan = await self.get_daily_plan_by_date_internal(plan_date, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id) if plan else None
 
-    async def get_yesterday_daily_plan(self, current_user_id: ObjectId) -> Optional[DailyPlanResponse]:
-        yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
-        # Convert date object to datetime for internal method
-        yesterday_datetime = datetime(
-            yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0, tzinfo=timezone.utc
+    async def get_prev_day_daily_plan(self, current_user_id: ObjectId) -> Optional[DailyPlanResponse]:
+        today_start_utc = get_utc_today_start()
+        plan = await self.engine.find_one(
+            DailyPlan,
+            DailyPlan.user_id == current_user_id,
+            DailyPlan.plan_date < today_start_utc,
+            sort=query.desc(DailyPlan.plan_date),
         )
-
-        plan = await self.get_daily_plan_by_date_internal(yesterday_datetime, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id) if plan else None
 
     async def get_today_daily_plan(self, current_user_id: ObjectId) -> Optional[DailyPlanResponse]:

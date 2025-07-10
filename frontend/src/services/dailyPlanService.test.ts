@@ -1,6 +1,6 @@
 import {
   getDailyPlanByDate,
-  getYesterdayDailyPlan,
+  getPrevDayDailyPlan,
   createDailyPlan,
   updateDailyPlan,
   getTodayDailyPlan,
@@ -8,6 +8,7 @@ import {
 import api from './api';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { DailyPlanResponse } from '../types/dailyPlan';
+
 
 jest.mock('./api');
 
@@ -18,7 +19,7 @@ describe('dailyPlanService', () => {
 
   describe('getDailyPlanByDate', () => {
     const mockDate = '2023-10-26';
-    const mockDailyPlan: DailyPlanResponse = {
+    const mockPrevDayPlan: DailyPlanResponse = {
       id: '1',
       plan_date: mockDate,
       user_id: 'user1',
@@ -29,12 +30,12 @@ describe('dailyPlanService', () => {
     };
 
     it('should fetch daily plan by date successfully', async () => {
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockDailyPlan });
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockPrevDayPlan });
 
       const result = await getDailyPlanByDate(mockDate);
 
       expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_BY_DATE(mockDate));
-      expect(result).toEqual(mockDailyPlan);
+      expect(result).toEqual(mockPrevDayPlan);
     });
 
     it('should return null if no daily plan is found', async () => {
@@ -54,8 +55,8 @@ describe('dailyPlanService', () => {
     });
   });
 
-  describe('getYesterdayDailyPlan', () => {
-    const mockDailyPlan: DailyPlanResponse = {
+  describe('getPrevDayDailyPlan', () => {
+    const mockPrevDayPlan: DailyPlanResponse = {
       id: '2',
       plan_date: '2023-10-25',
       user_id: 'user1',
@@ -65,29 +66,29 @@ describe('dailyPlanService', () => {
       reviewed: false,
     };
 
-    it('should fetch yesterday\'s daily plan successfully', async () => {
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockDailyPlan });
+    it("should fetch previous day's daily plan successfully", async () => {
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockPrevDayPlan });
 
-      const result = await getYesterdayDailyPlan();
+      const result = await getPrevDayDailyPlan();
 
-      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_YESTERDAY);
-      expect(result).toEqual(mockDailyPlan);
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_PREV_DAY);
+      expect(result).toEqual(mockPrevDayPlan);
     });
 
-    it('should return null if no daily plan is found for yesterday', async () => {
+    it("should return null if no daily plan is found for previous day", async () => {
       (api.get as jest.Mock).mockResolvedValueOnce({ data: {} });
 
-      const result = await getYesterdayDailyPlan();
+      const result = await getPrevDayDailyPlan();
 
-      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_YESTERDAY);
+      expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_PREV_DAY);
       expect(result).toBeNull();
     });
 
-    it('should throw an error if fetching yesterday\'s daily plan fails', async () => {
-      const errorMessage = 'Failed to fetch yesterday\'s daily plan';
+    it("should throw an error if fetching previous day's daily plan fails", async () => {
+      const errorMessage = "Failed to fetch previous day's daily plan";
       (api.get as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
 
-      await expect(getYesterdayDailyPlan()).rejects.toThrow(errorMessage);
+      await expect(getPrevDayDailyPlan()).rejects.toThrow(errorMessage);
     });
   });
 
@@ -151,7 +152,7 @@ describe('dailyPlanService', () => {
   });
 
   describe('getTodayDailyPlan', () => {
-    const mockDailyPlan: DailyPlanResponse = {
+    const mockPrevDayPlan: DailyPlanResponse = {
       id: '4',
       plan_date: '2023-10-27',
       user_id: 'user1',
@@ -162,12 +163,12 @@ describe('dailyPlanService', () => {
     };
 
     it('should fetch today\'s daily plan successfully', async () => {
-      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockDailyPlan });
+      (api.get as jest.Mock).mockResolvedValueOnce({ data: mockPrevDayPlan });
 
       const result = await getTodayDailyPlan();
 
       expect(api.get).toHaveBeenCalledWith(API_ENDPOINTS.DAILY_PLAN_TODAY);
-      expect(result).toEqual(mockDailyPlan);
+      expect(result).toEqual(mockPrevDayPlan);
     });
 
     it('should return null if no daily plan is found for today', async () => {

@@ -20,9 +20,9 @@ export const getDailyPlanByDate = async (planDate: string): Promise<DailyPlanRes
   }
 };
 
-export const getYesterdayDailyPlan = async (): Promise<DailyPlanResponse | null> => {
+export const getPrevDayDailyPlan = async (): Promise<DailyPlanResponse | null> => {
   try {
-    const response = await api.get<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_YESTERDAY);
+    const response = await api.get<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_PREV_DAY);
     if (!response.data || Object.keys(response.data).length === 0) {
       return null;
     }

@@ -2,7 +2,7 @@ import logging  # Added import for logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Path, status
 from odmantic import ObjectId
 
 from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest
@@ -31,16 +31,16 @@ async def create_daily_plan(
 
 # Specific string routes should come before parameterized routes
 @router.get(
-    "/yesterday",
+    "/prev-day",
     response_model=Optional[DailyPlanResponse],
-    summary="Get yesterday's Daily Plan for review",
-    description="Retrieves the daily plan for the previous day, typically for review purposes.",
+    summary="Get the last working day's Daily Plan",
+    description="Retrieves the daily plan for the user's last recorded day prior to today, for review purposes.",
 )
-async def get_yesterday_daily_plan(
+async def get_prev_day_daily_plan(
     service: DailyPlanService = Depends(DailyPlanService),
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
-    return await service.get_yesterday_daily_plan(current_user_id=current_user_id) or None
+    return await service.get_prev_day_daily_plan(current_user_id=current_user_id) or None
 
 
 @router.get(

@@ -15,7 +15,7 @@ import CreateTimeWindowModal from '../components/modals/CreateTimeWindowModal';
 import { TimeWindow, TimeWindowCreateRequest } from '../types/timeWindow';
 import { Task } from '../types/task';
 import { useMessage } from '../context/MessageContext';
-import { useTodayDailyPlan, useYesterdayDailyPlan } from '../hooks/useDailyPlan';
+import { useTodayDailyPlan, usePrevDayDailyPlan } from '../hooks/useDailyPlan';
 import { useTemplates } from '../hooks/useTemplates';
 import { useCategories } from '../hooks/useCategories';
 import { useSharedTimerContext } from '../context/SharedTimerContext';
@@ -27,7 +27,7 @@ const MyDayPage: React.FC = () => {
   const { stopCurrentTask, currentTaskId } = useSharedTimerContext();
 
   const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } = useTodayDailyPlan();
-  const { data: yesterdayPlan, isLoading: isLoadingYesterdayPlan } = useYesterdayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
+  const { data: prevDayPlan, isLoading: isLoadingPrevDayPlan } = usePrevDayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
   const { data: dayTemplates = [] } = useTemplates();
   const { data: categories = [] } = useCategories();
   const { data: dailyStats } = useDailyStats();
@@ -60,8 +60,8 @@ const MyDayPage: React.FC = () => {
   }, [fetchedDailyPlan]);
 
   useEffect(() => {
-    setShowYesterdayReview(!!(yesterdayPlan && !fetchedDailyPlan && !selectedTemplate));
-  }, [yesterdayPlan, fetchedDailyPlan, selectedTemplate]);
+    setShowYesterdayReview(!!(prevDayPlan && !fetchedDailyPlan && !selectedTemplate));
+  }, [prevDayPlan, fetchedDailyPlan, selectedTemplate]);
 
   const handleAssignTask = (timeWindowId: string, task: Task) => {
     setDailyPlan(prevPlan => {
@@ -228,7 +228,7 @@ const MyDayPage: React.FC = () => {
       }
     };
 
-  const isLoading = isLoadingTodayPlan || isLoadingYesterdayPlan;
+  const isLoading = isLoadingTodayPlan || isLoadingPrevDayPlan;
 
   if (isLoading) {
     return (
@@ -332,17 +332,17 @@ const MyDayPage: React.FC = () => {
 
             <div className="space-y-16">
               {/* Section 1: Review Unfinished Tasks */}
-              {showYesterdayReview && yesterdayPlan && !yesterdayPlan.reviewed && (
+              {showYesterdayReview && prevDayPlan && !prevDayPlan.reviewed && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
                       <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                        Review: Yesterday's Tasks
+                        Review: Previous Day's Tasks
                       </h2>
                     </header>
                     <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-70 transition-opacity">
                       <div className="space-y-4">
-                        {yesterdayPlan.time_windows
+                        {prevDayPlan.time_windows
                           .slice()
                           .sort((a, b) => a.time_window.start_time - b.time_window.start_time)
                           .map((alloc) => (
@@ -357,8 +357,8 @@ const MyDayPage: React.FC = () => {
                         <button
                           className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
                           onClick={() => {
-                            if (yesterdayPlan) {
-                              const timeWindowsToCarryOver = yesterdayPlan.time_windows.map(alloc => ({
+                            if (prevDayPlan) {
+                              const timeWindowsToCarryOver = prevDayPlan.time_windows.map(alloc => ({
                                 description: alloc.time_window.description,
                                 start_time: alloc.time_window.start_time,
                                 end_time: alloc.time_window.end_time,
@@ -378,7 +378,7 @@ const MyDayPage: React.FC = () => {
               )}
 
               {/* Section 3: Self-Reflection */}
-              {showYesterdayReview && yesterdayPlan && !yesterdayPlan.reviewed && (
+              {showYesterdayReview && prevDayPlan && !prevDayPlan.reviewed && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">

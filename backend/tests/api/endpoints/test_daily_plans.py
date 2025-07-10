@@ -7,13 +7,8 @@ import pytest
 from httpx import AsyncClient
 from odmantic import ObjectId
 
-from app.api.schemas.daily_plan import (
-    DailyPlanCreateRequest,
-    DailyPlanResponse,
-    DailyPlanUpdateRequest,
-    PopulatedTimeWindowResponse, # Wrapper for response
-    TimeWindowCreateRequest,     # Flat for request
-)
+from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat for request
+from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest
 from app.api.schemas.task import TaskPriority, TaskStatus
 from app.core.config import settings
 from app.db.models.category import Category as CategoryModel
@@ -83,8 +78,8 @@ async def unique_date() -> datetime:
 
 def create_time_window_payload(
     description: Optional[str], category_id: ObjectId, start_time: int, end_time: int, task_ids: List[ObjectId]
-) -> TimeWindowCreateRequest: # Changed return type
-    return TimeWindowCreateRequest( # Changed instantiation
+) -> TimeWindowCreateRequest:  # Changed return type
+    return TimeWindowCreateRequest(  # Changed instantiation
         description=description,
         category_id=category_id,
         start_time=start_time,
@@ -517,38 +512,33 @@ async def test_get_yesterday_daily_plan_success(
     test_user_one: UserModel,
     test_db,
 ):
-    # Ensure no plan exists for yesterday for this user (UTC midnight)
-    yesterday_date_for_del = datetime.now(timezone.utc).date() - timedelta(days=1)
-    utc_midnight_yesterday_for_del = datetime(
-        yesterday_date_for_del.year,
-        yesterday_date_for_del.month,
-        yesterday_date_for_del.day,
-        0,
-        0,
-        0,
-        tzinfo=timezone.utc,
-    )
-    await test_db.get_collection(DailyPlanModel).delete_many(
-        {"user_id": test_user_one.id, "plan_date": utc_midnight_yesterday_for_del}
+    # Clean up any existing plans for the user
+    await test_db.get_collection(DailyPlanModel).delete_many({"user_id": test_user_one.id})
+
+    # Create a daily plan for 3 days ago
+    three_days_ago_date = datetime.now(timezone.utc).date() - timedelta(days=3)
+    three_days_ago_datetime = datetime.combine(three_days_ago_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    create_payload_old = DailyPlanCreateRequest(plan_date=three_days_ago_datetime, time_windows=[])
+    await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload_old.model_dump(mode="json")
     )
 
-    # Create a daily plan for yesterday
-    yesterday_date = datetime.now(timezone.utc).date() - timedelta(days=1)
-    yesterday_datetime = datetime.combine(yesterday_date, datetime.min.time()).replace(
-        tzinfo=timezone.utc
-    )  # Ensure it's UTC aware
-
-    create_payload = DailyPlanCreateRequest(plan_date=yesterday_datetime, time_windows=[])
+    # Create a daily plan for 2 days ago (this is the most recent)
+    two_days_ago_date = datetime.now(timezone.utc).date() - timedelta(days=2)
+    two_days_ago_datetime = datetime.combine(two_days_ago_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    create_payload_recent = DailyPlanCreateRequest(plan_date=two_days_ago_datetime, time_windows=[])
     create_resp = await async_client.post(
-        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload_recent.model_dump(mode="json")
     )
     assert create_resp.status_code == 201
+    recent_plan_id = create_resp.json()["id"]
 
-    # Request yesterday's plan
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
+    # Request previous day's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/prev-day", headers=auth_headers_user_one)
     assert response.status_code == 200
     fetched_plan = DailyPlanResponse(**response.json())
-    assert fetched_plan.plan_date.date() == yesterday_date  # Comparing only date part is fine here
+    assert str(fetched_plan.id) == recent_plan_id
+    assert fetched_plan.plan_date.date() == two_days_ago_date
     assert fetched_plan.user_id == test_user_one.id
 
 
@@ -593,29 +583,17 @@ async def test_get_today_daily_plan_success(
     assert fetched_plan.user_id == test_user_one.id
 
 
-async def test_get_yesterday_daily_plan_not_found(
+async def test_get_prev_day_daily_plan_not_found(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     test_user_one: UserModel,
     test_db,
 ):
-    # Ensure no plan exists for yesterday for this user (UTC midnight)
-    yesterday_date_for_del = datetime.now(timezone.utc).date() - timedelta(days=1)
-    utc_midnight_yesterday_for_del = datetime(
-        yesterday_date_for_del.year,
-        yesterday_date_for_del.month,
-        yesterday_date_for_del.day,
-        0,
-        0,
-        0,
-        tzinfo=timezone.utc,
-    )
-    await test_db.get_collection(DailyPlanModel).delete_many(
-        {"user_id": test_user_one.id, "plan_date": utc_midnight_yesterday_for_del}
-    )
+    # Ensure no plans exist for this user at all
+    await test_db.get_collection(DailyPlanModel).delete_many({"user_id": test_user_one.id})
 
-    # Request yesterday's plan
-    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/yesterday", headers=auth_headers_user_one)
+    # Request previous day's plan
+    response = await async_client.get(f"{DAILY_PLANS_ENDPOINT}/prev-day", headers=auth_headers_user_one)
     assert response.status_code == 200
     assert response.json() is None
 
@@ -840,9 +818,9 @@ async def test_create_daily_plan_fail_task_category_mismatch(
 async def test_update_daily_plan_with_overlapping_time_windows(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
-    test_user_one: UserModel, # Renamed from test_user for consistency with existing tests
-    user_one_category: CategoryModel, # Renamed from created_category
-    test_db, # Added db_session equivalent for creating plan
+    test_user_one: UserModel,  # Renamed from test_user for consistency with existing tests
+    user_one_category: CategoryModel,  # Renamed from created_category
+    test_db,  # Added db_session equivalent for creating plan
 ):
     # a. Define initial valid time windows
     initial_time_windows = [
@@ -855,15 +833,13 @@ async def test_update_daily_plan_with_overlapping_time_windows(
     create_data = {
         "plan_date": plan_date_str,
         "time_windows": initial_time_windows,
-        "user_id": str(test_user_one.id), # Ensure user_id is part of creation if needed by service logic indirectly
+        "user_id": str(test_user_one.id),  # Ensure user_id is part of creation if needed by service logic indirectly
     }
     # Use DailyPlanCreateRequest for payload construction to ensure all fields are correct
     # However, the endpoint expects a raw dict, so model_dump it.
     # The direct dict usage above is fine as long as it matches the expected structure.
 
-    response = await async_client.post(
-        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_data
-    )
+    response = await async_client.post(DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_data)
     assert response.status_code == 201, f"Failed to create daily plan: {response.text}"
     created_plan_id = response.json()["id"]
 

@@ -19,6 +19,7 @@ const mockUser: User = {
   last_name: 'User',
   preferences: {
     pomodoro_timeout_minutes: 25,
+    pomodoro_working_interval: 25,
     system_notifications_enabled: true,
   },
 };
@@ -65,7 +66,8 @@ describe('UserSettingsPage', () => {
 
   it('pre-fills preferences form with user data', () => {
     renderComponent(mockUser);
-    expect(screen.getByRole('combobox', { name: 'Pomodoro timeout' })).toHaveValue(String(mockUser.preferences.pomodoro_timeout_minutes));
+    expect(screen.getByRole('combobox', { name: 'Pomodoro working interval' })).toHaveValue(String(mockUser.preferences.pomodoro_working_interval));
+    expect(screen.getByRole('combobox', { name: 'Pomodoro break duration' })).toHaveValue(String(mockUser.preferences.pomodoro_timeout_minutes));
     expect(screen.getByRole('checkbox', { name: 'System notifications' })).toBeChecked();
   });
 
@@ -76,7 +78,8 @@ describe('UserSettingsPage', () => {
     await act(async () => {
       fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Updated' } });
       fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpassword123' } });
-      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro timeout' }), { target: { value: '30' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro working interval' }), { target: { value: '45' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro break duration' }), { target: { value: '5' } });
       fireEvent.click(screen.getByRole('checkbox', { name: 'System notifications' }));
       fireEvent.click(screen.getByRole('button', { name: 'Update Account' }));
     });
@@ -88,7 +91,8 @@ describe('UserSettingsPage', () => {
         last_name: 'User',
         password: 'newpassword123',
         preferences: {
-          pomodoro_timeout_minutes: 30,
+          pomodoro_timeout_minutes: 5,
+          pomodoro_working_interval: 45,
           system_notifications_enabled: false,
         },
       });
@@ -140,7 +144,7 @@ describe('UserSettingsPage', () => {
     renderComponent(mockUser);
 
     await act(async () => {
-      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro timeout' }), { target: { value: '45' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro working interval' }), { target: { value: '60' } });
       fireEvent.click(screen.getByRole('button', { name: 'Update Account' }));
     });
 
@@ -150,7 +154,8 @@ describe('UserSettingsPage', () => {
         first_name: 'Test',
         last_name: 'User',
         preferences: {
-          pomodoro_timeout_minutes: 45,
+          pomodoro_timeout_minutes: 25,
+          pomodoro_working_interval: 60,
           system_notifications_enabled: true,
         },
       });

@@ -25,6 +25,7 @@ const mockUser: User = {
   preferences: {
     pomodoro_timeout_minutes: 25,
     system_notifications_enabled: true,
+    pomodoro_working_interval: 25,
   },
 };
 

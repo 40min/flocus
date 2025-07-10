@@ -7,7 +7,8 @@ from pydantic import ConfigDict, EmailStr
 class UserPreferences(EmbeddedModel):
     """User-specific preferences"""
 
-    pomodoro_timeout_minutes: int = ODMField(default=25)
+    pomodoro_timeout_minutes: int = ODMField(default=5)
+    pomodoro_working_interval: int = ODMField(default=25)
     system_notifications_enabled: bool = ODMField(default=True)
 
 

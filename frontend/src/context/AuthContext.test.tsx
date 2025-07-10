@@ -65,6 +65,7 @@ describe('AuthContext', () => {
       last_name: 'User',
       preferences: {
         pomodoro_timeout_minutes: 25,
+        pomodoro_working_interval: 25,
         system_notifications_enabled: true,
       },
     };
@@ -102,6 +103,7 @@ describe('AuthContext', () => {
       last_name: 'User',
       preferences: {
         pomodoro_timeout_minutes: 25,
+        pomodoro_working_interval: 25,
         system_notifications_enabled: true,
       },
     };
@@ -144,6 +146,7 @@ describe('AuthContext', () => {
       last_name: 'User',
       preferences: {
         pomodoro_timeout_minutes: 25,
+        pomodoro_working_interval: 25,
         system_notifications_enabled: true,
       },
     };

@@ -190,14 +190,14 @@ describe('MyDayPage', () => {
           {
             time_window: { id: 'tw_yesterday_1', description: 'Morning session', start_time: 540, end_time: 660, category: mockCategories[0], day_template_id: '', user_id: 'user1', is_deleted: false },
             tasks: [
-              { id: 'task1', title: 'Completed Task', is_completed: true, status: 'done', priority: 'medium', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
-              { id: 'task2', title: 'Uncompleted Task', is_completed: false, status: 'in_progress', priority: 'high', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
+              { id: 'task1', title: 'Completed Task',  status: 'done', priority: 'medium', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
+              { id: 'task2', title: 'Uncompleted Task',  status: 'in_progress', priority: 'high', description: '', user_id: 'user1', category_id: 'cat1' } as Task,
             ],
           },
            {
             time_window: { id: 'tw_yesterday_2', description: 'Afternoon session', start_time: 840, end_time: 960, category: mockCategories[1], day_template_id: '', user_id: 'user1', is_deleted: false },
             tasks: [
-              { id: 'task3', title: 'Another Uncompleted Task', is_completed: false, status: 'pending', priority: 'low', description: '', user_id: 'user1', category_id: 'cat2' } as Task,
+              { id: 'task3', title: 'Another Uncompleted Task',  status: 'pending', priority: 'low', description: '', user_id: 'user1', category_id: 'cat2' } as Task,
             ],
           },
         ],

@@ -363,7 +363,7 @@ const MyDayPage: React.FC = () => {
                                 start_time: alloc.time_window.start_time,
                                 end_time: alloc.time_window.end_time,
                                 category_id: alloc.time_window.category?.id || null,
-                                task_ids: alloc.tasks.filter(task => !task.is_completed).map(task => task.id),
+                                task_ids: alloc.tasks.filter(task => task.status !== 'done').map(task => task.id),
                               }));
                               createPlanMutation.mutate(timeWindowsToCarryOver);
                             }

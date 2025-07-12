@@ -5,6 +5,7 @@ import { AuthContext, AuthContextType } from '../context/AuthContext';
 import UserSettingsPage from './UserSettingsPage';
 import * as userService from '../services/userService';
 import { User } from '../types/user';
+import { MemoryRouter } from 'react-router-dom';
 
 jest.mock('../services/userService');
 const mockedUpdateUser = userService.updateUser as jest.Mock;
@@ -21,6 +22,7 @@ const mockUser: User = {
     pomodoro_timeout_minutes: 25,
     pomodoro_working_interval: 25,
     system_notifications_enabled: true,
+    pomodoro_timer_sound: 'none',
   },
 };
 
@@ -38,9 +40,11 @@ const renderComponent = (user: User | null) => {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={authContextValue}>
-        <UserSettingsPage />
-      </AuthContext.Provider>
+      <MemoryRouter>
+        <AuthContext.Provider value={authContextValue}>
+          <UserSettingsPage />
+        </AuthContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 };
@@ -69,6 +73,7 @@ describe('UserSettingsPage', () => {
     expect(screen.getByRole('combobox', { name: 'Pomodoro working interval' })).toHaveValue(String(mockUser.preferences.pomodoro_working_interval));
     expect(screen.getByRole('combobox', { name: 'Pomodoro break duration' })).toHaveValue(String(mockUser.preferences.pomodoro_timeout_minutes));
     expect(screen.getByRole('checkbox', { name: 'System notifications' })).toBeChecked();
+    expect(screen.getByLabelText('Timer Sound')).toHaveValue('none');
   });
 
   it('submits form with updated data and shows success message', async () => {
@@ -80,6 +85,7 @@ describe('UserSettingsPage', () => {
       fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpassword123' } });
       fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro working interval' }), { target: { value: '45' } });
       fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro break duration' }), { target: { value: '5' } });
+            fireEvent.change(screen.getByLabelText('Timer Sound'), { target: { value: 'ding.mp3' } });
       fireEvent.click(screen.getByRole('checkbox', { name: 'System notifications' }));
       fireEvent.click(screen.getByRole('button', { name: 'Update Account' }));
     });
@@ -94,6 +100,7 @@ describe('UserSettingsPage', () => {
           pomodoro_timeout_minutes: 5,
           pomodoro_working_interval: 45,
           system_notifications_enabled: false,
+          pomodoro_timer_sound: 'ding.mp3',
         },
       });
     });
@@ -157,6 +164,7 @@ describe('UserSettingsPage', () => {
           pomodoro_timeout_minutes: 25,
           pomodoro_working_interval: 60,
           system_notifications_enabled: true,
+          pomodoro_timer_sound: 'none',
         },
       });
     });

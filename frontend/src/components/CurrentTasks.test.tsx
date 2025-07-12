@@ -4,12 +4,12 @@ import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CurrentTasks from './CurrentTasks';
 import { useCurrentTimeWindow } from '../hooks/useCurrentTimeWindow';
-import { useSharedTimerContext } from '../context/SharedTimerContext';
+import { useSharedTimerContext, SharedTimerProvider } from '../context/SharedTimerContext';
+import { AuthContext, AuthContextType } from '../context/AuthContext';
 import { DndContext } from '@dnd-kit/core';
 import { Task } from 'types/task';
 import { TimeWindow } from 'types/timeWindow';
 import { useDeleteTask, useUpdateTask } from 'hooks/useTasks';
-import { SharedTimerProvider } from '../context/SharedTimerContext';
 import { getTodayStats } from '../services/userDailyStatsService';
 
 jest.mock('../hooks/useCurrentTimeWindow');
@@ -43,14 +43,27 @@ const mockTasks: Task[] = [
 
 const queryClient = new QueryClient();
 
-const renderWithDnd = (component: React.ReactElement) => {
+const renderWithDnd = (component: React.ReactElement, authContextValue?: Partial<AuthContextType>) => {
+  const defaultAuthContextValue: AuthContextType = {
+    user: null,
+    token: "test-token",
+    login: jest.fn(),
+    logout: jest.fn(),
+    isAuthenticated: true,
+    isLoading: false,
+  };
+
+  const mergedAuthContextValue = { ...defaultAuthContextValue, ...authContextValue };
+
   return render(
     <QueryClientProvider client={queryClient}>
-      <SharedTimerProvider>
-        <DndContext onDragEnd={() => {}}>
-          {component}
-        </DndContext>
-      </SharedTimerProvider>
+      <AuthContext.Provider value={mergedAuthContextValue as AuthContextType}>
+        <SharedTimerProvider>
+          <DndContext onDragEnd={() => {}}>
+            {component}
+          </DndContext>
+        </SharedTimerProvider>
+      </AuthContext.Provider>
     </QueryClientProvider>
   );
 };

@@ -132,7 +132,11 @@ async def test_update_user(async_client: AsyncClient, user_and_token):
     assert user_id is not None, "User ID not found in fixture response"
     update_data = {
         "first_name": "UpdatedFirstName",
-        "preferences": {"pomodoro_timeout_minutes": 10, "pomodoro_working_interval": 30},
+        "preferences": {
+            "pomodoro_timeout_minutes": 10,
+            "pomodoro_working_interval": 30,
+            "pomodoro_timer_sound": "bell.mp3",
+        },
     }
     resp = await async_client.put(f"{settings.API_V1_STR}/users/{user_id}", json=update_data, headers=auth)
     assert resp.status_code == 200
@@ -209,6 +213,7 @@ async def test_register_user_standalone(async_client, test_db):
     assert response_data["preferences"]["pomodoro_timeout_minutes"] == 5
     assert response_data["preferences"]["pomodoro_working_interval"] == 25
     assert response_data["preferences"]["system_notifications_enabled"] is True
+    assert response_data["preferences"]["pomodoro_timer_sound"] == "none"
     assert "hashed_password" not in response_data
 
 

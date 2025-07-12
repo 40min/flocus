@@ -14,6 +14,7 @@ const preferencesSchema = z.object({
   pomodoro_timeout_minutes: z.coerce.number(),
   pomodoro_working_interval: z.coerce.number(),
   system_notifications_enabled: z.boolean(),
+  pomodoro_timer_sound: z.string(),
 });
 
 const userSettingsSchema = z.object({
@@ -41,6 +42,7 @@ const UserSettingsPage: React.FC = () => {
         pomodoro_timeout_minutes: user?.preferences?.pomodoro_timeout_minutes || 5,
         pomodoro_working_interval: user?.preferences?.pomodoro_working_interval || 25,
         system_notifications_enabled: user?.preferences?.system_notifications_enabled ?? true,
+        pomodoro_timer_sound: user?.preferences?.pomodoro_timer_sound || 'none',
       }
     }
   });
@@ -72,6 +74,7 @@ const UserSettingsPage: React.FC = () => {
         setValue('preferences.pomodoro_timeout_minutes', user.preferences.pomodoro_timeout_minutes);
         setValue('preferences.pomodoro_working_interval', user.preferences.pomodoro_working_interval);
         setValue('preferences.system_notifications_enabled', user.preferences.system_notifications_enabled);
+        setValue('preferences.pomodoro_timer_sound', user.preferences.pomodoro_timer_sound || 'none');
       }
     } else {
       // If user logs out or becomes null, clear the form.
@@ -168,6 +171,17 @@ const UserSettingsPage: React.FC = () => {
                 <option value={30}>30 minutes</option>
                 <option value={45}>45 minutes</option>
                 <option value={60}>60 minutes</option>
+              </Input>
+            </div>
+            <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
+              <div>
+                <h3 className="text-base font-medium text-gray-800">Timer Sound</h3>
+              </div>
+              <Input as="select" className="h-11 text-sm w-40" aria-label="Timer Sound" {...register('preferences.pomodoro_timer_sound')}>
+                <option value={'none'}>None</option>
+                <option value={'ding.mp3'}>Ding</option>
+                <option value={'qpop.mp3'}>Pop</option>
+                <option value={'super_mario_coin.mp3'}>Mario Coin</option>
               </Input>
             </div>
             <div className="flex items-center justify-between py-4 ">

@@ -37,7 +37,19 @@ jest.mock('../components/modals/TaskStatisticsModal', () => ({
 
 const mockedTaskService = taskService as jest.Mocked<typeof taskService>;
 
-const mockUser: User = { id: 'user1', username: 'testuser', email: 'test@example.com', first_name: 'Test', last_name: 'User', preferences: { pomodoro_timeout_minutes: 25, system_notifications_enabled: true, pomodoro_working_interval: 25 } };
+const mockUser: User = {
+  id: 'user1',
+  username: 'testuser',
+  email: 'test@example.com',
+  first_name: 'Test',
+  last_name: 'User',
+  preferences: {
+    pomodoro_timeout_minutes: 25,
+    system_notifications_enabled: true,
+    pomodoro_working_interval: 25,
+    pomodoro_timer_sound: 'bell.mp3'
+  }
+};
 const mockAuthContextValue: AuthContextType = {
   isAuthenticated: true,
   user: mockUser,

@@ -28,13 +28,20 @@ const mockTasks: Task[] = [
   { id: 'task2', title: 'Task 2', status: 'in_progress', priority: 'high', user_id: 'user1' },
 ];
 
+import { MemoryRouter } from 'react-router-dom';
+import { AuthProvider } from '../context/AuthContext';
+
 describe('TimeWindowBalloon', () => {
   const renderWithClient = (ui: React.ReactElement) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <SharedTimerProvider>
-          {ui}
-        </SharedTimerProvider>
+        <MemoryRouter>
+          <AuthProvider>
+            <SharedTimerProvider>
+              {ui}
+            </SharedTimerProvider>
+          </AuthProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
   };

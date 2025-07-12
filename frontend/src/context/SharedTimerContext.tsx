@@ -2,6 +2,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect, useCa
 import { useUpdateTask } from '../hooks/useTasks';
 import { useQueryClient } from '@tanstack/react-query';
 import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
+import { useAuth } from './AuthContext';
 
 const WORK_DURATION = 25 * 60;
 const SHORT_BREAK_DURATION = 5 * 60;
@@ -118,6 +119,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(initialState.currentTaskDescription);
 
   const { mutateAsync: updateTask } = useUpdateTask();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -163,6 +165,13 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       } catch (error) {
         console.error("Failed to increment pomodoro count:", error);
         // Optionally, add logic to handle this failure, e.g., retry or notify user
+      }
+      if (user?.preferences.pomodoro_timer_sound && user.preferences.pomodoro_timer_sound !== 'none') {
+        try {
+          new Audio(`/sounds/${user.preferences.pomodoro_timer_sound}`).play();
+        } catch (err) {
+          console.error("Failed to play timer sound:", err);
+        }
       }
     } else {
       setMode('work');

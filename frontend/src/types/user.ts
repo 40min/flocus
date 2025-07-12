@@ -2,6 +2,7 @@ export interface UserPreferences {
   pomodoro_timeout_minutes: number;
   pomodoro_working_interval: number;
   system_notifications_enabled: boolean;
+  pomodoro_timer_sound: string;
 }
 export interface User {
   id: string;

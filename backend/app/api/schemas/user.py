@@ -18,6 +18,7 @@ class UserPreferencesSchema(BaseModel):
     pomodoro_timeout_minutes: int
     pomodoro_working_interval: int
     system_notifications_enabled: bool
+    pomodoro_timer_sound: str
 
     model_config = ConfigDict(from_attributes=True)
 

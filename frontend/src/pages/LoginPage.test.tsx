@@ -26,6 +26,7 @@ const mockUser: User = {
     pomodoro_timeout_minutes: 25,
     system_notifications_enabled: true,
     pomodoro_working_interval: 25,
+    pomodoro_timer_sound: 'bell.mp3',
   },
 };
 

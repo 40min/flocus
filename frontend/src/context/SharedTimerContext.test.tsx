@@ -4,6 +4,8 @@ import { SharedTimerProvider, useSharedTimerContext } from './SharedTimerContext
 import { getTodayStats } from '../services/userDailyStatsService';
 import { useUpdateTask } from '../hooks/useTasks';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { AuthContext, AuthContextType } from '../context/AuthContext';
+import { MemoryRouter } from 'react-router-dom';
 
 jest.mock('../hooks/useTasks');
 jest.mock('../services/userDailyStatsService');
@@ -81,13 +83,46 @@ const TestComponent: React.FC<TestComponentProps> = ({
 const queryClient = new QueryClient();
 const mockedUseQueryClient = useQueryClient as jest.Mock;
 
-const renderWithProviders = async (component: React.ReactElement) => {
-  await act(async () => {
-    render(
+const defaultMockUser = {
+  id: 'user1',
+  username: 'testuser',
+  email: 'test@example.com',
+  first_name: 'Test',
+  last_name: 'User',
+  preferences: {
+    pomodoro_timeout_minutes: 25,
+    pomodoro_working_interval: 25,
+    system_notifications_enabled: true,
+    pomodoro_timer_sound: 'none',
+  },
+};
+
+// Modified renderWithProviders to accept custom authContextValue
+const renderWithProviders = async (
+  component: React.ReactElement,
+  customAuthContextValue?: Partial<AuthContextType>
+) => {
+  const defaultAuthContextValue: AuthContextType = {
+    isAuthenticated: true,
+    user: defaultMockUser,
+    token: 'test-token',
+    login: jest.fn(),
+    logout: jest.fn(),
+    isLoading: false,
+  };
+
+  const authContextValue = { ...defaultAuthContextValue, ...customAuthContextValue };
+
+  await act(() => {
+    return render(
       <QueryClientProvider client={queryClient}>
-        <SharedTimerProvider>
-          {component}
-        </SharedTimerProvider>
+        <MemoryRouter>
+          <AuthContext.Provider value={authContextValue}>
+            <SharedTimerProvider>
+              {component}
+            </SharedTimerProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
   });
@@ -202,7 +237,6 @@ describe('SharedTimerContext', () => {
     expect(screen.getByTestId('pomodoros-completed')).toHaveTextContent('1');
   });
 
-  // temporary disabled tests for localStorage functionality (1)
   it('saves and loads state from localStorage', async () => {
     (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 2 });
     const state = {
@@ -240,6 +274,73 @@ describe('SharedTimerContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('time-remaining')).toHaveTextContent('08:10');
     });
+  });
+
+  it('plays a sound on mode transition if user preference is set', async () => {
+    const mockAudio = {
+      play: jest.fn().mockResolvedValue(undefined),
+    };
+    const mockAudioConstructor = jest.spyOn(window, 'Audio').mockImplementation(() => mockAudio as any);
+
+    const authContextWithSound = {
+      user: {
+        ...defaultMockUser,
+        preferences: {
+          ...defaultMockUser.preferences,
+          pomodoro_timer_sound: 'bell.mp3',
+        },
+      },
+    };
+
+    await renderWithProviders(<TestComponent />, authContextWithSound);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(WORK_DURATION * 1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
+    });
+
+    expect(mockAudioConstructor).toHaveBeenCalledWith('/sounds/bell.mp3');
+    expect(mockAudio.play).toHaveBeenCalledTimes(1);
+
+    mockAudioConstructor.mockRestore();
+  });
+
+  it('does not play a sound on mode transition if user preference is "none"', async () => {
+    const mockAudio = {
+      play: jest.fn().mockResolvedValue(undefined),
+    };
+    const mockAudioConstructor = jest.spyOn(window, 'Audio').mockImplementation(() => mockAudio as any);
+
+    // Using default user with 'none' sound preference
+    await renderWithProviders(<TestComponent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Start/Pause'));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(WORK_DURATION * 1000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mode')).toHaveTextContent('shortBreak');
+    });
+
+    expect(mockAudioConstructor).not.toHaveBeenCalled();
+    expect(mockAudio.play).not.toHaveBeenCalled();
+
+    mockAudioConstructor.mockRestore();
   });
 });
 
@@ -394,7 +495,7 @@ describe('SharedTimerContext - Task interaction', () => {
     const mockQueryClient = {
       invalidateQueries: jest.fn(),
     };
-    mockedUseQueryClient.mockReturnValue(mockQueryClient); // Use the top-level mock
+    mockedUseQueryClient.mockReturnValue(mockQueryClient);
 
     await renderWithProviders(<TestComponent initialTaskId="task-to-mark-done" initialIsActive={true} />);
 

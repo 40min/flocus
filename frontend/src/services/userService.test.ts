@@ -11,7 +11,12 @@ const mockUser: User = {
   email: 'test@example.com',
   first_name: 'Test',
   last_name: 'User',
-  preferences: { pomodoro_timeout_minutes: 5, pomodoro_working_interval: 25, system_notifications_enabled: true },
+  preferences: {
+    pomodoro_timeout_minutes: 5,
+    pomodoro_working_interval: 25,
+    system_notifications_enabled: true,
+    pomodoro_timer_sound: 'none'
+ },
 };
 
 describe('userService', () => {

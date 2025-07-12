@@ -59,14 +59,21 @@ jest.mock('@dnd-kit/core', () => ({
   })),
 }));
 
+import { MemoryRouter } from 'react-router-dom';
+import { AuthProvider } from '../context/AuthContext';
+
 const queryClient = new QueryClient();
 
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <QueryClientProvider client={queryClient}>
-      <SharedTimerProvider>
-        {component}
-      </SharedTimerProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <SharedTimerProvider>
+            {component}
+          </SharedTimerProvider>
+        </AuthProvider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 };

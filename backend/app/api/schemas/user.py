@@ -16,6 +16,7 @@ class UserBase(BaseModel):
 
 class UserPreferencesSchema(BaseModel):
     pomodoro_timeout_minutes: int
+    pomodoro_long_timeout_minutes: int
     pomodoro_working_interval: int
     system_notifications_enabled: bool
     pomodoro_timer_sound: str
@@ -36,6 +37,7 @@ class UserCreateRequest(UserBase):
 
 class UserPreferencesUpdateSchema(BaseModel):
     pomodoro_timeout_minutes: Optional[int] = None
+    pomodoro_long_timeout_minutes: Optional[int] = None
     pomodoro_working_interval: Optional[int] = None
     system_notifications_enabled: Optional[bool] = None
     pomodoro_timer_sound: Optional[str] = None

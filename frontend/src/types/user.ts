@@ -1,5 +1,6 @@
 export interface UserPreferences {
   pomodoro_timeout_minutes: number;
+  pomodoro_long_timeout_minutes: number;
   pomodoro_working_interval: number;
   system_notifications_enabled: boolean;
   pomodoro_timer_sound: string;

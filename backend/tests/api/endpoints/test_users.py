@@ -80,6 +80,7 @@ async def test_register_user_basic(async_client: AsyncClient, test_db):  # Added
     assert "preferences" in resp.json()
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 5
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
+    assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
     assert resp.json()["email"] == USER_DATA_BASIC["email"]
     assert resp.json()["username"] == USER_DATA_BASIC["username"]
@@ -106,6 +107,7 @@ async def test_get_current_user(async_client: AsyncClient, user_and_token):
     assert "preferences" in resp.json()
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 5
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
+    assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
     assert resp.json()["email"] == original_data["email"]
 
@@ -119,6 +121,7 @@ async def test_get_user_by_id(async_client: AsyncClient, user_and_token):
     resp = await async_client.get(f"{settings.API_V1_STR}/users/{user_id}", headers=auth)
     assert resp.status_code == 200
     assert "preferences" in resp.json()
+    assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 5
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
@@ -134,12 +137,14 @@ async def test_update_user(async_client: AsyncClient, user_and_token):
         "first_name": "UpdatedFirstName",
         "preferences": {
             "pomodoro_timeout_minutes": 10,
+            "pomodoro_long_timeout_minutes": 20,
             "pomodoro_working_interval": 30,
             "pomodoro_timer_sound": "bell.mp3",
         },
     }
     resp = await async_client.put(f"{settings.API_V1_STR}/users/{user_id}", json=update_data, headers=auth)
     assert resp.status_code == 200
+    assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 20
     assert resp.json()["first_name"] == update_data["first_name"]
     # Check that preferences are updated
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 10
@@ -209,6 +214,7 @@ async def test_register_user_standalone(async_client, test_db):
     assert "username" in response_data
     assert response_data["username"] == user_data_payload["username"]
     assert "id" in response_data
+    assert response_data["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert "password" not in response_data
     assert "preferences" in response_data
     assert response_data["preferences"]["pomodoro_timeout_minutes"] == 5

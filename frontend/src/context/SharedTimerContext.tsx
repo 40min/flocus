@@ -4,25 +4,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
 import { useAuth } from './AuthContext';
 
-const WORK_DURATION = 25 * 60;
-const SHORT_BREAK_DURATION = 5 * 60;
-const LONG_BREAK_DURATION = 15 * 60;
+
+
+
 const CYCLES_BEFORE_LONG_BREAK = 4;
 const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
 const EXPIRATION_THRESHOLD = 60 * 60 * 1000; // 1 hour
 
 type Mode = 'work' | 'shortBreak' | 'longBreak';
 
-const DURATION_MAP: Record<Mode, number> = {
-  work: WORK_DURATION,
-  shortBreak: SHORT_BREAK_DURATION,
-  longBreak: LONG_BREAK_DURATION,
-};
-
 // Default state constants
 const DEFAULT_TIMER_STATE = {
   mode: 'work' as Mode,
-  timeRemaining: WORK_DURATION,
+  timeRemaining: 25 * 60, // Default to 25 minutes for work
   isActive: false,
   pomodorosCompleted: 0,
   currentTaskId: undefined as string | undefined,
@@ -122,6 +116,12 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const DURATION_MAP: Record<Mode, number> = {
+    work: (user?.preferences?.pomodoro_working_interval || 25) * 60,
+    shortBreak: (user?.preferences?.pomodoro_timeout_minutes || 5) * 60,
+    longBreak: (user?.preferences?.pomodoro_long_timeout_minutes || 15) * 60,
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -175,9 +175,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     } else {
       setMode('work');
-      setTimeRemaining(WORK_DURATION);
+      setTimeRemaining(DURATION_MAP.work);
     }
-  }, [mode, pomodorosCompleted, stopCurrentTask]);
+  }, [mode, pomodorosCompleted, stopCurrentTask, DURATION_MAP, user]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -233,14 +233,14 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     await stopCurrentTask();
     setIsActive(false);
     setTimeRemaining(DURATION_MAP[mode]);
-  }, [stopCurrentTask, mode]);
+  }, [stopCurrentTask, mode, DURATION_MAP]);
 
   const resetForNewTask = useCallback(async () => {
     await stopCurrentTask();
     setIsActive(false);
     setMode('work');
-    setTimeRemaining(WORK_DURATION);
-  }, [stopCurrentTask]);
+    setTimeRemaining(DURATION_MAP.work);
+  }, [stopCurrentTask, DURATION_MAP]);
 
   const handleSkip = useCallback(async () => {
     await switchToNextMode();

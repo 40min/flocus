@@ -8,6 +8,7 @@ class UserPreferences(EmbeddedModel):
     """User-specific preferences"""
 
     pomodoro_timeout_minutes: int = ODMField(default=5)
+    pomodoro_long_timeout_minutes: int = ODMField(default=15)
     pomodoro_working_interval: int = ODMField(default=25)
     system_notifications_enabled: bool = ODMField(default=True)
     pomodoro_timer_sound: str = ODMField(default="none")

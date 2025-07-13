@@ -20,6 +20,7 @@ const mockUser: User = {
   last_name: 'User',
   preferences: {
     pomodoro_timeout_minutes: 25,
+    pomodoro_long_timeout_minutes: 15,
     pomodoro_working_interval: 25,
     system_notifications_enabled: true,
     pomodoro_timer_sound: 'none',
@@ -71,6 +72,7 @@ describe('UserSettingsPage', () => {
   it('pre-fills preferences form with user data', () => {
     renderComponent(mockUser);
     expect(screen.getByRole('combobox', { name: 'Pomodoro working interval' })).toHaveValue(String(mockUser.preferences.pomodoro_working_interval));
+    expect(screen.getByRole('combobox', { name: 'Pomodoro long break duration' })).toHaveValue(String(mockUser.preferences.pomodoro_long_timeout_minutes));
     expect(screen.getByRole('combobox', { name: 'Pomodoro break duration' })).toHaveValue(String(mockUser.preferences.pomodoro_timeout_minutes));
     expect(screen.getByRole('checkbox', { name: 'System notifications' })).toBeChecked();
     expect(screen.getByLabelText('Timer Sound')).toHaveValue('none');
@@ -83,6 +85,7 @@ describe('UserSettingsPage', () => {
     await act(async () => {
       fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Updated' } });
       fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpassword123' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro long break duration' }), { target: { value: '20' } });
       fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro working interval' }), { target: { value: '45' } });
       fireEvent.change(screen.getByRole('combobox', { name: 'Pomodoro break duration' }), { target: { value: '5' } });
             fireEvent.change(screen.getByLabelText('Timer Sound'), { target: { value: 'ding.mp3' } });
@@ -98,6 +101,7 @@ describe('UserSettingsPage', () => {
         password: 'newpassword123',
         preferences: {
           pomodoro_timeout_minutes: 5,
+          pomodoro_long_timeout_minutes: 20,
           pomodoro_working_interval: 45,
           system_notifications_enabled: false,
           pomodoro_timer_sound: 'ding.mp3',
@@ -162,6 +166,7 @@ describe('UserSettingsPage', () => {
         last_name: 'User',
         preferences: {
           pomodoro_timeout_minutes: 25,
+          pomodoro_long_timeout_minutes: 15,
           pomodoro_working_interval: 60,
           system_notifications_enabled: true,
           pomodoro_timer_sound: 'none',

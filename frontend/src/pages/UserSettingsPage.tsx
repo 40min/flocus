@@ -12,6 +12,7 @@ import { ApiError } from '../lib/errors';
 
 const preferencesSchema = z.object({
   pomodoro_timeout_minutes: z.coerce.number(),
+  pomodoro_long_timeout_minutes: z.coerce.number(),
   pomodoro_working_interval: z.coerce.number(),
   system_notifications_enabled: z.boolean(),
   pomodoro_timer_sound: z.string(),
@@ -42,6 +43,7 @@ const UserSettingsPage: React.FC = () => {
         pomodoro_timeout_minutes: user?.preferences?.pomodoro_timeout_minutes || 5,
         pomodoro_working_interval: user?.preferences?.pomodoro_working_interval || 25,
         system_notifications_enabled: user?.preferences?.system_notifications_enabled ?? true,
+        pomodoro_long_timeout_minutes: user?.preferences?.pomodoro_long_timeout_minutes || 15,
         pomodoro_timer_sound: user?.preferences?.pomodoro_timer_sound || 'none',
       }
     }
@@ -71,6 +73,7 @@ const UserSettingsPage: React.FC = () => {
       setValue('first_name', user.first_name || '');
       setValue('last_name', user.last_name || '');
       if (user.preferences) {
+        setValue('preferences.pomodoro_long_timeout_minutes', user.preferences.pomodoro_long_timeout_minutes);
         setValue('preferences.pomodoro_timeout_minutes', user.preferences.pomodoro_timeout_minutes);
         setValue('preferences.pomodoro_working_interval', user.preferences.pomodoro_working_interval);
         setValue('preferences.system_notifications_enabled', user.preferences.system_notifications_enabled);
@@ -171,6 +174,17 @@ const UserSettingsPage: React.FC = () => {
                 <option value={30}>30 minutes</option>
                 <option value={45}>45 minutes</option>
                 <option value={60}>60 minutes</option>
+              </Input>
+            </div>
+            <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
+              <div>
+                <h3 className="text-base font-medium text-gray-800">Pomodoro long break duration</h3>
+              </div>
+              <Input as="select" className="h-11 text-sm w-40" aria-label="Pomodoro long break duration" {...register('preferences.pomodoro_long_timeout_minutes')}>
+                <option value={15}>15 minutes</option>
+                <option value={20}>20 minutes</option>
+                <option value={25}>25 minutes</option>
+                <option value={30}>30 minutes</option>
               </Input>
             </div>
             <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">

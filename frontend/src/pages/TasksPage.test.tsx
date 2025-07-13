@@ -45,6 +45,7 @@ const mockUser: User = {
   last_name: 'User',
   preferences: {
     pomodoro_timeout_minutes: 25,
+    pomodoro_long_timeout_minutes: 15,
     system_notifications_enabled: true,
     pomodoro_working_interval: 25,
     pomodoro_timer_sound: 'bell.mp3'

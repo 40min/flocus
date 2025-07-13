@@ -38,6 +38,7 @@ class UserPreferencesUpdateSchema(BaseModel):
     pomodoro_timeout_minutes: Optional[int] = None
     pomodoro_working_interval: Optional[int] = None
     system_notifications_enabled: Optional[bool] = None
+    pomodoro_timer_sound: Optional[str] = None
 
 
 class UserUpdateRequest(BaseModel):

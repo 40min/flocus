@@ -90,16 +90,8 @@ class UserService:
                 raise EmailAlreadyExistsException(email=user_data.email)
             existing_user.email = user_data.email
 
-        if user_data.first_name is not None:
-            existing_user.first_name = user_data.first_name
-        if user_data.preferences:
-            prefs_update_data = user_data.preferences.model_dump(exclude_unset=True)
-            for key, value in prefs_update_data.items():
-                if hasattr(existing_user.preferences, key):
-                    setattr(existing_user.preferences, key, value)
-        if user_data.last_name is not None:
-            existing_user.last_name = user_data.last_name
-        if user_data.password:  # Ensure password is not empty string before hashing
+        existing_user = UserMapper.apply_update_to_model(existing_user, user_data)
+        if user_data.password:
             existing_user.hashed_password = hash_password(user_data.password)
 
         updated_user = await self.db.save(existing_user)

@@ -144,6 +144,7 @@ async def test_update_user(async_client: AsyncClient, user_and_token):
     # Check that preferences are updated
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 10
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 30
+    assert resp.json()["preferences"]["pomodoro_timer_sound"] == "bell.mp3"
     # Check that non-updated preference field is untouched
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
 

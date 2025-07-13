@@ -19,7 +19,7 @@ const mockUser: User = {
   first_name: 'Test',
   last_name: 'User',
   preferences: {
-    pomodoro_timeout_minutes: 25,
+    pomodoro_timeout_minutes: 5,
     pomodoro_long_timeout_minutes: 15,
     pomodoro_working_interval: 25,
     system_notifications_enabled: true,
@@ -165,7 +165,7 @@ describe('UserSettingsPage', () => {
         first_name: 'Test',
         last_name: 'User',
         preferences: {
-          pomodoro_timeout_minutes: 25,
+          pomodoro_timeout_minutes: 5,
           pomodoro_long_timeout_minutes: 15,
           pomodoro_working_interval: 60,
           system_notifications_enabled: true,

@@ -170,10 +170,8 @@ const UserSettingsPage: React.FC = () => {
               </div>
               <Input as="select" className="h-11 text-sm w-40" aria-label="Pomodoro break duration" {...register('preferences.pomodoro_timeout_minutes')}>
                 <option value={5}>5 minutes</option>
-                <option value={25}>25 minutes</option>
-                <option value={30}>30 minutes</option>
-                <option value={45}>45 minutes</option>
-                <option value={60}>60 minutes</option>
+                <option value={10}>10 minutes</option>
+                <option value={15}>15 minutes</option>
               </Input>
             </div>
             <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
@@ -181,10 +179,9 @@ const UserSettingsPage: React.FC = () => {
                 <h3 className="text-base font-medium text-gray-800">Pomodoro long break duration</h3>
               </div>
               <Input as="select" className="h-11 text-sm w-40" aria-label="Pomodoro long break duration" {...register('preferences.pomodoro_long_timeout_minutes')}>
+                <option value={10}>10 minutes</option>
                 <option value={15}>15 minutes</option>
                 <option value={20}>20 minutes</option>
-                <option value={25}>25 minutes</option>
-                <option value={30}>30 minutes</option>
               </Input>
             </div>
             <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">

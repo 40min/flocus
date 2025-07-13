@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useMemo } from 'react';
 import { useUpdateTask } from '../hooks/useTasks';
 import { useQueryClient } from '@tanstack/react-query';
 import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
@@ -116,11 +116,11 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const DURATION_MAP: Record<Mode, number> = {
+  const DURATION_MAP = useMemo(() => ({
     work: (user?.preferences?.pomodoro_working_interval || 25) * 60,
     shortBreak: (user?.preferences?.pomodoro_timeout_minutes || 5) * 60,
     longBreak: (user?.preferences?.pomodoro_long_timeout_minutes || 15) * 60,
-  };
+  }), [user?.preferences]);
 
   useEffect(() => {
     const fetchStats = async () => {

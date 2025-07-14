@@ -5,10 +5,10 @@ type: feature
 layer: presentation
 owner: '@frontend-team'
 version: v1
-status: planned
+status: current
 created: 2025-07-13
 updated: 2025-07-13
-tags: [notifications, timer, feature, planned]
+tags: [notifications, timer, feature]
 depends_on: [ARCH-feature-user-preferences]
 referenced_by: []
 ---

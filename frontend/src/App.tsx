@@ -1,5 +1,6 @@
 import { useMenuState } from './hooks/useMenuState';
-import React from 'react';
+import React, { useEffect } from 'react';
+
 import { Route, Routes, Navigate, Outlet } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
@@ -9,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TemplatesPage from './pages/TemplatesPage';
 import EditTemplatePage from './pages/EditTemplatePage';
+import * as notificationService from './services/notificationService';
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
 import { cn } from './lib/utils';
@@ -42,6 +44,10 @@ const AppLayout: React.FC = () => {
     logout();
     // AuthContext's logout already handles navigation to /login
   };
+  useEffect(() => {
+    // Request notification permission on app load
+    notificationService.requestPermission();
+  }, []);
 
   return (
     <div className="flex h-screen  text-slate-800">

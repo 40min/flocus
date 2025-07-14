@@ -2,6 +2,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect, useCa
 import { useUpdateTask } from '../hooks/useTasks';
 import { useQueryClient } from '@tanstack/react-query';
 import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
+import * as notificationService from '../services/notificationService';
 import { useAuth } from './AuthContext';
 
 
@@ -153,6 +154,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
+    let notificationTitle = '';
+    let notificationBody = '';
+
     if (mode === 'work') {
       await stopCurrentTask();
       const newPomodorosCount = pomodorosCompleted + 1;
@@ -160,6 +164,11 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
       setMode(nextMode);
       setTimeRemaining(DURATION_MAP[nextMode]);
+
+      notificationTitle = 'Work session finished!';
+      notificationBody = currentTaskName
+        ? `Great job on "${currentTaskName}"! Time for a break.`
+        : "Time for a break.";
       try {
         await incrementPomodoro();
       } catch (error) {
@@ -174,10 +183,18 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
       }
     } else {
+      notificationTitle = "Break's over!";
+      notificationBody = currentTaskName
+        ? `Time to get back to: "${currentTaskName}"`
+        : 'Time to get back to work!';
       setMode('work');
       setTimeRemaining(DURATION_MAP.work);
     }
-  }, [mode, pomodorosCompleted, stopCurrentTask, DURATION_MAP, user]);
+
+    if (user?.preferences.system_notifications_enabled) {
+      notificationService.showNotification(notificationTitle, { body: notificationBody });
+    }
+  }, [mode, pomodorosCompleted, stopCurrentTask, DURATION_MAP, user, currentTaskName]);
 
   // Timer countdown effect
   useEffect(() => {

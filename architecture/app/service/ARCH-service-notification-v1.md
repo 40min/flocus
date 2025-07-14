@@ -5,10 +5,10 @@ type: service
 layer: presentation
 owner: '@frontend-team'
 version: v1
-status: planned
+status: current
 created: 2025-07-13
 updated: 2025-07-13
-tags: [notifications, service, planned]
+tags: [notifications, service]
 depends_on: []
 referenced_by: []
 ---

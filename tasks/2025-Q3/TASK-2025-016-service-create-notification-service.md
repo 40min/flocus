@@ -1,16 +1,17 @@
 ---
 id: TASK-2025-016
 title: "Service: Create and Implement NotificationService"
-status: backlog
+status: done
 priority: high
 type: feature
 estimate: 4h
-assignee:
+assignee: '@Robotic-SSE-AI'
 created: 2025-07-13
 updated: 2025-07-13
 parents: [TASK-2025-015]
 arch_refs: [ARCH-service-notification]
 audit_log:
+  - {date: 2025-07-13, user: "@Robotic-SSE-AI", action: "implemented feature and set status to done"}
   - {date: 2025-07-13, user: "@AI-DocArchitect", action: "created with status backlog"}
 ---
 ## Description

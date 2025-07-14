@@ -1,14 +1,12 @@
+import { act } from 'react';
+
 describe('notificationService', () => {
   const originalNotification = window.Notification;
-
-  afterEach(() => {
-    window.Notification = originalNotification;
-    jest.resetModules();
-  });
-  let consoleWarnSpy: jest.SpyInstance;
+  const originalConsoleWarn = console.warn;
 
   beforeEach(() => {
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((message, ...args) => {
+    jest.resetModules();
+    console.warn = jest.fn((message, ...args) => {
       if (message.includes('This browser does not support desktop notification')) {
         return;
       }
@@ -16,12 +14,9 @@ describe('notificationService', () => {
     });
   });
 
-  const originalConsoleWarn = console.warn;
-
   afterEach(() => {
-    consoleWarnSpy.mockRestore();
+    (console.warn as jest.Mock).mockRestore();
     window.Notification = originalNotification;
-    jest.resetModules();
   });
 
   describe('requestPermission', () => {
@@ -32,23 +27,28 @@ describe('notificationService', () => {
         requestPermission: mockRequestPermission,
       };
 
-      const { requestPermission } = await import('./notificationService');
-      await requestPermission();
+      let requestPermission: any;
+      await act(async () => {
+        ({ requestPermission } = await import('./notificationService'));
+        await requestPermission();
+      });
       expect(mockRequestPermission).toHaveBeenCalledTimes(1);
     });
 
     it('should return "denied" if notifications are not supported', async () => {
       // @ts-ignore
       delete window.Notification;
-      const { requestPermission } = await import('./notificationService');
-
-      const permission = await requestPermission();
-      expect(permission).toBe('denied');
+      let requestPermission: any;
+      await act(async () => {
+        ({ requestPermission } = await import('./notificationService'));
+        const permission = await requestPermission();
+        expect(permission).toBe('denied');
+      });
     });
   });
 
   describe('showNotification', () => {
-    it('should create a new Notification if permission is granted', () => {
+    it('should create a new Notification if permission is granted', async () => {
       const mockNotification = jest.fn();
       // @ts-ignore
       window.Notification = mockNotification;
@@ -56,15 +56,18 @@ describe('notificationService', () => {
         writable: true,
         value: 'granted',
       });
-      const { showNotification } = require('./notificationService');
-      showNotification('Test Title', { body: 'Test Body' });
+      let showNotification: any;
+      await act(async () => {
+        ({ showNotification } = require('./notificationService'));
+        showNotification('Test Title', { body: 'Test Body' });
+      });
       expect(mockNotification).toHaveBeenCalledWith('Test Title', {
         body: 'Test Body',
         icon: '/logo192.png',
       });
     });
 
-    it('should not create a new Notification if permission is denied', () => {
+    it('should not create a new Notification if permission is denied', async () => {
       const mockNotification = jest.fn();
       // @ts-ignore
       window.Notification = mockNotification;
@@ -72,12 +75,15 @@ describe('notificationService', () => {
         writable: true,
         value: 'denied',
       });
-      const { showNotification } = require('./notificationService');
-      showNotification('Test Title', { body: 'Test Body' });
+      let showNotification: any;
+      await act(async () => {
+        ({ showNotification } = require('./notificationService'));
+        showNotification('Test Title', { body: 'Test Body' });
+      });
       expect(mockNotification).not.toHaveBeenCalled();
     });
 
-    it('should not create a new Notification if permission is default', () => {
+    it('should not create a new Notification if permission is default', async () => {
       const mockNotification = jest.fn();
       // @ts-ignore
       window.Notification = mockNotification;
@@ -85,19 +91,22 @@ describe('notificationService', () => {
         writable: true,
         value: 'default',
       });
-      const { showNotification } = require('./notificationService');
-      showNotification('Test Title', { body: 'Test Body' });
+      let showNotification: any;
+      await act(async () => {
+        ({ showNotification } = require('./notificationService'));
+        showNotification('Test Title', { body: 'Test Body' });
+      });
       expect(mockNotification).not.toHaveBeenCalled();
     });
 
-    it('should not fail if notifications are not supported', () => {
+    it('should not fail if notifications are not supported', async () => {
       // @ts-ignore
       delete window.Notification;
-      const { showNotification } = require('./notificationService');
-
-
-      expect(() => showNotification('Test Title')).not.toThrow();
+      let showNotification: any;
+      await act(async () => {
+        ({ showNotification } = require('./notificationService'));
+        expect(() => showNotification('Test Title')).not.toThrow();
+      });
     });
   });
 });
-export {};

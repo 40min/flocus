@@ -1,11 +1,6 @@
 import React, { useEffect } from "react";
-import {
-  render,
-  screen,
-  act,
-  fireEvent,
-  waitFor,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act } from "react";
 import {
   SharedTimerProvider,
   useSharedTimerContext,
@@ -147,7 +142,7 @@ const defaultMockUser = {
 };
 
 // Modified renderWithProviders to accept custom authContextValue
-const renderWithProviders = (
+const renderWithProviders = async (
   component: React.ReactElement,
   customAuthContextValue?: Partial<AuthContextType>
 ) => {
@@ -165,15 +160,17 @@ const renderWithProviders = (
     ...customAuthContextValue,
   };
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <AuthContext.Provider value={authContextValue}>
-          <SharedTimerProvider>{component}</SharedTimerProvider>
-        </AuthContext.Provider>
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+  await act(async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthContext.Provider value={authContextValue}>
+            <SharedTimerProvider>{component}</SharedTimerProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  });
 };
 
 describe("SharedTimerContext", () => {
@@ -212,7 +209,7 @@ describe("SharedTimerContext", () => {
         },
       },
     };
-    renderWithProviders(<TestComponent />, authContextWithNoSound);
+    await renderWithProviders(<TestComponent />, authContextWithNoSound);
 
     expect(screen.getByTestId("mode")).toHaveTextContent("work");
     expect(screen.getByTestId("time-remaining")).toHaveTextContent("25:00");
@@ -246,9 +243,11 @@ describe("SharedTimerContext", () => {
         },
       },
     };
-    renderWithProviders(<TestComponent />, authContextWithNoSound);
+    await renderWithProviders(<TestComponent />, authContextWithNoSound);
 
-    fireEvent.click(screen.getByText("Start/Pause"));
+    act(() => {
+      fireEvent.click(screen.getByText("Start/Pause"));
+    });
     await waitFor(() =>
       expect(screen.getByTestId("is-active")).toHaveTextContent("true")
     );
@@ -260,9 +259,7 @@ describe("SharedTimerContext", () => {
       expect(screen.getByTestId("time-remaining")).toHaveTextContent("24:58")
     );
 
-    act(() => {
-      fireEvent.click(screen.getByText("Start/Pause"));
-    });
+    fireEvent.click(screen.getByText("Start/Pause"));
     await waitFor(() =>
       expect(screen.getByTestId("is-active")).toHaveTextContent("false")
     );
@@ -286,14 +283,18 @@ describe("SharedTimerContext", () => {
         },
       },
     };
-    renderWithProviders(<TestComponent />, authContextWithNoSound);
+    await renderWithProviders(<TestComponent />, authContextWithNoSound);
 
-    fireEvent.click(screen.getByText("Start/Pause"));
+    act(() => {
+      fireEvent.click(screen.getByText("Start/Pause"));
+    });
     act(() => {
       jest.advanceTimersByTime(5000);
     });
 
-    fireEvent.click(screen.getByText("Reset"));
+    act(() => {
+      fireEvent.click(screen.getByText("Reset"));
+    });
     await waitFor(() => {
       expect(screen.getByTestId("time-remaining")).toHaveTextContent("25:00");
     });
@@ -339,9 +340,7 @@ describe("SharedTimerContext", () => {
   });
 
   it("skips the current session", async () => {
-    await act(async () => {
-      renderWithProviders(<TestComponent />);
-    });
+    await renderWithProviders(<TestComponent />);
 
     await act(async () => {
       fireEvent.click(screen.getByText("Skip"));
@@ -377,7 +376,7 @@ describe("SharedTimerContext", () => {
         },
       },
     };
-    renderWithProviders(<TestComponent />, authContextWithNoSound);
+    await renderWithProviders(<TestComponent />, authContextWithNoSound);
 
     await waitFor(() => {
       expect(screen.getByTestId("mode")).toHaveTextContent("shortBreak");
@@ -408,7 +407,7 @@ describe("SharedTimerContext", () => {
         },
       },
     };
-    renderWithProviders(<TestComponent />, authContextWithNoSound);
+    await renderWithProviders(<TestComponent />, authContextWithNoSound);
 
     await waitFor(() => {
       expect(screen.getByTestId("time-remaining")).toHaveTextContent("08:10");
@@ -439,16 +438,19 @@ describe("SharedTimerContext", () => {
         authContextWithSound
       );
     });
-    await notificationService.requestPermission();
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByText("Start/Pause"));
     });
 
-    await act(async () => {
+    await act(() => {
       jest.advanceTimersByTime(
         defaultMockUser.preferences.pomodoro_working_interval * 60 * 1000
       );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mode")).toHaveTextContent("shortBreak");
     });
 
     await waitFor(() => {
@@ -486,13 +488,16 @@ describe("SharedTimerContext", () => {
       },
     };
 
-    renderWithProviders(
+    await renderWithProviders(
       <TestComponent initialTaskId="task-1" initialTaskName="Test Task" />,
       authContextWithNoSound
     );
 
-    fireEvent.click(screen.getByText("Start/Pause"));
-    act(() => {
+    await act(() => {
+      fireEvent.click(screen.getByText("Start/Pause"));
+    });
+
+    await act(() => {
       jest.advanceTimersByTime(
         defaultMockUser.preferences.pomodoro_working_interval * 60 * 1000
       );
@@ -509,5 +514,88 @@ describe("SharedTimerContext", () => {
     });
 
     mockAudioConstructor.mockRestore();
+  });
+
+  describe("Task Interaction & Notifications", () => {
+    it("does not show a notification if the task is the same", async () => {
+      await renderWithProviders(
+        <TestComponent
+          initialTaskId="same-task-id"
+          initialTaskName="Same Task"
+        />
+      );
+      mockedShowNotification.mockClear();
+
+      // Re-render with the same task details
+      await renderWithProviders(
+        <TestComponent
+          initialTaskId="same-task-id"
+          initialTaskName="Same Task"
+        />
+      );
+
+      expect(mockedShowNotification).not.toHaveBeenCalled();
+    });
+
+    it("calls resetForNewTask and clears the current task", async () => {
+      const resetForNewTaskMock = jest.fn();
+      await renderWithProviders(
+        <TestComponent
+          resetForNewTaskMock={resetForNewTaskMock}
+          initialTaskId="task-to-reset"
+        />
+      );
+
+      await act(() => {
+        fireEvent.click(screen.getByText("Reset For New Task"));
+      });
+
+      await waitFor(() => {
+        expect(resetForNewTaskMock).toHaveBeenCalled();
+      });
+    });
+
+    it("calls stopCurrentTask and clears the current task", async () => {
+      await renderWithProviders(<TestComponent initialTaskId="task-to-stop" />);
+
+      await act(() => {
+        fireEvent.click(screen.getByText("Stop Current Task"));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("current-task-id")).toHaveTextContent("");
+      });
+    });
+
+    it('calls handleMarkAsDone, which updates task status to "done" and resets current task if it was the active one', async () => {
+      const mockUpdateTask = jest.fn().mockImplementation((...args) => {
+        const options = args[0];
+        if (options.onSuccess) {
+          options.onSuccess();
+        }
+        return Promise.resolve({});
+      });
+      (useUpdateTask as jest.Mock).mockReturnValue({
+        mutateAsync: mockUpdateTask,
+      });
+
+      await renderWithProviders(
+        <TestComponent initialTaskId="task-to-mark-done" />
+      );
+
+      await act(() => {
+        fireEvent.click(screen.getByText("Mark as Done"));
+      });
+
+      await waitFor(() => {
+        expect(mockUpdateTask).toHaveBeenCalledWith(
+          { taskId: "task-to-mark-done", taskData: { status: "done" } },
+          expect.any(Object)
+        );
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId("current-task-id")).toHaveTextContent("");
+      });
+    });
   });
 });

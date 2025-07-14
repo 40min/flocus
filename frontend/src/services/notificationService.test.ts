@@ -5,6 +5,24 @@ describe('notificationService', () => {
     window.Notification = originalNotification;
     jest.resetModules();
   });
+  let consoleWarnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((message, ...args) => {
+      if (message.includes('This browser does not support desktop notification')) {
+        return;
+      }
+      originalConsoleWarn(message, ...args);
+    });
+  });
+
+  const originalConsoleWarn = console.warn;
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+    window.Notification = originalNotification;
+    jest.resetModules();
+  });
 
   describe('requestPermission', () => {
     it('should call Notification.requestPermission', async () => {

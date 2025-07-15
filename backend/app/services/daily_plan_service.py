@@ -205,7 +205,7 @@ class DailyPlanService:
 
         if "notes_content" in update_data:
             daily_plan.notes_content = daily_plan_update_request.notes_content
-        if "self_reflection" in update_data:
+        if "self_reflection" in update_data and daily_plan_update_request.self_reflection is not None:
             if daily_plan.self_reflection is None:
                 daily_plan.self_reflection = SelfReflection()
 

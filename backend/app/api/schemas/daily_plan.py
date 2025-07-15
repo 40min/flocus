@@ -11,18 +11,12 @@ from app.api.schemas.time_window import TimeWindowResponse as ImportedTimeWindow
 from app.api.schemas.utils import ensure_time_windows_do_not_overlap
 
 
-class SelfReflectionSchema(BaseModel):
+class SelfReflection(BaseModel):
     positive: Optional[str] = Field(None, max_length=1000)
     negative: Optional[str] = Field(None, max_length=1000)
     follow_up_notes: Optional[str] = Field(None, max_length=1000)
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class SelfReflectionUpdateRequest(BaseModel):
-    positive: Optional[str] = Field(None, max_length=1000)
-    negative: Optional[str] = Field(None, max_length=1000)
-    follow_up_notes: Optional[str] = Field(None, max_length=1000)
 
 
 # Schema for creating a time window, typically used in request bodies
@@ -79,15 +73,14 @@ class DailyPlanCreateRequest(DailyPlanBase):
     time_windows: List[TimeWindowCreateRequest] = Field(
         default_factory=list, description="List of time windows and their allocated tasks."
     )
+    self_reflection: Optional[SelfReflection] = Field(None, description="User's reflection for the day.")
 
 
 class DailyPlanUpdateRequest(BaseModel):
     time_windows: Optional[List[TimeWindowCreateRequest]] = Field(
         None, description="Updated list of time windows and their allocated tasks. Replaces existing time windows."
     )
-    self_reflection: Optional[SelfReflectionUpdateRequest] = Field(
-        None, description="Updated user's reflection for the day."
-    )
+    self_reflection: Optional[SelfReflection] = Field(None, description="Updated user's reflection for the day.")
     notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
     reviewed: Optional[bool] = Field(None, description="Whether the daily plan has been reviewed.")
     model_config = ConfigDict(extra="forbid")
@@ -102,7 +95,7 @@ class DailyPlanUpdateRequest(BaseModel):
 class DailyPlanResponse(DailyPlanBase):
     id: ObjectId
     user_id: ObjectId
-    self_reflection: SelfReflectionSchema
+    self_reflection: SelfReflection
     time_windows: List[PopulatedTimeWindowResponse] = []
     reviewed: bool
 

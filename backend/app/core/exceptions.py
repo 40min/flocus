@@ -303,10 +303,3 @@ class LLMInputValidationError(LLMServiceError):
 
     def __init__(self, detail: str):
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
-
-
-class AIServiceUnavailableException(LLMServiceError):
-    """Raised when the AI service (e.g. LLM provider) is unavailable or fails."""
-
-    def __init__(self, detail: str = "AI service is currently unavailable."):
-        super().__init__(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)

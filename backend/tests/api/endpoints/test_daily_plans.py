@@ -13,6 +13,7 @@ from app.api.schemas.task import TaskPriority, TaskStatus
 from app.core.config import settings
 from app.db.models.category import Category as CategoryModel
 from app.db.models.daily_plan import DailyPlan as DailyPlanModel  # Added import
+from app.db.models.daily_plan import SelfReflection
 
 # from app.db.models.day_template import DayTemplate as DayTemplateModel
 from app.db.models.task import Task as TaskModel
@@ -484,14 +485,18 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
     assert create_resp.status_code == 201
     created_plan = DailyPlanResponse(**create_resp.json())
     assert created_plan.reviewed is False
-    assert created_plan.reflection_content is None
+    assert created_plan.self_reflection.positive is None
+    assert created_plan.self_reflection.negative is None
+    assert created_plan.self_reflection.follow_up_notes is None
     assert created_plan.notes_content is None
 
     # Update the plan to mark as reviewed and add reflection/notes
     update_payload = DailyPlanUpdateRequest(
-        reviewed=True,
-        reflection_content="Yesterday was productive.",
-        notes_content="Remember to follow up on task X.",
+        self_reflection=SelfReflection(
+            positive="Yesterday was productive.",
+            negative=None,
+            follow_up_notes="Remember to follow up on task X.",
+        )
     )
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan.id}",
@@ -501,9 +506,9 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
     assert response.status_code == 200
     updated_plan = DailyPlanResponse(**response.json())
     assert updated_plan.plan_date.date() == yesterday_date  # Comparing only date part is fine here
-    assert updated_plan.reviewed is True
-    assert updated_plan.reflection_content == "Yesterday was productive."
-    assert updated_plan.notes_content == "Remember to follow up on task X."
+    assert updated_plan.self_reflection.positive == "Yesterday was productive."
+    assert updated_plan.self_reflection.negative is None
+    assert updated_plan.self_reflection.follow_up_notes == "Remember to follow up on task X."
 
 
 async def test_get_yesterday_daily_plan_success(
@@ -775,7 +780,7 @@ async def test_update_daily_plan_not_owner_fails(
         json=update_payload_by_two.model_dump(mode="json"),
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Daily plan not found"
+    assert response.json()["detail"] == f"Daily plan with ID '{created_response_id}' not found"
 
 
 async def test_create_daily_plan_fail_task_category_mismatch(

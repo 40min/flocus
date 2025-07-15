@@ -2,15 +2,15 @@ from typing import List
 
 from odmantic import ObjectId
 
-from app.api.schemas.daily_plan import (
-    DailyPlanCreateRequest,      # Flat input schema for creating a daily plan
-    DailyPlanResponse,           # Response schema for a full daily plan
-    PopulatedTimeWindowResponse, # Wrapper schema for a time window within a daily plan response (contains detailed TW and tasks)
-    TimeWindowCreateRequest,     # Flat input schema for creating a single time window
-)
+from app.api.schemas.daily_plan import DailyPlanCreateRequest  # Flat input schema for creating a daily plan
+from app.api.schemas.daily_plan import DailyPlanResponse  # Response schema for a full daily plan
+from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat input schema for creating a single time window
+from app.api.schemas.daily_plan import PopulatedTimeWindowResponse
 from app.api.schemas.task import TaskResponse
-from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse # Detailed response for a single TW from its own schema file
-from app.db.models.daily_plan import DailyPlan, TimeWindow
+from app.api.schemas.time_window import (
+    TimeWindowResponse as TimeWindowModelResponse,  # Detailed response for a single TW from its own schema file
+)
+from app.db.models.daily_plan import DailyPlan, SelfReflection, TimeWindow
 
 
 class DailyPlanMapper:
@@ -53,19 +53,22 @@ class DailyPlanMapper:
             id=daily_plan_model.id,
             user_id=daily_plan_model.user_id,
             plan_date=daily_plan_model.plan_date,
+            self_reflection=daily_plan_model.self_reflection,
             time_windows=populated_time_window_responses,
-            reflection_content=daily_plan_model.reflection_content,
             notes_content=daily_plan_model.notes_content,
             reviewed=daily_plan_model.reviewed,
         )
 
     @staticmethod
     def to_model_for_create(schema: DailyPlanCreateRequest, user_id: ObjectId) -> DailyPlan:
+
         time_window_models = DailyPlanMapper.time_windows_request_to_models(schema.time_windows)
         return DailyPlan(
             user_id=user_id,
             plan_date=schema.plan_date,
             time_windows=time_window_models,
-            reflection_content=schema.reflection_content,
+            self_reflection=(
+                SelfReflection(**schema.self_reflection.model_dump()) if schema.self_reflection else SelfReflection()
+            ),
             notes_content=schema.notes_content,
         )

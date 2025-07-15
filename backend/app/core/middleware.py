@@ -5,6 +5,7 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 from app.core.exceptions import (
+    AIServiceUnavailableException,
     EmailAlreadyExistsException,
     ForbiddenException,
     InvalidCredentialsException,
@@ -74,6 +75,12 @@ async def error_handling_middleware(request: Request, call_next):
         logger.info(f"LLMInputValidationError: {e.detail}")
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.detail},
+        )
+    except AIServiceUnavailableException as e:
+        logger.error(f"AIServiceUnavailableException: {e.detail}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": e.detail},
         )
     except LLMAPIKeyNotConfiguredError as e:

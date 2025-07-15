@@ -4,7 +4,12 @@ from app.api.schemas.llm import LLMImprovementResponse
 from app.clients.llm.base import LLMClient
 from app.core.config import settings
 from app.core.enums import LLMActionType
-from app.core.exceptions import LLMGenerationError, LLMInputValidationError, LLMServiceError
+from app.core.exceptions import (
+    AIServiceUnavailableException,
+    LLMGenerationError,
+    LLMInputValidationError,
+    LLMServiceError,
+)
 
 
 class LLMService:
@@ -58,7 +63,7 @@ class LLMService:
         try:
             return await self.llm_client.generate_text(full_prompt_for_llm)
         except LLMGenerationError as e:
-            raise e
+            raise AIServiceUnavailableException() from e
         except Exception as e:
             raise LLMServiceError(
                 status_code=500, detail=f"An unexpected error occurred while contacting the LLM provider: {str(e)}"

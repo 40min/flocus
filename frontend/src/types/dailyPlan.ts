@@ -11,11 +11,17 @@ export interface TimeWindowResponse {
   tasks: Task[];
 }
 
+export interface SelfReflection {
+  positive?: string | null;
+  negative?: string | null;
+  follow_up_notes?: string | null;
+}
+
 export interface DailyPlanResponse {
   id: string;
   user_id: string;
   plan_date: string; // ISO datetime string
-  reflection_content?: string | null;
+  self_reflection: SelfReflection;
   notes_content?: string | null;
   time_windows: TimeWindowResponse[];
   reviewed: boolean;

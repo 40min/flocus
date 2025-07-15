@@ -24,7 +24,11 @@ describe('dailyPlanService', () => {
       plan_date: mockDate,
       user_id: 'user1',
       time_windows: [],
-      reflection_content: null,
+      self_reflection: {
+        positive: "Had a productive morning",
+        negative: "Need to improve focus in the afternoon",
+        follow_up_notes: "Consider taking breaks more often",
+      },
       notes_content: null,
       reviewed: false,
     };
@@ -61,7 +65,11 @@ describe('dailyPlanService', () => {
       plan_date: '2023-10-25',
       user_id: 'user1',
       time_windows: [],
-      reflection_content: null,
+      self_reflection: {
+        positive: "Had a productive morning",
+        negative: "Need to improve focus in the afternoon",
+        follow_up_notes: "Consider taking breaks more often",
+      },
       notes_content: null,
       reviewed: false,
     };
@@ -99,7 +107,11 @@ describe('dailyPlanService', () => {
       plan_date: '2023-10-27',
       user_id: 'user1',
       time_windows: mockTimeWindows as any, // Cast to any to match the service's any[] type
-      reflection_content: null,
+      self_reflection: {
+        positive: null,
+        negative: null,
+        follow_up_notes: null,
+      },
       notes_content: null,
       reviewed: false,
     };
@@ -123,13 +135,23 @@ describe('dailyPlanService', () => {
 
   describe('updateDailyPlan', () => {
     const dailyPlanId = '1';
-    const updatePayload = { reflection_content: 'Updated reflection' };
+    const updatePayload = {
+      self_reflection: {
+        positive: null,
+        negative: null,
+        follow_up_notes: null,
+      },
+    };
     const mockUpdatedDailyPlan: DailyPlanResponse = {
       id: dailyPlanId,
       plan_date: '2023-10-26',
       user_id: 'user1',
       time_windows: [],
-      reflection_content: 'Updated reflection',
+      self_reflection: {
+        positive: null,
+        negative: null,
+        follow_up_notes: null,
+      },
       notes_content: null,
       reviewed: false,
     };
@@ -157,7 +179,11 @@ describe('dailyPlanService', () => {
       plan_date: '2023-10-27',
       user_id: 'user1',
       time_windows: [],
-      reflection_content: null,
+      self_reflection: {
+        positive: null,
+        negative: null,
+        follow_up_notes: null,
+      },
       notes_content: null,
       reviewed: false,
     };

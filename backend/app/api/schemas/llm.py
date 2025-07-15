@@ -14,3 +14,11 @@ class LLMImprovementRequest(BaseModel):
 class LLMImprovementResponse(BaseModel):
     improved_title: Optional[str] = None
     improved_description: Optional[str] = None
+
+
+class LLMReflectionRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+
+
+class LLMReflectionResponse(BaseModel):
+    improved_text: str

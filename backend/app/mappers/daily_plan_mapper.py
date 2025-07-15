@@ -53,7 +53,7 @@ class DailyPlanMapper:
             id=daily_plan_model.id,
             user_id=daily_plan_model.user_id,
             plan_date=daily_plan_model.plan_date,
-            self_reflection=daily_plan_model.self_reflection,
+            self_reflection=daily_plan_model.self_reflection or SelfReflection(),
             time_windows=populated_time_window_responses,
             notes_content=daily_plan_model.notes_content,
             reviewed=daily_plan_model.reviewed,

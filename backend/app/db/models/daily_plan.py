@@ -12,11 +12,17 @@ class TimeWindow(EmbeddedModel):
     task_ids: List[ObjectId] = Field(default_factory=list)
 
 
+class SelfReflection(EmbeddedModel):
+    positive: Optional[str] = Field(None, max_length=1000)
+    negative: Optional[str] = Field(None, max_length=1000)
+    follow_up_notes: Optional[str] = Field(None, max_length=1000)
+
+
 class DailyPlan(Model):
     plan_date: datetime
     user_id: ObjectId
     time_windows: List[TimeWindow] = Field(default_factory=list)
-    reflection_content: Optional[str] = None
+    self_reflection: SelfReflection = Field(default_factory=SelfReflection)
     notes_content: Optional[str] = None
     reviewed: bool = Field(default=False)
 

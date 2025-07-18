@@ -11,10 +11,10 @@ from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat input sch
 from app.api.schemas.daily_plan import DailyPlanResponse
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
-from app.core.exceptions import TaskCategoryMismatchException
+from app.core.exceptions import DailyPlanNotFoundException, TaskCategoryMismatchException
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.daily_plan import DailyPlan
+from app.db.models.daily_plan import DailyPlan, SelfReflection
 from app.db.models.task import Task
 from app.mappers.category_mapper import CategoryMapper
 from app.mappers.daily_plan_mapper import DailyPlanMapper
@@ -187,7 +187,7 @@ class DailyPlanService:
             DailyPlan, (DailyPlan.id == plan_id) & (DailyPlan.user_id == current_user_id)
         )
         if not daily_plan:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily plan not found")
+            raise DailyPlanNotFoundException(plan_id=plan_id)
 
         update_data = daily_plan_update_request.model_dump(exclude_unset=True)
 
@@ -203,11 +203,17 @@ class DailyPlanService:
             else:
                 daily_plan.time_windows = []
 
-        if "reflection_content" in update_data:
-            daily_plan.reflection_content = daily_plan_update_request.reflection_content
         if "notes_content" in update_data:
             daily_plan.notes_content = daily_plan_update_request.notes_content
+        if "self_reflection" in update_data and daily_plan_update_request.self_reflection is not None:
+            if daily_plan.self_reflection is None:
+                daily_plan.self_reflection = SelfReflection()
+
+            reflection_update_data = daily_plan_update_request.self_reflection.model_dump(exclude_unset=True)
+            for key, value in reflection_update_data.items():
+                setattr(daily_plan.self_reflection, key, value)
         if "reviewed" in update_data:
+
             # Only update if the value is explicitly True or False, not None
             if daily_plan_update_request.reviewed is not None:
                 daily_plan.reviewed = daily_plan_update_request.reviewed

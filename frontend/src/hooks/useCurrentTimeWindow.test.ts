@@ -39,6 +39,11 @@ const mockDailyPlan: DailyPlanResponse = {
     { time_window: mockWindow1, tasks: [mockTask1] },
     { time_window: mockWindow2, tasks: [mockTask2] },
   ],
+  self_reflection: {
+    positive: 'Had a productive morning',
+    negative: 'Need to improve focus in the afternoon',
+    follow_up_notes: 'Consider taking breaks more often',
+  }
 };
 
 describe('useCurrentTimeWindow', () => {

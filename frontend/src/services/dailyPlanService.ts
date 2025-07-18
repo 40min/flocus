@@ -1,6 +1,6 @@
 import api from './api';
 import axios from 'axios';
-import { DailyPlanResponse } from '../types/dailyPlan';
+import { DailyPlanResponse, SelfReflection } from '../types/dailyPlan';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { ApiError } from '../lib/errors';
 
@@ -48,7 +48,15 @@ export const createDailyPlan = async (timeWindows: any[]): Promise<DailyPlanResp
   }
 };
 
-export const updateDailyPlan = async (dailyPlanId: string, payload: { time_windows?: any[], reflection_content?: string, notes_content?: string, reviewed?: boolean }): Promise<DailyPlanResponse> => {
+export const getLlmReflectionSuggestion = async (text: string): Promise<string> => {
+  const response = await api.post<{ improved_text: string }>(
+    API_ENDPOINTS.LLM_IMPROVE_REFLECTION,
+    { text }
+  );
+  return response.data.improved_text;
+};
+
+export const updateDailyPlan = async (dailyPlanId: string, payload: { time_windows?: any[], self_reflection?: SelfReflection, notes_content?: string, reviewed?: boolean }): Promise<DailyPlanResponse> => {
   try {
     const response = await api.put<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_UPDATE_BY_ID(dailyPlanId), payload);
     return response.data;

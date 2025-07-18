@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, Path, status
 from odmantic import ObjectId
 
 from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest
-from app.core.dependencies import get_current_active_user_id
+from app.api.schemas.llm import LLMReflectionRequest, LLMReflectionResponse
+from app.core.dependencies import get_current_active_user_id, get_llm_service
 from app.services.daily_plan_service import DailyPlanService
+from app.services.llm_service import LLMService
 
 router = APIRouter()
 
@@ -84,6 +86,27 @@ async def get_daily_plan_by_date(
     current_user_id: ObjectId = Depends(get_current_active_user_id),
 ):
     return await service.get_daily_plan_by_date(plan_date, current_user_id) or None
+
+
+@router.post(
+    "/llm/improve-reflection",
+    response_model=LLMReflectionResponse,
+    summary="Improve reflection text using LLM",
+    status_code=status.HTTP_200_OK,
+)
+async def improve_reflection(
+    request: LLMReflectionRequest,
+    llm_service: LLMService = Depends(get_llm_service),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
+):
+    prompt = (
+        "You are a helpful assistant for self-reflection. "
+        "Improve the following journal entry to be more clear, concise, and insightful. "
+        "Maintain the original sentiment and correct any grammatical errors. "
+        "The output should be just the improved text, without any additional commentary."
+    )
+    improved_text = await llm_service.improve_text(request.text, prompt)
+    return LLMReflectionResponse(improved_text=improved_text)
 
 
 @router.put(

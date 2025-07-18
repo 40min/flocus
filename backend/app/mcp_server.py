@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import List, Optional
 
 from fastmcp import FastMCP
@@ -16,6 +17,12 @@ from app.services.user_daily_stats_service import UserDailyStatsService
 # TODO: Implement proper user authentication for MCP tools.
 MCP_USER_ID = os.getenv("MCP_USER_ID")
 USER_ID = ObjectId(MCP_USER_ID)
+
+
+def parse_iso_date(date_str: Optional[str]) -> Optional[datetime]:
+    """Convert ISO format string to datetime if provided, otherwise return None."""
+    return datetime.fromisoformat(date_str) if date_str else None
+
 
 # Initialize FastMCP server
 server = FastMCP("Flocus Backend MCP Server")
@@ -57,9 +64,10 @@ async def update_category(
     category_id: str = Field(..., description="ID of the category to update"),
     name: Optional[str] = Field(None, description="New name for the category"),
     description: Optional[str] = Field(None, description="New description for the category"),
+    color: Optional[str] = Field(None, description="New color for the category (e.g., #RRGGBB or color name)"),
 ) -> CategoryResponse:
     """Update an existing category."""
-    category_data = CategoryUpdateRequest(name=name, description=description)
+    category_data = CategoryUpdateRequest(name=name, description=description, color=color)
     return await category_service.update_category(
         category_id=ObjectId(category_id), category_data=category_data, current_user_id=USER_ID
     )
@@ -86,9 +94,9 @@ async def create_task(
     task_data = TaskCreateRequest(
         title=title,
         description=description,
-        status=status,
+        status=status or TaskStatus.PENDING,
         priority=priority,
-        due_date=due_date,
+        due_date=parse_iso_date(due_date),
         category_id=ObjectId(category_id) if category_id else None,
     )
     return await task_service.create_task(task_data=task_data, current_user_id=USER_ID)
@@ -139,7 +147,7 @@ async def update_task(
         description=description,
         status=status,
         priority=priority,
-        due_date=due_date,
+        due_date=parse_iso_date(due_date),
         category_id=ObjectId(category_id) if category_id else None,
     )
     return await task_service.update_task(task_id=ObjectId(task_id), task_data=task_data, current_user_id=USER_ID)

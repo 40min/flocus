@@ -203,11 +203,9 @@ class DailyPlanService:
             else:
                 daily_plan.time_windows = []
 
-        if "notes_content" in update_data:
-            daily_plan.notes_content = daily_plan_update_request.notes_content
         if "self_reflection" in update_data and daily_plan_update_request.self_reflection is not None:
             if daily_plan.self_reflection is None:
-                daily_plan.self_reflection = SelfReflection()
+                daily_plan.self_reflection = SelfReflection(positive=None, negative=None, follow_up_notes=None)
 
             reflection_update_data = daily_plan_update_request.self_reflection.model_dump(exclude_unset=True)
             for key, value in reflection_update_data.items():

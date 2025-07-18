@@ -188,7 +188,7 @@ const MyDayPage: React.FC = () => {
         user_id: "", // Will be filled on save
         plan_date: new Date().toISOString(),
         self_reflection: { positive: "", negative: "", follow_up_notes: "" }, // Initialize self_reflection
-        notes_content: null,
+
         time_windows: [newTimeWindowAllocation],
         reviewed: false,
       });

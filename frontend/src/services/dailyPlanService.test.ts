@@ -29,7 +29,6 @@ describe('dailyPlanService', () => {
         negative: "Need to improve focus in the afternoon",
         follow_up_notes: "Consider taking breaks more often",
       },
-      notes_content: null,
       reviewed: false,
     };
 
@@ -70,7 +69,6 @@ describe('dailyPlanService', () => {
         negative: "Need to improve focus in the afternoon",
         follow_up_notes: "Consider taking breaks more often",
       },
-      notes_content: null,
       reviewed: false,
     };
 
@@ -112,7 +110,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      notes_content: null,
       reviewed: false,
     };
 
@@ -152,7 +149,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      notes_content: null,
       reviewed: false,
     };
 
@@ -184,7 +180,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      notes_content: null,
       reviewed: false,
     };
 

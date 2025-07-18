@@ -22,7 +22,7 @@ export interface DailyPlanResponse {
   user_id: string;
   plan_date: string; // ISO datetime string
   self_reflection: SelfReflection;
-  notes_content?: string | null;
+
   time_windows: TimeWindowResponse[];
   reviewed: boolean;
 }

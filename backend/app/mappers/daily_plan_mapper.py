@@ -6,11 +6,14 @@ from app.api.schemas.daily_plan import DailyPlanCreateRequest  # Flat input sche
 from app.api.schemas.daily_plan import DailyPlanResponse  # Response schema for a full daily plan
 from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat input schema for creating a single time window
 from app.api.schemas.daily_plan import PopulatedTimeWindowResponse
+from app.api.schemas.daily_plan import SelfReflection as SchemaSelfReflection
 from app.api.schemas.task import TaskResponse
 from app.api.schemas.time_window import (
     TimeWindowResponse as TimeWindowModelResponse,  # Detailed response for a single TW from its own schema file
 )
-from app.db.models.daily_plan import DailyPlan, SelfReflection, TimeWindow
+from app.db.models.daily_plan import DailyPlan
+from app.db.models.daily_plan import SelfReflection as ModelSelfReflection
+from app.db.models.daily_plan import TimeWindow
 
 
 class DailyPlanMapper:
@@ -49,13 +52,18 @@ class DailyPlanMapper:
     def to_response(
         daily_plan_model: DailyPlan, populated_time_window_responses: List[PopulatedTimeWindowResponse]
     ) -> DailyPlanResponse:
+
+        self_reflection = (
+            SchemaSelfReflection(**daily_plan_model.self_reflection.model_dump())
+            if daily_plan_model.self_reflection
+            else SchemaSelfReflection(positive=None, negative=None, follow_up_notes=None)
+        )
         return DailyPlanResponse(
             id=daily_plan_model.id,
             user_id=daily_plan_model.user_id,
             plan_date=daily_plan_model.plan_date,
-            self_reflection=daily_plan_model.self_reflection or SelfReflection(),
+            self_reflection=self_reflection,
             time_windows=populated_time_window_responses,
-            notes_content=daily_plan_model.notes_content,
             reviewed=daily_plan_model.reviewed,
         )
 
@@ -63,12 +71,14 @@ class DailyPlanMapper:
     def to_model_for_create(schema: DailyPlanCreateRequest, user_id: ObjectId) -> DailyPlan:
 
         time_window_models = DailyPlanMapper.time_windows_request_to_models(schema.time_windows)
+        self_reflection = (
+            ModelSelfReflection(**schema.self_reflection.model_dump())
+            if schema.self_reflection
+            else ModelSelfReflection(positive=None, negative=None, follow_up_notes=None)
+        )
         return DailyPlan(
             user_id=user_id,
             plan_date=schema.plan_date,
             time_windows=time_window_models,
-            self_reflection=(
-                SelfReflection(**schema.self_reflection.model_dump()) if schema.self_reflection else SelfReflection()
-            ),
-            notes_content=schema.notes_content,
-        )
+            self_reflection=self_reflection,
+        )  # type: ignore

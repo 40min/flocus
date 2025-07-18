@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "components/Button";
 import Input from "components/Input";
 import { DailyPlanResponse, SelfReflection } from "types/dailyPlan";
@@ -105,7 +105,7 @@ const SelfReflectionComponent: React.FC<SelfReflectionComponentProps> = ({
     setReflection((prev) => ({ ...prev, [field]: value }));
   };
 
-  const createLlmHandlers = (field: ReflectionField) => {
+  const useLlmHandlers = (field: ReflectionField) => {
     const { fetchSuggestion, ...rest } = useGenericLlmSuggestion(
       reflection[field] || "",
       (newValue) => handleFieldChange(field, newValue)
@@ -121,14 +121,14 @@ const SelfReflectionComponent: React.FC<SelfReflectionComponentProps> = ({
     return { handleImprove, ...rest };
   };
 
-  const positiveHandlers = createLlmHandlers("positive");
-  const negativeHandlers = createLlmHandlers("negative");
-  const followUpHandlers = createLlmHandlers("follow_up_notes");
+  const positiveHandlers = useLlmHandlers("positive");
+  const negativeHandlers = useLlmHandlers("negative");
+  const followUpHandlers = useLlmHandlers("follow_up_notes");
 
   const renderField = (
     label: string,
     field: ReflectionField,
-    handlers: ReturnType<typeof createLlmHandlers>
+    handlers: ReturnType<typeof useLlmHandlers>
   ) => (
     <div>
       <div className="flex justify-between items-center mb-1.5">

@@ -8,12 +8,11 @@ from httpx import AsyncClient
 from odmantic import ObjectId
 
 from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat for request
-from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest
+from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest, SelfReflection
 from app.api.schemas.task import TaskPriority, TaskStatus
 from app.core.config import settings
 from app.db.models.category import Category as CategoryModel
 from app.db.models.daily_plan import DailyPlan as DailyPlanModel  # Added import
-from app.db.models.daily_plan import SelfReflection
 
 # from app.db.models.day_template import DayTemplate as DayTemplateModel
 from app.db.models.task import Task as TaskModel
@@ -478,7 +477,7 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
         tzinfo=timezone.utc
     )  # Ensure it's UTC aware
 
-    create_payload = DailyPlanCreateRequest(plan_date=yesterday_datetime, time_windows=[])
+    create_payload = DailyPlanCreateRequest(plan_date=yesterday_datetime, time_windows=[], self_reflection=None)
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -488,7 +487,6 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
     assert created_plan.self_reflection.positive is None
     assert created_plan.self_reflection.negative is None
     assert created_plan.self_reflection.follow_up_notes is None
-    assert created_plan.notes_content is None
 
     # Update the plan to mark as reviewed and add reflection/notes
     update_payload = DailyPlanUpdateRequest(
@@ -496,7 +494,9 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
             positive="Yesterday was productive.",
             negative=None,
             follow_up_notes="Remember to follow up on task X.",
-        )
+        ),
+        reviewed=True,
+        time_windows=[],
     )
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan.id}",

@@ -22,8 +22,9 @@ class DailyPlan(Model):
     plan_date: datetime
     user_id: ObjectId
     time_windows: List[TimeWindow] = Field(default_factory=list)
-    self_reflection: SelfReflection = Field(default_factory=SelfReflection)
-    notes_content: Optional[str] = None
+    self_reflection: SelfReflection = Field(
+        default_factory=lambda: SelfReflection(positive=None, negative=None, follow_up_notes=None)
+    )
     reviewed: bool = Field(default=False)
 
     model_config = {

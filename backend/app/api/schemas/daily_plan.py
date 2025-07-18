@@ -2,13 +2,13 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from odmantic import ObjectId
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from app.api.schemas.task import TaskResponse
 
 # Import the TimeWindowResponse from the other module and alias it to avoid name collision
 from app.api.schemas.time_window import TimeWindowResponse as ImportedTimeWindowResponse
-from app.api.schemas.utils import ensure_time_windows_do_not_overlap
+from app.api.schemas.utils import HasTimeWindow, ensure_time_windows_do_not_overlap
 
 
 class SelfReflection(BaseModel):
@@ -20,7 +20,7 @@ class SelfReflection(BaseModel):
 
 
 # Schema for creating a time window, typically used in request bodies
-class TimeWindowCreateRequest(BaseModel):
+class TimeWindowCreateRequest(HasTimeWindow):
     description: Optional[str] = Field(None, max_length=100, description="Description of the time window.")
     category_id: ObjectId = Field(..., description="Category ID for the time window.")
     start_time: int = Field(..., description="Start time in minutes since midnight.")
@@ -39,10 +39,10 @@ class TimeWindowCreateRequest(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def check_end_time_greater_than_start_time(cls, values: "TimeWindowCreateRequest") -> "TimeWindowCreateRequest":
-        if values.start_time is not None and values.end_time is not None and values.end_time <= values.start_time:
+    def check_end_time_greater_than_start_time(self, info: ValidationInfo) -> "TimeWindowCreateRequest":
+        if self.start_time is not None and self.end_time is not None and self.end_time <= self.start_time:
             raise ValueError("end_time must be greater than start_time")
-        return values
+        return self
 
 
 # Wrapper schema for responses, including the detailed time window and associated tasks
@@ -58,8 +58,6 @@ class DailyPlanBase(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc),
         description="The specific date and time for this daily plan.",
     )
-
-    notes_content: Optional[str] = Field(None, description="User's notes for the day.")
 
     @field_validator("plan_date")
     @classmethod
@@ -81,7 +79,6 @@ class DailyPlanUpdateRequest(BaseModel):
         None, description="Updated list of time windows and their allocated tasks. Replaces existing time windows."
     )
     self_reflection: Optional[SelfReflection] = Field(None, description="Updated user's reflection for the day.")
-    notes_content: Optional[str] = Field(None, description="Updated user's notes for the day.")
     reviewed: Optional[bool] = Field(None, description="Whether the daily plan has been reviewed.")
     model_config = ConfigDict(extra="forbid")
 

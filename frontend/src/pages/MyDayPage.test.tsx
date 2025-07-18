@@ -103,7 +103,6 @@ const mockDailyPlan: DailyPlanResponse = {
     negative: "Need to improve focus in the afternoon",
     follow_up_notes: "Consider taking breaks more often",
   },
-  notes_content: null,
 };
 
 const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({
@@ -288,7 +287,6 @@ describe("MyDayPage", () => {
           negative: "Need to improve focus in the afternoon",
           follow_up_notes: "Consider taking breaks more often",
         },
-        notes_content: null,
       };
 
       beforeEach(() => {

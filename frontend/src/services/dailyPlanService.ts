@@ -56,7 +56,7 @@ export const getLlmReflectionSuggestion = async (text: string): Promise<string> 
   return response.data.improved_text;
 };
 
-export const updateDailyPlan = async (dailyPlanId: string, payload: { time_windows?: any[], self_reflection?: SelfReflection, notes_content?: string, reviewed?: boolean }): Promise<DailyPlanResponse> => {
+export const updateDailyPlan = async (dailyPlanId: string, payload: { time_windows?: any[], self_reflection?: SelfReflection, reviewed?: boolean }): Promise<DailyPlanResponse> => {
   try {
     const response = await api.put<DailyPlanResponse>(API_ENDPOINTS.DAILY_PLAN_UPDATE_BY_ID(dailyPlanId), payload);
     return response.data;

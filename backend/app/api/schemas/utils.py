@@ -1,12 +1,15 @@
-from typing import List, Any
+from typing import Sequence
+
 from pydantic import BaseModel
+
 
 # Define a protocol or base class for objects that have start_time and end_time
 class HasTimeWindow(BaseModel):
     start_time: int
     end_time: int
 
-def ensure_time_windows_do_not_overlap(time_windows_list: List[HasTimeWindow]) -> None:
+
+def ensure_time_windows_do_not_overlap(time_windows_list: Sequence[HasTimeWindow]) -> None:
     """Checks if any time windows in the list overlap. Raises ValueError if they do."""
     if not time_windows_list or len(time_windows_list) < 2:
         return  # No overlap possible with 0 or 1 window

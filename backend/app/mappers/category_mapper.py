@@ -26,4 +26,4 @@ class CategoryMapper:
             color=schema.color,
             user=user_id,
             is_deleted=False,  # Default for new categories
-        )
+        )  # type: ignore

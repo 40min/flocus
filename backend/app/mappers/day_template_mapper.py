@@ -83,4 +83,4 @@ class DayTemplateMapper:
             description=schema.description,
             user_id=user_id,
             time_windows=embedded_time_windows,
-        )
+        )  # type: ignore

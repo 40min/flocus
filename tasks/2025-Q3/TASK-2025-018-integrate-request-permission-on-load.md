@@ -1,7 +1,7 @@
 ---
 id: TASK-2025-018
 title: "Integration: Request Notification Permission on App Load"
-status: backlog
+status: done
 priority: high
 type: feature
 estimate: 2h

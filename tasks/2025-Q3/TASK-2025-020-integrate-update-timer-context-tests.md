@@ -1,7 +1,7 @@
 ---
 id: TASK-2025-020
 title: "Tests: Update SharedTimerContext Tests for Notifications"
-status: backlog
+status: done
 priority: high
 type: chore
 estimate: 4h

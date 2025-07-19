@@ -1,7 +1,7 @@
 ---
 id: TASK-2025-019
 title: "Integration: Trigger Notification in SharedTimerContext"
-status: backlog
+status: done
 priority: high
 type: feature
 estimate: 4h

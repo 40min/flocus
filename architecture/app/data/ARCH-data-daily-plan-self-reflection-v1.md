@@ -1,39 +1,37 @@
 ---
 id: ARCH-data-daily-plan-self-reflection
-title: "Data Model. Daily Plan Self Reflection"
+title: "Data. Daily Plan Self-Reflection"
 type: data_model
 layer: infrastructure
 owner: '@backend-team'
-version: v1
-status: planned
+version: v1.1
+status: current
 created: 2025-07-15
-updated: 2025-07-15
-tags: [reflection, data_model, backend, planned]
+updated: 2025-07-19
+tags: [reflection, data_model, backend]
 depends_on: []
 referenced_by: []
 ---
 ## Context
-To provide a more structured and guided user experience for daily reflections, the existing free-text `reflection_content` field in the `DailyPlan` model will be replaced. A new embedded document, `SelfReflection`, is planned to capture three distinct aspects of a user's reflection.
+To provide a more structured and guided user experience for daily reflections, the previous free-text `reflection_content` field in the `DailyPlan` model was replaced with a new embedded document, `SelfReflection`, to capture three distinct aspects of a user's reflection.
 
 ## Structure
-The `DailyPlan` model in `backend/app/db/models/daily_plan.py` will be modified:
+The `DailyPlan` model in `backend/app/db/models/daily_plan.py` was modified:
 -   **Remove:** `reflection_content: Optional[str] = None`
 -   **Add:** `self_reflection: Optional[SelfReflection] = None`
 
-A new `odmantic.EmbeddedModel` named `SelfReflection` will be created to support this change:
+The `SelfReflection` embedded document is defined as:
 ```python
-from odmantic import EmbeddedModel, Field
-from typing import Optional
-
-class SelfReflection(EmbeddedModel):
-    positive: Optional[str] = Field(None, max_length=1000)
-    negative: Optional[str] = Field(None, max_length=1000)
-    follow_up_notes: Optional[str] = Field(None, max_length=1000)
+class SelfReflection(EmbeddedDocument):
+    positive: Optional[str] = None
+    negative: Optional[str] = None
+    follow_up_notes: Optional[str] = None
 ```
-
-## Behavior
-This new structure will store up to three separate pieces of text, each with a 1000-character limit, corresponding to the positive, negative, and follow-up aspects of a daily reflection. All fields are optional to allow for partial reflections.
 
 ## Evolution
 ### Planned
-- v1: Initial implementation to replace the unstructured `reflection_content` field.
+- No immediate changes planned.
+
+### Historical
+- v1.1: Updated status to `current` as the feature has been implemented.
+- v1: Initial plan to replace the unstructured `reflection_content` field.

@@ -29,7 +29,6 @@ describe('dailyPlanService', () => {
         negative: "Need to improve focus in the afternoon",
         follow_up_notes: "Consider taking breaks more often",
       },
-      reviewed: false,
     };
 
     it('should fetch daily plan by date successfully', async () => {
@@ -69,7 +68,6 @@ describe('dailyPlanService', () => {
         negative: "Need to improve focus in the afternoon",
         follow_up_notes: "Consider taking breaks more often",
       },
-      reviewed: false,
     };
 
     it("should fetch previous day's daily plan successfully", async () => {
@@ -110,7 +108,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      reviewed: false,
     };
 
     it('should create a daily plan successfully', async () => {
@@ -149,7 +146,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      reviewed: false,
     };
 
     it('should update a daily plan successfully', async () => {
@@ -180,7 +176,6 @@ describe('dailyPlanService', () => {
         negative: null,
         follow_up_notes: null,
       },
-      reviewed: false,
     };
 
     it('should fetch today\'s daily plan successfully', async () => {

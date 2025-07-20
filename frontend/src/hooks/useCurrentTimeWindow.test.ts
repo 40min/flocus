@@ -34,7 +34,6 @@ const mockDailyPlan: DailyPlanResponse = {
   id: 'plan1',
   user_id: 'user1',
   plan_date: new Date().toISOString(),
-  reviewed: false,
   time_windows: [
     { time_window: mockWindow1, tasks: [mockTask1] },
     { time_window: mockWindow2, tasks: [mockTask2] },

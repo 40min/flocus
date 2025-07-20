@@ -79,7 +79,7 @@ class DailyPlanUpdateRequest(BaseModel):
         None, description="Updated list of time windows and their allocated tasks. Replaces existing time windows."
     )
     self_reflection: Optional[SelfReflection] = Field(None, description="Updated user's reflection for the day.")
-    reviewed: Optional[bool] = Field(None, description="Whether the daily plan has been reviewed.")
+
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
@@ -94,6 +94,5 @@ class DailyPlanResponse(DailyPlanBase):
     user_id: ObjectId
     self_reflection: SelfReflection
     time_windows: List[PopulatedTimeWindowResponse] = []
-    reviewed: bool
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

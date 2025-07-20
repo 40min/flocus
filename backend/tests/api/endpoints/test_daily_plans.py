@@ -106,7 +106,7 @@ async def test_create_daily_plan_success_with_allocations(
             task_ids=[user_one_task_model.id],
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -129,7 +129,7 @@ async def test_create_daily_plan_success_empty_allocations(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], test_user_one: UserModel, unique_date: datetime
 ):
     plan_date = unique_date
-    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[])
+    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[], self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -144,7 +144,7 @@ async def test_create_daily_plan_duplicate_date_fails(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: datetime
 ):
     plan_date = unique_date
-    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[])
+    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[], self_reflection=None)
     await async_client.post(DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json"))
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
@@ -195,7 +195,7 @@ async def test_create_daily_plan_non_existent_category_for_tw_fails(
             task_ids=[user_one_task_model.id],
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -219,7 +219,7 @@ async def test_create_daily_plan_unowned_category_for_tw_fails(
             task_ids=[user_one_task_model.id],
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -243,7 +243,7 @@ async def test_create_daily_plan_non_existent_task_fails(
             task_ids=[non_existent_task_id],
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -269,7 +269,7 @@ async def test_create_daily_plan_unowned_task_fails(
             task_ids=[user_two_task_model.id],
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -279,7 +279,7 @@ async def test_create_daily_plan_unowned_task_fails(
 
 
 async def test_create_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: datetime):
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=[])
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=[], self_reflection=None)
     response = await async_client.post(DAILY_PLANS_ENDPOINT, json=payload.model_dump(mode="json"))
     assert response.status_code == 401
 
@@ -302,7 +302,7 @@ async def test_get_daily_plan_by_date_success(
             task_ids=[user_one_task_model.id],
         )
     ]
-    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows)
+    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows, self_reflection=None)
     create_response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -366,6 +366,7 @@ async def test_get_daily_plan_by_id_success(
                 task_ids=[user_one_task_model.id],
             )
         ],
+        self_reflection=None,
     )
     create_response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
@@ -398,7 +399,7 @@ async def test_get_daily_plan_by_id_not_owner_fails(
     auth_headers_user_two: dict[str, str],
     unique_date: datetime,
 ):
-    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=[])
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=[], self_reflection=None)
     create_response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -433,7 +434,9 @@ async def test_update_daily_plan_success(
             task_ids=[user_one_task_model.id],
         )
     ]
-    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=initial_time_windows)
+    create_payload = DailyPlanCreateRequest(
+        plan_date=plan_date, time_windows=initial_time_windows, self_reflection=None
+    )
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -449,7 +452,7 @@ async def test_update_daily_plan_success(
             task_ids=[user_one_task_alt.id],
         )
     ]
-    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
+    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows, self_reflection=None)
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
@@ -465,7 +468,7 @@ async def test_update_daily_plan_success(
     assert updated_plan.time_windows[0].tasks[0].id == user_one_task_alt.id
 
 
-async def test_update_daily_plan_mark_reviewed_and_add_reflection(
+async def test_update_daily_plan_add_reflection(
     async_client: AsyncClient,
     auth_headers_user_one: dict[str, str],
     test_user_one: UserModel,
@@ -483,7 +486,7 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
     )
     assert create_resp.status_code == 201
     created_plan = DailyPlanResponse(**create_resp.json())
-    assert created_plan.reviewed is False
+
     assert created_plan.self_reflection.positive is None
     assert created_plan.self_reflection.negative is None
     assert created_plan.self_reflection.follow_up_notes is None
@@ -495,7 +498,6 @@ async def test_update_daily_plan_mark_reviewed_and_add_reflection(
             negative=None,
             follow_up_notes="Remember to follow up on task X.",
         ),
-        reviewed=True,
         time_windows=[],
     )
     response = await async_client.put(
@@ -523,7 +525,9 @@ async def test_get_yesterday_daily_plan_success(
     # Create a daily plan for 3 days ago
     three_days_ago_date = datetime.now(timezone.utc).date() - timedelta(days=3)
     three_days_ago_datetime = datetime.combine(three_days_ago_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    create_payload_old = DailyPlanCreateRequest(plan_date=three_days_ago_datetime, time_windows=[])
+    create_payload_old = DailyPlanCreateRequest(
+        plan_date=three_days_ago_datetime, time_windows=[], self_reflection=None
+    )
     await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload_old.model_dump(mode="json")
     )
@@ -531,7 +535,9 @@ async def test_get_yesterday_daily_plan_success(
     # Create a daily plan for 2 days ago (this is the most recent)
     two_days_ago_date = datetime.now(timezone.utc).date() - timedelta(days=2)
     two_days_ago_datetime = datetime.combine(two_days_ago_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    create_payload_recent = DailyPlanCreateRequest(plan_date=two_days_ago_datetime, time_windows=[])
+    create_payload_recent = DailyPlanCreateRequest(
+        plan_date=two_days_ago_datetime, time_windows=[], self_reflection=None
+    )
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload_recent.model_dump(mode="json")
     )
@@ -574,7 +580,7 @@ async def test_get_today_daily_plan_success(
         tzinfo=timezone.utc
     )  # Ensure it's UTC aware
 
-    create_payload = DailyPlanCreateRequest(plan_date=today_datetime, time_windows=[])
+    create_payload = DailyPlanCreateRequest(plan_date=today_datetime, time_windows=[], self_reflection=None)
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -634,7 +640,7 @@ async def test_update_daily_plan_with_extra_fields_fails(
     async_client: AsyncClient, auth_headers_user_one: dict[str, str], unique_date: date
 ):
     plan_date = unique_date
-    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[])
+    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=[], self_reflection=None)
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -652,7 +658,7 @@ async def test_update_daily_plan_with_extra_fields_fails(
 
 
 async def test_update_daily_plan_unauthenticated_fails(async_client: AsyncClient, unique_date: date):
-    update_payload = DailyPlanUpdateRequest(time_windows=[])
+    update_payload = DailyPlanUpdateRequest(time_windows=[], self_reflection=None)
     some_date_id = ObjectId()  # Use a random ObjectId for testing
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{some_date_id}", json=update_payload.model_dump(mode="json")
@@ -674,6 +680,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
         time_windows=[
             create_time_window_payload("Initial", user_one_category.id, 100, 200, task_ids=[user_one_task_model.id])
         ],
+        self_reflection=None,
     )
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
@@ -690,7 +697,7 @@ async def test_update_daily_plan_unowned_category_for_tw_fails(
             task_ids=[user_one_task_model.id],
         )
     ]
-    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
+    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows, self_reflection=None)
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
@@ -716,6 +723,7 @@ async def test_update_daily_plan_unowned_task_fails(
                 "Initial Task", user_one_category.id, 100, 200, task_ids=[user_one_task_model.id]
             )
         ],
+        self_reflection=None,
     )
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
@@ -732,7 +740,7 @@ async def test_update_daily_plan_unowned_task_fails(
             task_ids=[user_two_task_model.id],
         )
     ]
-    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
+    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows, self_reflection=None)
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_plan_id}",
         headers=auth_headers_user_one,
@@ -760,6 +768,7 @@ async def test_update_daily_plan_not_owner_fails(
                 "UserOne Plan", user_one_category.id, 100, 200, task_ids=[user_one_task_model.id]
             )
         ],
+        self_reflection=None,
     )
     create_response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
@@ -772,7 +781,8 @@ async def test_update_daily_plan_not_owner_fails(
             create_time_window_payload(
                 "Attempted Update", user_one_category.id, 300, 400, task_ids=[user_one_task_model.id]
             )
-        ]
+        ],
+        self_reflection=None,
     )
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
@@ -812,7 +822,7 @@ async def test_create_daily_plan_fail_task_category_mismatch(
             task_ids=[task_instance.id],  # Task with alt_category
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -893,7 +903,7 @@ async def test_create_daily_plan_success_task_no_category(
             task_ids=[user_one_task_no_category_model.id],  # Task has no category
         )
     ]
-    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows)
+    payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=time_windows, self_reflection=None)
     response = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=payload.model_dump(mode="json")
     )
@@ -941,7 +951,9 @@ async def test_update_daily_plan_fail_task_category_mismatch(
             task_ids=[user_one_task_model.id],  # Task with matching category
         )
     ]
-    create_payload = DailyPlanCreateRequest(plan_date=plan_date, time_windows=initial_time_windows)
+    create_payload = DailyPlanCreateRequest(
+        plan_date=plan_date, time_windows=initial_time_windows, self_reflection=None
+    )
     create_resp = await async_client.post(
         DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
     )
@@ -958,7 +970,7 @@ async def test_update_daily_plan_fail_task_category_mismatch(
             task_ids=[mismatch_task_instance.id],  # Task has user_one_category_alt
         )
     ]
-    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows)
+    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows, self_reflection=None)
     response = await async_client.put(
         f"{DAILY_PLANS_ENDPOINT}/{created_response_id}",
         headers=auth_headers_user_one,

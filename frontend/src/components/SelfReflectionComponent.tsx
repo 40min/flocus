@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Button from "components/Button";
 import Input from "components/Input";
-import { DailyPlanResponse, SelfReflection } from "types/dailyPlan";
+import { SelfReflection } from "types/dailyPlan";
 import { getLlmReflectionSuggestion } from "services/dailyPlanService";
-import { Save, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface SuggestionBoxProps {
   suggestion: string;
@@ -36,9 +36,9 @@ const useGenericLlmSuggestion = (
   initialValue: string,
   onUpdate: (newValue: string) => void
 ) => {
-  const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchSuggestion = async (text: string) => {
     if (!text) return;
@@ -77,32 +77,17 @@ const useGenericLlmSuggestion = (
 };
 
 interface SelfReflectionComponentProps {
-  plan: DailyPlanResponse;
-  onSave: (reflection: SelfReflection) => void;
-  isSaving: boolean;
+  reflection: SelfReflection;
+  onReflectionChange: (newReflection: SelfReflection) => void;
 }
 
 const SelfReflectionComponent: React.FC<SelfReflectionComponentProps> = ({
-  plan,
-  onSave,
-  isSaving,
+  reflection,
+  onReflectionChange,
 }) => {
-  const [reflection, setReflection] = useState<SelfReflection>(
-    plan.self_reflection || { positive: "", negative: "", follow_up_notes: "" }
-  );
-
-  useEffect(() => {
-    setReflection(
-      plan.self_reflection || {
-        positive: "",
-        negative: "",
-        follow_up_notes: "",
-      }
-    );
-  }, [plan.self_reflection]);
-
   const handleFieldChange = (field: ReflectionField, value: string) => {
-    setReflection((prev) => ({ ...prev, [field]: value }));
+    const newReflection = { ...reflection, [field]: value };
+    onReflectionChange(newReflection);
   };
 
   const useLlmHandlers = (field: ReflectionField) => {
@@ -183,17 +168,6 @@ const SelfReflectionComponent: React.FC<SelfReflectionComponentProps> = ({
         "follow_up_notes",
         followUpHandlers
       )}
-
-      <div className="flex justify-end pt-4">
-        <Button
-          onClick={() => onSave(reflection)}
-          disabled={isSaving}
-          className="flex items-center gap-2"
-        >
-          <Save size={18} />
-          {isSaving ? "Saving..." : "Save Reflection"}
-        </Button>
-      </div>
     </div>
   );
 };

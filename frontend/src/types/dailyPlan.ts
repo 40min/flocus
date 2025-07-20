@@ -24,5 +24,5 @@ export interface DailyPlanResponse {
   self_reflection: SelfReflection;
 
   time_windows: TimeWindowResponse[];
-  reviewed: boolean;
+
 }

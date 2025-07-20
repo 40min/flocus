@@ -1,16 +1,17 @@
 ---
 id: TASK-2025-002
 title: "Backend: Remove 'reviewed' field from DailyPlan"
-status: backlog
+status: done
 priority: high
 type: tech_debt
 estimate: M
 assignee: '@backend-team'
 created: 2025-07-19
-updated: 2025-07-19
+updated: 2025-07-20
 parents: [TASK-2025-001]
 arch_refs: [ARCH-data-model-daily-plan, ARCH-api-daily-plan]
 audit_log:
+  - {date: 2025-07-20, user: "@Robotic-SSE-AI", action: "implemented feature and set status to done"}
   - {date: 2025-07-19, user: "@AI-DocArchitect", action: "created with status backlog"}
 ---
 ## Description

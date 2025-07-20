@@ -210,11 +210,6 @@ class DailyPlanService:
             reflection_update_data = daily_plan_update_request.self_reflection.model_dump(exclude_unset=True)
             for key, value in reflection_update_data.items():
                 setattr(daily_plan.self_reflection, key, value)
-        if "reviewed" in update_data:
-
-            # Only update if the value is explicitly True or False, not None
-            if daily_plan_update_request.reviewed is not None:
-                daily_plan.reviewed = daily_plan_update_request.reviewed
 
         await self.engine.save(daily_plan)
 

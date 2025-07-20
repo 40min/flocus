@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router } from "react-router-dom";
 import { AuthProvider } from "context/AuthContext";
@@ -22,10 +28,19 @@ jest.mock("hooks/useTemplates");
 jest.mock("hooks/useCategories");
 jest.mock("services/dailyPlanService");
 jest.mock("services/userDailyStatsService");
+jest.mock("components/modals/CreateTimeWindowModal", () => ({
+  __esModule: true,
+  default: ({ isOpen }: any) => (isOpen ? null : null),
+}));
+
 jest.mock("components/modals/EditDailyPlanTimeWindowModal", () => ({
   __esModule: true,
   default: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="edit-modal">Mock Edit Modal</div> : null,
+    isOpen ? (
+      <div data-testid="edit-modal">
+        <p>Mock Edit Modal</p>
+      </div>
+    ) : null,
 }));
 
 jest.mock("context/MessageContext", () => {
@@ -42,7 +57,6 @@ const mockedUseTemplates = useTemplates as jest.Mock;
 const mockedUseCategories = useCategories as jest.Mock;
 const mockedCreateDailyPlan = dailyPlanService.createDailyPlan as jest.Mock;
 const mockedUpdateDailyPlan = dailyPlanService.updateDailyPlan as jest.Mock;
-const mockedUseMessage = useMessage as jest.Mock;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,7 +111,6 @@ const mockDailyPlan: DailyPlanResponse = {
       tasks: [],
     },
   ],
-  reviewed: false,
   self_reflection: {
     positive: "Had a productive morning",
     negative: "Need to improve focus in the afternoon",
@@ -172,18 +185,20 @@ describe("MyDayPage", () => {
       });
     });
 
-    it('opens template modal on "Create Plan" click', async () => {
+    it('selects template on "Work Day" template click', async () => {
       mockedUseTemplates.mockReturnValue({
         data: mockTemplates,
         isLoading: false,
       });
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: "Create Plan" }));
+      fireEvent.click(screen.getByRole("button", { name: "Work Day" }));
       await waitFor(() => {
-        expect(screen.getByText("Choose a Day Template")).toBeInTheDocument();
+        expect(screen.getByText("Morning work")).toBeInTheDocument();
       });
       await waitFor(() => {
-        expect(screen.getByText("Work Day")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Save Plan" })
+        ).toBeInTheDocument();
       });
     });
 
@@ -195,8 +210,8 @@ describe("MyDayPage", () => {
       mockedCreateDailyPlan.mockResolvedValue({});
       renderComponent();
 
-      fireEvent.click(screen.getByRole("button", { name: "Create Plan" }));
-      fireEvent.click(screen.getByText("Work Day"));
+      // Click on the Work Day template button directly
+      fireEvent.click(screen.getByRole("button", { name: "Work Day" }));
 
       await waitFor(() => {
         expect(screen.getByText("Morning work")).toBeInTheDocument();
@@ -217,7 +232,7 @@ describe("MyDayPage", () => {
       });
     });
 
-    describe("when previous day's plan exists and is not reviewed", () => {
+    describe("when previous day's plan exists", () => {
       const mockPrevDayPlan: DailyPlanResponse = {
         id: "yesterday_plan",
         user_id: "user1",
@@ -281,7 +296,6 @@ describe("MyDayPage", () => {
             ],
           },
         ],
-        reviewed: false,
         self_reflection: {
           positive: "Had a productive morning",
           negative: "Need to improve focus in the afternoon",
@@ -317,14 +331,26 @@ describe("MyDayPage", () => {
       it('carries over uncompleted tasks to a new daily plan on "Carry over" click', async () => {
         renderComponent();
 
-        await waitFor(() => {
-          expect(
-            screen.getByRole("button", { name: "Carry over" })
-          ).toBeInTheDocument();
+        const carryOverButton = await screen.findByRole("button", {
+          name: "Carry over unfinished tasks",
+        });
+        expect(carryOverButton).toBeInTheDocument();
+
+        // Simulate changing reflection
+        fireEvent.change(screen.getByLabelText("What could be improved?"), {
+          target: { value: "Could be better." },
         });
 
-        fireEvent.click(screen.getByRole("button", { name: "Carry over" }));
+        fireEvent.click(carryOverButton);
 
+        await waitFor(() => {
+          expect(mockedUpdateDailyPlan).toHaveBeenCalledWith("yesterday_plan", {
+            self_reflection: {
+              ...mockPrevDayPlan.self_reflection,
+              negative: "Could be better.",
+            },
+          });
+        });
         await waitFor(() => {
           expect(mockedCreateDailyPlan).toHaveBeenCalledWith([
             {
@@ -349,7 +375,9 @@ describe("MyDayPage", () => {
           data: mockTemplates,
           isLoading: false,
         });
-        renderComponent();
+        await act(async () => {
+          renderComponent();
+        });
 
         await waitFor(() => {
           expect(
@@ -357,8 +385,10 @@ describe("MyDayPage", () => {
           ).toBeInTheDocument();
         });
 
-        fireEvent.click(screen.getByRole("button", { name: "Create Plan" }));
-        fireEvent.click(screen.getByText("Work Day")); // Select a template
+        // Click on "Create new plan" button from the review section
+        fireEvent.click(
+          screen.getByRole("button", { name: "Create new plan" })
+        );
 
         await waitFor(() => {
           expect(
@@ -451,29 +481,26 @@ describe("MyDayPage", () => {
     });
 
     // TODO: Future test with a more sophisticated mock or by not mocking this modal
-    // to test the full edit and save functionality.
-    // For now, this test is simplified due to the basic mock.
+
     it("saves the plan when save button is clicked (after an action like delete)", async () => {
       mockedUpdateDailyPlan.mockResolvedValue({});
       renderComponent();
 
-      // Example: Perform a delete action first
       const deleteButton = screen.getByLabelText("Delete time window");
       fireEvent.click(deleteButton);
+
       await waitFor(() => {
         expect(screen.queryByText("Morning work")).not.toBeInTheDocument();
       });
 
-      // Click the main Save button for the page
       const savePlanButton = screen.getByRole("button", { name: "Save" });
       fireEvent.click(savePlanButton);
 
-      // Assert that updateDailyPlan was called
       await waitFor(() => {
         expect(mockedUpdateDailyPlan).toHaveBeenCalledWith("plan1", {
-          time_windows: [], // Reflects the deletion
+          time_windows: [],
         });
       });
-    }); // Closes the new 'it('saves the plan when save button is clicked (after an action like delete)', ...)'
-  }); // Closes 'describe('when a daily plan exists', ...)'
-}); // Closes 'describe('MyDayPage', ...)'
+    });
+  });
+});

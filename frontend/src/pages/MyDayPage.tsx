@@ -52,6 +52,8 @@ const MyDayPage: React.FC = () => {
   const [editingTimeWindow, setEditingTimeWindow] =
     useState<TimeWindowAllocation | null>(null);
   const [showYesterdayReview, setShowYesterdayReview] = useState(false);
+  const [prevDayReflection, setPrevDayReflection] =
+    useState<SelfReflection | null>(null);
 
   const createPlanMutation = useMutation({
     mutationFn: createDailyPlan,
@@ -82,14 +84,24 @@ const MyDayPage: React.FC = () => {
   useEffect(() => {
     // When the fetched daily plan changes, update the local state.
     // This allows local modifications before saving.
-    setDailyPlan(fetchedDailyPlan ?? null);
-  }, [fetchedDailyPlan]);
+    if (fetchedDailyPlan) {
+      setDailyPlan(fetchedDailyPlan);
+    } else {
+      setDailyPlan(null);
+    }
+  }, [fetchedDailyPlan, setDailyPlan]);
 
   useEffect(() => {
-    setShowYesterdayReview(
-      !!(prevDayPlan && !fetchedDailyPlan && !selectedTemplate)
+    const shouldShowReview = !!(
+      prevDayPlan &&
+      !fetchedDailyPlan &&
+      !selectedTemplate
     );
-  }, [prevDayPlan, fetchedDailyPlan, selectedTemplate]);
+    setShowYesterdayReview(shouldShowReview);
+    if (shouldShowReview) {
+      setPrevDayReflection(prevDayPlan.self_reflection);
+    }
+  }, [prevDayPlan, fetchedDailyPlan, selectedTemplate, setPrevDayReflection]);
 
   const handleAssignTask = (timeWindowId: string, task: Task) => {
     setDailyPlan((prevPlan) => {
@@ -190,7 +202,6 @@ const MyDayPage: React.FC = () => {
         self_reflection: { positive: "", negative: "", follow_up_notes: "" }, // Initialize self_reflection
 
         time_windows: [newTimeWindowAllocation],
-        reviewed: false,
       });
     }
   };
@@ -278,13 +289,39 @@ const MyDayPage: React.FC = () => {
     }
   };
 
-  const handleSaveReflection = (reflection: SelfReflection) => {
+  const savePrevDayReflection = async (reflection: SelfReflection) => {
     if (prevDayPlan) {
-      updatePlanMutation.mutate({
+      await updatePlanMutation.mutateAsync({
         planId: prevDayPlan.id,
-        payload: { self_reflection: reflection, reviewed: true },
+        payload: { self_reflection: reflection },
       });
+    }
+  };
+
+  const handleCarryOver = async () => {
+    if (prevDayPlan && prevDayReflection) {
+      await savePrevDayReflection(prevDayReflection);
+
+      const timeWindowsToCarryOver = prevDayPlan.time_windows.map((alloc) => ({
+        description: alloc.time_window.description,
+        start_time: alloc.time_window.start_time,
+        end_time: alloc.time_window.end_time,
+        category_id: alloc.time_window.category?.id || null,
+        task_ids: alloc.tasks
+          .filter((task) => task.status !== "done")
+          .map((task) => task.id),
+      }));
+
+      await createPlanMutation.mutateAsync(timeWindowsToCarryOver);
       setShowYesterdayReview(false);
+    }
+  };
+
+  const handleCreateNewPlanFromReview = async () => {
+    if (prevDayPlan && prevDayReflection) {
+      await savePrevDayReflection(prevDayReflection);
+      setShowYesterdayReview(false);
+      setIsTemplateModalOpen(true);
     }
   };
 
@@ -428,7 +465,7 @@ const MyDayPage: React.FC = () => {
 
             <div className="space-y-16">
               {/* Section 1: Review Unfinished Tasks */}
-              {showYesterdayReview && prevDayPlan && !prevDayPlan.reviewed && (
+              {showYesterdayReview && prevDayPlan && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
@@ -453,28 +490,26 @@ const MyDayPage: React.FC = () => {
                             />
                           ))}
                       </div>
-                      <div className="mt-6 flex justify-start">
-                        <button
-                          className="flex items-center justify-center gap-2 min-w-[84px] cursor-pointer rounded-lg h-10 px-4 bg-slate-900 text-white text-sm font-medium shadow-sm hover:bg-slate-800 transition-colors"
-                          onClick={() => {
-                            if (prevDayPlan) {
-                              const timeWindowsToCarryOver =
-                                prevDayPlan.time_windows.map((alloc) => ({
-                                  description: alloc.time_window.description,
-                                  start_time: alloc.time_window.start_time,
-                                  end_time: alloc.time_window.end_time,
-                                  category_id:
-                                    alloc.time_window.category?.id || null,
-                                  task_ids: alloc.tasks
-                                    .filter((task) => task.status !== "done")
-                                    .map((task) => task.id),
-                                }));
-                              createPlanMutation.mutate(timeWindowsToCarryOver);
-                            }
-                          }}
+                      <div className="mt-6 flex justify-start gap-4">
+                        <Button
+                          onClick={handleCarryOver}
+                          disabled={
+                            createPlanMutation.isPending ||
+                            updatePlanMutation.isPending
+                          }
                         >
-                          Carry over
-                        </button>
+                          Carry over unfinished tasks
+                        </Button>
+                        <Button
+                          onClick={handleCreateNewPlanFromReview}
+                          variant="secondary"
+                          disabled={
+                            createPlanMutation.isPending ||
+                            updatePlanMutation.isPending
+                          }
+                        >
+                          Create new plan
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -482,7 +517,7 @@ const MyDayPage: React.FC = () => {
               )}
 
               {/* Section 3: Self-Reflection */}
-              {showYesterdayReview && prevDayPlan && !prevDayPlan.reviewed && (
+              {showYesterdayReview && prevDayPlan && prevDayReflection && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
@@ -494,111 +529,132 @@ const MyDayPage: React.FC = () => {
                       </p>
                     </header>
                     <SelfReflectionComponent
-                      plan={prevDayPlan}
-                      onSave={handleSaveReflection}
-                      isSaving={updatePlanMutation.isPending}
+                      reflection={prevDayReflection}
+                      onReflectionChange={setPrevDayReflection}
                     />
                   </div>
                 </section>
               )}
 
-              {/* Section 2: Today's Schedule (Create Plan Prompt) */}
-              <section className="w-full">
-                <div className="max-w-7xl mx-auto">
-                  <header className="mb-6">
-                    <h2 className="text-md font-semibold text-slate-800 mb-2">
-                      Today's Schedule
-                    </h2>
-                    <p className="text-slate-400 text-sm scale-80 origin-top-left">
-                      Plan your day, drag and drop tasks, and manage your time
-                      windows.
-                    </p>
-                  </header>
-                  {selectedTemplate ? (
-                    <>
-                      <div className="space-y-2 mt-8">
+              {/* Section 2: Create New Plan */}
+              {!showYesterdayReview && !selectedTemplate && (
+                <section className="w-full">
+                  <div className="max-w-7xl mx-auto">
+                    <header className="mb-6">
+                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
+                        No plan for today
+                      </h2>
+                      <p className="text-slate-500 text-sm">
+                        Start by creating a new daily plan.
+                      </p>
+                    </header>
+                    <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
+                      {dayTemplates.length > 0 ? (
+                        <>
+                          <p className="text-lg text-slate-500 mb-4">
+                            Choose a template to get started:
+                          </p>
+                          <div className="flex flex-wrap justify-center gap-4">
+                            {dayTemplates.map(
+                              (template: DayTemplateResponse) => (
+                                <Button
+                                  key={template.id}
+                                  onClick={() => handleSelectTemplate(template)}
+                                  variant="secondary"
+                                >
+                                  {template.name}
+                                </Button>
+                              )
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-lg text-slate-500 mb-4">
+                            No templates available.
+                          </p>
+                          <Button
+                            onClick={() => setIsTemplateModalOpen(true)}
+                            variant="primary"
+                          >
+                            Create Plan
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Template Preview Section */}
+              {!showYesterdayReview && selectedTemplate && (
+                <section className="w-full">
+                  <div className="max-w-7xl mx-auto">
+                    <header className="mb-6">
+                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
+                        Template Preview: {selectedTemplate.name}
+                      </h2>
+                      <p className="text-slate-500 text-sm">
+                        Review your template and save it as today's plan.
+                      </p>
+                    </header>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <div className="space-y-4 mb-6">
                         {selectedTemplate.time_windows
                           .slice()
-                          .sort(
-                            (a: TimeWindow, b: TimeWindow) =>
-                              a.start_time - b.start_time
-                          )
-                          .map((tw) => (
+                          .sort((a, b) => a.start_time - b.start_time)
+                          .map((timeWindow) => (
                             <TimeWindowBalloon
-                              key={tw.id}
-                              timeWindow={tw}
+                              key={timeWindow.id}
+                              timeWindow={timeWindow}
                               tasks={[]}
                             />
                           ))}
                       </div>
-                      <div className="space-y-2 mt-8 text-left">
+                      <div className="flex justify-start gap-4">
                         <Button
-                          variant="slate"
-                          size="medium"
                           onClick={handleSavePlan}
-                          className="flex items-center gap-2"
+                          disabled={createPlanMutation.isPending}
                         >
-                          <Save size={18} />
                           Save Plan
                         </Button>
+                        <Button
+                          onClick={() => setSelectedTemplate(null)}
+                          variant="secondary"
+                        >
+                          Back to Templates
+                        </Button>
                       </div>
-                    </>
-                  ) : (
-                    <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
-                      <h3 className="text-slate-800 text-xl font-semibold mb-2">
-                        No plan for today
-                      </h3>
-                      <p className="text-slate-600 text-sm max-w-md mb-6">
-                        Create a plan from a Day Template or start from scratch
-                        to organize your tasks and boost your productivity.
-                      </p>
-                      <Button
-                        variant="slate"
-                        size="medium"
-                        onClick={() => setIsTemplateModalOpen(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <PlusCircle size={18} />
-                        Create Plan
-                      </Button>
                     </div>
-                  )}
-                </div>
-              </section>
+                  </div>
+                </section>
+              )}
             </div>
-
             <footer className="mt-16 pt-8 border-t border-slate-200 text-center">
-              <p className="text-sm text-slate-500">
-                Stay organized, stay productive. Make every day count.
+              <p className="text-slate-500 text-sm">
+                &copy; {new Date().getFullYear()} Flocus. All rights reserved.
               </p>
             </footer>
           </>
         )}
       </div>
+
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         title="Choose a Day Template"
       >
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {dayTemplates.length > 0 ? (
-            dayTemplates.map((template: DayTemplateResponse) => (
-              <button
-                key={template.id}
-                onClick={() => handleSelectTemplate(template)}
-                className="w-full text-left p-3 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
-              >
-                <p className="font-semibold">{template.name}</p>
-                <p className="text-sm text-slate-600">
-                  {template.description || "No description"}
-                </p>
-              </button>
-            ))
-          ) : (
-            <p className="text-slate-600 text-sm">
-              No day templates found. You can create one on the Templates page.
-            </p>
-          )}
+        <div className="space-y-4">
+          {dayTemplates.map((template: DayTemplateResponse) => (
+            <Button
+              key={template.id}
+              onClick={() => handleSelectTemplate(template)}
+              variant="secondary"
+              className="w-full"
+            >
+              {template.name}
+            </Button>
+          ))}
         </div>
       </Modal>
 
@@ -609,12 +665,13 @@ const MyDayPage: React.FC = () => {
         categories={categories}
         existingTimeWindows={dailyPlan?.time_windows || []}
       />
+
       {dailyPlan && editingTimeWindow && (
         <EditDailyPlanTimeWindowModal
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
-          onSubmit={handleUpdateTimeWindow}
           editingTimeWindow={editingTimeWindow}
+          onSubmit={handleUpdateTimeWindow}
           existingTimeWindows={dailyPlan.time_windows}
         />
       )}

@@ -27,7 +27,6 @@ const mockDailyPlan: DailyPlanResponse = {
   user_id: "user1",
   plan_date: new Date().toISOString(),
   time_windows: [],
-  reviewed: false,
   self_reflection: {
     positive: "Had a productive morning",
     negative: "Need to improve focus in the afternoon",

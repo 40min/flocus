@@ -215,36 +215,47 @@ const simulateDragAndDrop = (
   overId: string,
   container: HTMLElement
 ) => {
-  // Find the DndContext component
   const dndContext =
     container.querySelector('[data-testid="dnd-context"]') || container;
 
-  // Create drag start event
+  const mockRect: ClientRect = {
+    width: 200,
+    height: 50,
+    top: 100,
+    left: 50,
+    right: 250,
+    bottom: 150,
+    x: 50,
+    y: 100,
+    toJSON: () => ({}),
+  };
+
   const dragStartEvent: DragStartEvent = {
     active: {
       id: activeId,
       data: { current: {} },
-      rect: { current: { initial: null, translated: null } },
+      rect: { current: { initial: mockRect, translated: mockRect } },
     },
+    activatorEvent: new MouseEvent("mousedown") as any,
   };
 
-  // Create drag end event
   const dragEndEvent: DragEndEvent = {
     active: {
       id: activeId,
       data: { current: {} },
-      rect: { current: { initial: null, translated: null } },
+      rect: { current: { initial: mockRect, translated: mockRect } },
     },
     over: {
       id: overId,
       data: { current: {} },
-      rect: { current: { initial: null, translated: null } },
+      rect: mockRect,
+      disabled: false,
     },
     delta: { x: 0, y: 100 },
     collisions: [],
+    activatorEvent: new MouseEvent("mouseup") as any,
   };
 
-  // Simulate the drag events
   fireEvent(
     dndContext,
     new CustomEvent("dragstart", { detail: dragStartEvent })

@@ -322,3 +322,27 @@ export function roundToInterval(minutes: number, interval: number = 15): number 
 
   return Math.round(minutes / interval) * interval;
 }
+
+export const recalculateTimeWindows = (timeWindows: TimeWindowAllocation[]): TimeWindowAllocation[] => {
+  if (!timeWindows || timeWindows.length === 0) {
+    return [];
+  }
+
+  let currentTime = timeWindows[0].time_window.start_time;
+
+  return timeWindows.map((allocation) => {
+    const duration = allocation.time_window.end_time - allocation.time_window.start_time;
+    const newStartTime = currentTime;
+    const newEndTime = currentTime + duration;
+    currentTime = newEndTime;
+
+    return {
+      ...allocation,
+      time_window: {
+        ...allocation.time_window,
+        start_time: newStartTime,
+        end_time: newEndTime,
+      },
+    };
+  });
+};

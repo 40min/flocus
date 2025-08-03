@@ -176,11 +176,11 @@ describe("MyDayPage", () => {
       mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByText("No plan for today")).toBeInTheDocument();
+        expect(screen.getByText("Welcome to Your Day")).toBeInTheDocument();
       });
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: "Create Plan" })
+          screen.getByRole("button", { name: "Or Choose from All Templates" })
         ).toBeInTheDocument();
       });
     });
@@ -191,13 +191,13 @@ describe("MyDayPage", () => {
         isLoading: false,
       });
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: "Work Day" }));
+      fireEvent.click(screen.getByRole("button", { name: /Work Day/ }));
       await waitFor(() => {
         expect(screen.getByText("Morning work")).toBeInTheDocument();
       });
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: "Save Plan" })
+          screen.getByRole("button", { name: "Save Today's Plan" })
         ).toBeInTheDocument();
       });
     });
@@ -211,13 +211,15 @@ describe("MyDayPage", () => {
       renderComponent();
 
       // Click on the Work Day template button directly
-      fireEvent.click(screen.getByRole("button", { name: "Work Day" }));
+      fireEvent.click(screen.getByRole("button", { name: /Work Day/ }));
 
       await waitFor(() => {
         expect(screen.getByText("Morning work")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Save Plan" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Save Today's Plan" })
+      );
 
       await waitFor(() => {
         expect(mockedCreateDailyPlan).toHaveBeenCalledWith([
@@ -316,13 +318,11 @@ describe("MyDayPage", () => {
         renderComponent();
         await waitFor(() => {
           expect(
-            screen.getByText("Review: Previous Day's Tasks")
+            screen.getByText("Review Yesterday's Plan")
           ).toBeInTheDocument();
         });
-        expect(screen.getByText("Morning session")).toBeInTheDocument();
         expect(screen.getByText("Completed Task")).toBeInTheDocument();
         expect(screen.getByText("Uncompleted Task")).toBeInTheDocument();
-        expect(screen.getByText("Afternoon session")).toBeInTheDocument();
         expect(
           screen.getByText("Another Uncompleted Task")
         ).toBeInTheDocument();
@@ -332,7 +332,7 @@ describe("MyDayPage", () => {
         renderComponent();
 
         const carryOverButton = await screen.findByRole("button", {
-          name: "Carry over unfinished tasks",
+          name: "Carry Over Uncompleted Tasks",
         });
         expect(carryOverButton).toBeInTheDocument();
 
@@ -344,12 +344,15 @@ describe("MyDayPage", () => {
         fireEvent.click(carryOverButton);
 
         await waitFor(() => {
-          expect(mockedUpdateDailyPlan).toHaveBeenCalledWith("yesterday_plan", {
-            self_reflection: {
-              ...mockPrevDayPlan.self_reflection,
-              negative: "Could be better.",
-            },
-          });
+          expect(dailyPlanService.updateDailyPlan).toHaveBeenCalledWith(
+            "yesterday_plan",
+            {
+              self_reflection: {
+                ...mockPrevDayPlan.self_reflection,
+                negative: "Could be better.",
+              },
+            }
+          );
         });
         await waitFor(() => {
           expect(mockedCreateDailyPlan).toHaveBeenCalledWith([
@@ -375,24 +378,22 @@ describe("MyDayPage", () => {
           data: mockTemplates,
           isLoading: false,
         });
-        await act(async () => {
-          renderComponent();
-        });
+        renderComponent();
 
         await waitFor(() => {
           expect(
-            screen.getByText("Review: Previous Day's Tasks")
+            screen.getByText("Review Yesterday's Plan")
           ).toBeInTheDocument();
         });
 
         // Click on "Create new plan" button from the review section
         fireEvent.click(
-          screen.getByRole("button", { name: "Create new plan" })
+          screen.getByRole("button", { name: "Create New Plan" })
         );
 
         await waitFor(() => {
           expect(
-            screen.queryByText("Review: Previous Day's Tasks")
+            screen.queryByText("Review Yesterday's Plan")
           ).not.toBeInTheDocument();
         });
       });

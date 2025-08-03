@@ -387,7 +387,13 @@ const MyDayPage: React.FC = () => {
     };
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        data-testid={`sortable-time-window-${allocation.time_window.id}`}
+      >
         <TimeWindowBalloon
           timeWindow={allocation.time_window}
           tasks={allocation.tasks}
@@ -464,6 +470,7 @@ const MyDayPage: React.FC = () => {
                   collisionDetection={closestCenter}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
+                  data-testid="dnd-context"
                 >
                   <SortableContext
                     items={localTimeWindows.map(

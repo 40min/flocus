@@ -61,7 +61,7 @@ async def test_create_task_success(
     assert created_task.statistics.was_started_at is not None  # Because status is IN_PROGRESS
     assert created_task.statistics.was_taken_at is not None  # Because status is IN_PROGRESS
     assert created_task.statistics.was_stopped_at is None
-    assert created_task.statistics.lasts_min == 0
+    assert created_task.statistics.lasts_seconds == 0
     # Check if was_started_at and was_taken_at are close to created_at
     assert abs((created_task.statistics.was_started_at - created_task.created_at).total_seconds()) < 2
     assert abs((created_task.statistics.was_taken_at - created_task.created_at).total_seconds()) < 2
@@ -86,7 +86,7 @@ async def test_create_task_pending_initial_statistics(
     assert created_task.statistics.was_started_at is None
     assert created_task.statistics.was_taken_at is None
     assert created_task.statistics.was_stopped_at is None
-    assert created_task.statistics.lasts_min == 0
+    assert created_task.statistics.lasts_seconds == 0
 
 
 async def test_create_task_title_conflict(
@@ -730,7 +730,7 @@ async def test_update_task_statistics_flow_via_api(
 
     assert created_task.statistics.was_started_at is None
     assert created_task.statistics.was_taken_at is None
-    assert created_task.statistics.lasts_min == 0
+    assert created_task.statistics.lasts_seconds == 0
 
     # Mock datetime.utcnow to control time for statistics updates
     mock_time_1 = datetime.datetime.now(datetime.timezone.utc)
@@ -752,7 +752,7 @@ async def test_update_task_statistics_flow_via_api(
     assert abs((updated_task_1.statistics.was_started_at - mock_time_1).total_seconds()) < 2
     assert updated_task_1.statistics.was_taken_at is not None
     assert abs((updated_task_1.statistics.was_taken_at - mock_time_1).total_seconds()) < 2
-    assert updated_task_1.statistics.lasts_min == 0
+    assert updated_task_1.statistics.lasts_seconds == 0
 
     # 3. Move to DONE
     with patch("app.services.task_service.datetime") as mock_dt_2:
@@ -766,7 +766,7 @@ async def test_update_task_statistics_flow_via_api(
     updated_task_2 = TaskResponse(**response_2.json())
     assert updated_task_2.statistics.was_stopped_at is not None
     assert abs((updated_task_2.statistics.was_stopped_at - mock_time_2).total_seconds()) < 2
-    assert updated_task_2.statistics.lasts_min == 30  # (mock_time_2 - mock_time_1)
+    assert updated_task_2.statistics.lasts_seconds == 1800  # (mock_time_2 - mock_time_1)
 
     # 4. Move back to IN_PROGRESS (re-opening task)
     with patch("app.services.task_service.datetime") as mock_dt_3:
@@ -801,7 +801,7 @@ async def test_update_task_statistics_flow_via_api(
     # was_stopped_at should remain from the last stop, or be None if re-opened from non-stopped state
     # In this flow, it was stopped at mock_time_2
     assert abs((updated_task_3.statistics.was_stopped_at - mock_time_2).total_seconds()) < 2
-    assert updated_task_3.statistics.lasts_min == 30  # Unchanged until next stop
+    assert updated_task_3.statistics.lasts_seconds == 1800  # Unchanged until next stop
 
     # 5. Move to BLOCKED (another stop)
     with patch("app.services.task_service.datetime") as mock_dt_4:
@@ -820,7 +820,7 @@ async def test_update_task_statistics_flow_via_api(
     updated_task_4.statistics.was_stopped_at = was_stopped_at_from_resp_4
 
     assert abs((updated_task_4.statistics.was_stopped_at - mock_time_4).total_seconds()) < 2
-    assert updated_task_4.statistics.lasts_min == 30 + 10  # 30 (previous) + 10 (mock_time_4 - mock_time_3)
+    assert updated_task_4.statistics.lasts_seconds == (30 + 10) * 60  # 30 (previous) + 10 (mock_time_4 - mock_time_3)
 
 
 async def test_update_task_no_status_change_no_stat_change_via_api(
@@ -847,7 +847,7 @@ async def test_update_task_no_status_change_no_stat_change_via_api(
     task_in_db.statistics.was_started_at = initial_start
     task_in_db.statistics.was_taken_at = initial_taken
     task_in_db.statistics.was_stopped_at = initial_stop
-    task_in_db.statistics.lasts_min = initial_lasts_min
+    task_in_db.statistics.lasts_seconds = initial_lasts_min * 60
     await test_db.save(task_in_db)
 
     # Update only the title
@@ -885,7 +885,7 @@ async def test_update_task_no_status_change_no_stat_change_via_api(
     assert abs((updated_task.statistics.was_started_at - initial_start).total_seconds()) < 1
     assert abs((updated_task.statistics.was_taken_at - initial_taken).total_seconds()) < 1
     assert abs((updated_task.statistics.was_stopped_at - initial_stop).total_seconds()) < 1
-    assert updated_task.statistics.lasts_min == initial_lasts_min
+    assert updated_task.statistics.lasts_seconds == initial_lasts_min * 60
 
 
 # #####################################################################

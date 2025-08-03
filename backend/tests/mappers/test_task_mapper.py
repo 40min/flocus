@@ -70,7 +70,7 @@ def sample_task_model(
         created_at=now,
         updated_at=now,
         statistics=TaskStatistics(
-            lasts_min=15, was_started_at=now - timedelta(minutes=30), was_taken_at=now - timedelta(minutes=15)
+            lasts_seconds=900, was_started_at=now - timedelta(minutes=30), was_taken_at=now - timedelta(minutes=15)
         ),
     )
 
@@ -126,7 +126,7 @@ class TestTaskMapper:
         assert task_response.updated_at == sample_task_model.updated_at
         assert task_response.statistics is not None
         assert isinstance(task_response.statistics, TaskStatisticsSchema)
-        assert task_response.statistics.lasts_min == sample_task_model.statistics.lasts_min
+        assert task_response.statistics.lasts_seconds == sample_task_model.statistics.lasts_seconds
         assert task_response.statistics.was_started_at == sample_task_model.statistics.was_started_at
         assert task_response.statistics.was_taken_at == sample_task_model.statistics.was_taken_at
         assert (
@@ -155,7 +155,7 @@ class TestTaskMapper:
         assert isinstance(task_response.statistics, TaskStatisticsSchema)
         # Assuming default statistics if not explicitly set on task_model_no_category
         # If task_model_no_category.statistics was modified, assert against those values
-        assert task_response.statistics.lasts_min == task_model_no_category.statistics.lasts_min
+        assert task_response.statistics.lasts_seconds == task_model_no_category.statistics.lasts_seconds
         assert task_response.statistics.was_started_at == task_model_no_category.statistics.was_started_at
 
     def test_to_response_with_category_id_but_no_category_model(self, sample_task_model: Task):
@@ -172,5 +172,5 @@ class TestTaskMapper:
         assert task_response.user_id == sample_task_model.user_id
         assert task_response.statistics is not None
         assert isinstance(task_response.statistics, TaskStatisticsSchema)
-        assert task_response.statistics.lasts_min == sample_task_model.statistics.lasts_min
+        assert task_response.statistics.lasts_seconds == sample_task_model.statistics.lasts_seconds
         assert task_response.statistics.was_started_at == sample_task_model.statistics.was_started_at

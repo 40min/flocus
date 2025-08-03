@@ -255,7 +255,7 @@ class TaskService:
 
                     if was_taken_at_aware:  # Recalculate duration with aware times
                         duration = task.statistics.was_stopped_at - was_taken_at_aware
-                        task.statistics.lasts_min += int(duration.total_seconds() / 60)
+                        task.statistics.lasts_seconds += int(duration.total_seconds())
 
         task.updated_at = datetime.now(UTC)
 

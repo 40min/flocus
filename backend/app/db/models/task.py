@@ -10,7 +10,7 @@ class TaskStatistics(EmbeddedModel):
     was_started_at: Optional[datetime] = None
     was_taken_at: Optional[datetime] = None
     was_stopped_at: Optional[datetime] = None
-    lasts_min: int = Field(default=0)
+    lasts_seconds: int = Field(default=0)
 
     model_config = {"extra": "ignore"}  # Or "forbid" if you want to be strict
 

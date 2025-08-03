@@ -4,7 +4,7 @@ export interface TaskStatistics {
   was_taken_at?: string;    // ISO datetime string
   was_started_at?: string;  // ISO datetime string
   was_stopped_at?: string;  // ISO datetime string
-  lasts_min?: number;
+  lasts_seconds?: number;
 }
 
 export type TaskStatus = 'pending' | 'in_progress' | 'done' | 'blocked';

@@ -1,9 +1,9 @@
-import React from 'react';
-import Modal from './Modal';
-import Button from 'components/Button';
-import { Task } from 'types/task';
-import { formatDateTime, formatDurationFromMinutes } from 'lib/utils';
-import { CalendarDays, PlayCircle, StopCircle, Timer } from 'lucide-react';
+import React from "react";
+import Modal from "./Modal";
+import Button from "components/Button";
+import { Task } from "types/task";
+import { formatDateTime, formatDurationFromSeconds } from "lib/utils";
+import { CalendarDays, PlayCircle, StopCircle, Timer } from "lucide-react";
 
 interface TaskStatisticsModalProps {
   isOpen: boolean;
@@ -11,7 +11,11 @@ interface TaskStatisticsModalProps {
   task: Task | null;
 }
 
-const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({ isOpen, onClose, task }) => {
+const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({
+  isOpen,
+  onClose,
+  task,
+}) => {
   if (!task || !isOpen) {
     return null;
   }
@@ -24,35 +28,47 @@ const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({ isOpen, onClo
   const iconClass = "mr-2 h-5 w-5 text-slate-500";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Statistics for "${task.title}"`}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Statistics for "${task.title}"`}
+    >
       <div className="space-y-4 text-sm">
         <div className={statItemClass}>
           <span className={statLabelClass}>
             <CalendarDays className={iconClass} />
             First Taken:
           </span>
-          <span className={statValueClass}>{formatDateTime(statistics?.was_taken_at)}</span>
+          <span className={statValueClass}>
+            {formatDateTime(statistics?.was_taken_at)}
+          </span>
         </div>
         <div className={statItemClass}>
           <span className={statLabelClass}>
             <PlayCircle className={iconClass} />
             Last Started:
           </span>
-          <span className={statValueClass}>{formatDateTime(statistics?.was_started_at)}</span>
+          <span className={statValueClass}>
+            {formatDateTime(statistics?.was_started_at)}
+          </span>
         </div>
         <div className={statItemClass}>
           <span className={statLabelClass}>
             <StopCircle className={iconClass} />
             Last Stopped:
           </span>
-          <span className={statValueClass}>{formatDateTime(statistics?.was_stopped_at)}</span>
+          <span className={statValueClass}>
+            {formatDateTime(statistics?.was_stopped_at)}
+          </span>
         </div>
         <div className={statItemClass}>
           <span className={statLabelClass}>
             <Timer className={iconClass} />
             Total Active Time:
           </span>
-          <span className={statValueClass}>{formatDurationFromMinutes(statistics?.lasts_min)}</span>
+          <span className={statValueClass}>
+            {formatDurationFromSeconds(statistics?.lasts_seconds)}
+          </span>
         </div>
         <div className="flex justify-end pt-4">
           <Button variant="primary" size="medium" onClick={onClose}>

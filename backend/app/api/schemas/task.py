@@ -54,7 +54,7 @@ class TaskStatisticsSchema(BaseModel):
     was_started_at: Optional[datetime] = None
     was_taken_at: Optional[datetime] = None
     was_stopped_at: Optional[datetime] = None
-    lasts_min: Optional[int] = Field(default=0)
+    lasts_seconds: Optional[int] = Field(default=0)
 
     model_config = ConfigDict(from_attributes=True)
 

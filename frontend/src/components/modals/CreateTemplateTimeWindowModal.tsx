@@ -1,14 +1,17 @@
-import React, { useEffect, useMemo } from 'react';
-import 'react-datepicker/dist/react-datepicker.css';
-import { TimeWindow, TimeWindowInput } from '../../types/timeWindow';
-import { TimeWindowAllocation } from '../../types/dailyPlan';
-import { Category } from '../../types/category';
-import { minutesToDate, hhMMToMinutes } from '../../lib/utils';
-import { Plus, Edit } from 'lucide-react';
-import Modal from './Modal';
-import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useEffect, useMemo } from "react";
+import "react-datepicker/dist/react-datepicker.css";
+import { TimeWindow, TimeWindowInput } from "../../types/timeWindow";
+import { TimeWindowAllocation } from "../../types/dailyPlan";
+import { Category } from "../../types/category";
+import { minutesToDate, hhMMToMinutes } from "../../lib/utils";
+import { Plus, Edit } from "lucide-react";
+import Modal from "./Modal";
+import TimeWindowForm, {
+  TimeWindowFormInputs,
+  createTimeWindowFormSchema,
+} from "./TimeWindowForm";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface CreateTemplateTimeWindowModalProps {
   isOpen: boolean;
@@ -19,7 +22,9 @@ interface CreateTemplateTimeWindowModalProps {
   editingTimeWindow?: TimeWindow | null;
 }
 
-const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps> = ({
+const CreateTemplateTimeWindowModal: React.FC<
+  CreateTemplateTimeWindowModalProps
+> = ({
   isOpen,
   onClose,
   onSubmit,
@@ -30,13 +35,13 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   const initialData = useMemo(() => {
     if (editingTimeWindow) {
       return {
-        description: editingTimeWindow.description || '',
+        description: editingTimeWindow.description || "",
         startTime: minutesToDate(editingTimeWindow.start_time),
         endTime: minutesToDate(editingTimeWindow.end_time),
         categoryId: editingTimeWindow.category.id,
       };
     }
-    return { description: '', startTime: null, endTime: null, categoryId: '' };
+    return { description: "", startTime: null, endTime: null, categoryId: "" };
   }, [editingTimeWindow]);
 
   const existingTimeWindowsForOverlapCheck: TimeWindowAllocation[] = useMemo(
@@ -51,7 +56,12 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
     formState: { errors, isSubmitting },
     reset,
   } = useForm<TimeWindowFormInputs>({
-    resolver: zodResolver(createTimeWindowFormSchema(existingTimeWindowsForOverlapCheck, editingTimeWindow?.id)),
+    resolver: zodResolver(
+      createTimeWindowFormSchema(
+        existingTimeWindowsForOverlapCheck,
+        editingTimeWindow?.id
+      )
+    ),
     defaultValues: initialData,
   });
 
@@ -63,14 +73,20 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
     const { description, startTime, endTime, categoryId } = data;
     if (!startTime || !endTime || !categoryId) return;
 
-    const startTimeStr = startTime ? `${startTime.getHours()}:${startTime.getMinutes()}` : '';
-    const endTimeStr = endTime ? `${endTime.getHours()}:${endTime.getMinutes()}` : '';
+    const startTimeStr = startTime
+      ? `${startTime.getHours()}:${startTime.getMinutes()}`
+      : "";
+    const endTimeStr = endTime
+      ? `${endTime.getHours()}:${endTime.getMinutes()}`
+      : "";
     const startTimeMinutes = hhMMToMinutes(startTimeStr);
     const endTimeMinutes = hhMMToMinutes(endTimeStr);
 
     if (startTimeMinutes === null || endTimeMinutes === null) return;
 
-    const selectedCategory = availableCategories.find(cat => cat.id === categoryId);
+    const selectedCategory = availableCategories.find(
+      (cat) => cat.id === categoryId
+    );
     if (!selectedCategory) return;
 
     const newTimeWindow: TimeWindowInput = {
@@ -83,7 +99,11 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingTimeWindow ? "Edit Time Window" : "Add New Time Window"}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingTimeWindow ? "Edit Time Window" : "Add New Time Window"}
+    >
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <TimeWindowForm
           onClose={onClose}
@@ -94,7 +114,7 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           submitButtonContent={
             <>
               {editingTimeWindow ? <Edit size={16} /> : <Plus size={16} />}
-              {editingTimeWindow ? 'Update Time Window' : 'Add Time Window'}
+              {editingTimeWindow ? "Update Time Window" : "Add Time Window"}
             </>
           }
           control={control}
@@ -102,7 +122,6 @@ const CreateTemplateTimeWindowModal: React.FC<CreateTemplateTimeWindowModalProps
           errors={errors}
           isSubmitting={isSubmitting}
           reset={reset}
-onFormSubmit={handleSubmit(handleFormSubmit)}
         />
       </form>
     </Modal>

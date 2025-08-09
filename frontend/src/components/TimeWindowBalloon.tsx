@@ -119,7 +119,11 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
               <div className="flex items-center">
                 {onEdit && (
                   <Button
-                    onClick={onEdit}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     variant="ghost"
                     size="icon"
                     aria-label="Edit time window"
@@ -129,7 +133,11 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
                 )}
                 {onDelete && (
                   <Button
-                    onClick={handleDelete}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     variant="ghost"
                     size="icon"
                     className="text-slate-400 hover:text-red-500"
@@ -185,7 +193,11 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
                 ))}
               {onAssignTask && (
                 <Button
-                  onClick={() => setIsTaskPickerOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsTaskPickerOpen(true);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   variant="secondary"
                   size="icon"
                   className="w-8 h-8 rounded-full hover:text-blue-600"

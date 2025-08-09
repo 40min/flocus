@@ -1,14 +1,17 @@
-import React, { useMemo } from 'react';
-import Modal from './Modal';
-import { TimeWindowCreateRequest, TimeWindow } from '../../types/timeWindow';
-import { Category } from '../../types/category';
-import { hhMMToMinutes, minutesToDate } from '../../lib/utils';
-import { useMessage } from '../../context/MessageContext';
-import { TimeWindowAllocation } from '../../types/dailyPlan';
-import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
-import { PlusCircle } from 'lucide-react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useMemo } from "react";
+import Modal from "./Modal";
+import { TimeWindowCreateRequest, TimeWindow } from "../../types/timeWindow";
+import { Category } from "../../types/category";
+import { hhMMToMinutes, minutesToDate } from "../../lib/utils";
+import { useMessage } from "../../context/MessageContext";
+import { TimeWindowAllocation } from "../../types/dailyPlan";
+import TimeWindowForm, {
+  TimeWindowFormInputs,
+  createTimeWindowFormSchema,
+} from "./TimeWindowForm";
+import { PlusCircle } from "lucide-react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface CreateTimeWindowModalProps {
   isOpen: boolean;
@@ -29,16 +32,18 @@ const CreateTimeWindowModal: React.FC<CreateTimeWindowModalProps> = ({
 
   const initialData = useMemo(() => {
     let startTimeMinutes = 540;
-if (existingTimeWindows.length > 0) {
-      startTimeMinutes = Math.max(...existingTimeWindows.map((alloc) => alloc.time_window.end_time));
+    if (existingTimeWindows.length > 0) {
+      startTimeMinutes = Math.max(
+        ...existingTimeWindows.map((alloc) => alloc.time_window.end_time)
+      );
     }
 
     const endTimeMinutes = Math.min(startTimeMinutes + 60, 1439);
     return {
-      description: '',
+      description: "",
       startTime: minutesToDate(startTimeMinutes),
       endTime: minutesToDate(endTimeMinutes),
-      categoryId: '',
+      categoryId: "",
     };
   }, [existingTimeWindows]);
 
@@ -53,14 +58,16 @@ if (existingTimeWindows.length > 0) {
     defaultValues: initialData,
   });
 
-
-
   const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime, categoryId } = data;
     if (!startTime || !endTime || !categoryId) return;
 
-    const startTimeMinutes = hhMMToMinutes(`${startTime.getHours()}:${startTime.getMinutes()}`);
-    const endTimeMinutes = hhMMToMinutes(`${endTime.getHours()}:${endTime.getMinutes()}`);
+    const startTimeMinutes = hhMMToMinutes(
+      `${startTime.getHours()}:${startTime.getMinutes()}`
+    );
+    const endTimeMinutes = hhMMToMinutes(
+      `${endTime.getHours()}:${endTime.getMinutes()}`
+    );
 
     if (startTimeMinutes === null || endTimeMinutes === null) return;
 
@@ -73,14 +80,21 @@ if (existingTimeWindows.length > 0) {
 
     try {
       const tempId = `temp-${Date.now()}`;
-      const selectedCategory = categories.find((cat) => cat.id === timeWindowData.category_id);
+      const selectedCategory = categories.find(
+        (cat) => cat.id === timeWindowData.category_id
+      );
 
       const newTimeWindow: TimeWindow = {
         id: tempId,
         ...timeWindowData,
-        category: selectedCategory || { id: '', name: 'Uncategorized', user_id: '', is_deleted: false },
-        day_template_id: '',
-        user_id: '',
+        category: selectedCategory || {
+          id: "",
+          name: "Uncategorized",
+          user_id: "",
+          is_deleted: false,
+        },
+        day_template_id: "",
+        user_id: "",
         is_deleted: false,
       };
 
@@ -90,11 +104,11 @@ if (existingTimeWindows.length > 0) {
       };
 
       onSubmitSuccess(newTimeWindowAllocation);
-      showMessage('Time window added successfully!', 'success');
+      showMessage("Time window added successfully!", "success");
       onClose();
     } catch (error) {
-      showMessage('Failed to add time window.', 'error');
-      console.error('Failed to add time window:', error);
+      showMessage("Failed to add time window.", "error");
+      console.error("Failed to add time window:", error);
     }
   };
 
@@ -116,7 +130,6 @@ if (existingTimeWindows.length > 0) {
           errors={errors}
           isSubmitting={isSubmitting}
           reset={reset}
-onFormSubmit={handleSubmit(handleFormSubmit)}
         />
       </form>
     </Modal>

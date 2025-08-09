@@ -1,11 +1,14 @@
-import React, { useMemo } from 'react';
-import Modal from 'components/modals/Modal';
-import { TimeWindowCreateRequest } from 'types/timeWindow';
-import { hhMMToMinutes, minutesToDate } from 'lib/utils';
-import TimeWindowForm, { TimeWindowFormInputs, createTimeWindowFormSchema } from './TimeWindowForm';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { TimeWindowAllocation } from 'types/dailyPlan';
+import React, { useMemo } from "react";
+import Modal from "components/modals/Modal";
+import { TimeWindowCreateRequest } from "types/timeWindow";
+import { hhMMToMinutes, minutesToDate } from "lib/utils";
+import TimeWindowForm, {
+  TimeWindowFormInputs,
+  createTimeWindowFormSchema,
+} from "./TimeWindowForm";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { TimeWindowAllocation } from "types/dailyPlan";
 
 interface EditDailyPlanTimeWindowModalProps {
   isOpen: boolean;
@@ -15,24 +18,20 @@ interface EditDailyPlanTimeWindowModalProps {
   existingTimeWindows: TimeWindowAllocation[];
 }
 
-const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> = ({
-  isOpen,
-  onClose,
-  onSubmit,
-  editingTimeWindow,
-  existingTimeWindows,
-}) => {
+const EditDailyPlanTimeWindowModal: React.FC<
+  EditDailyPlanTimeWindowModalProps
+> = ({ isOpen, onClose, onSubmit, editingTimeWindow, existingTimeWindows }) => {
   const initialData = useMemo(() => {
     if (!editingTimeWindow) {
       return {
-        description: '',
+        description: "",
         startTime: null,
         endTime: null,
-        categoryId: '',
+        categoryId: "",
       };
     }
     return {
-      description: editingTimeWindow.time_window.description || '',
+      description: editingTimeWindow.time_window.description || "",
       startTime: minutesToDate(editingTimeWindow.time_window.start_time),
       endTime: minutesToDate(editingTimeWindow.time_window.end_time),
       categoryId: editingTimeWindow.time_window.category.id,
@@ -46,18 +45,25 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
     formState: { errors, isSubmitting },
     reset,
   } = useForm<TimeWindowFormInputs>({
-    resolver: zodResolver(createTimeWindowFormSchema(existingTimeWindows, editingTimeWindow.time_window.id)),
+    resolver: zodResolver(
+      createTimeWindowFormSchema(
+        existingTimeWindows,
+        editingTimeWindow.time_window.id
+      )
+    ),
     defaultValues: initialData,
   });
-
-
 
   const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
     const { description, startTime, endTime } = data;
     if (!startTime || !endTime) return;
 
-    const startTimeMinutes = hhMMToMinutes(`${startTime.getHours()}:${startTime.getMinutes()}`);
-    const endTimeMinutes = hhMMToMinutes(`${endTime.getHours()}:${endTime.getMinutes()}`);
+    const startTimeMinutes = hhMMToMinutes(
+      `${startTime.getHours()}:${startTime.getMinutes()}`
+    );
+    const endTimeMinutes = hhMMToMinutes(
+      `${endTime.getHours()}:${endTime.getMinutes()}`
+    );
 
     if (startTimeMinutes === null || endTimeMinutes === null) return;
 
@@ -74,7 +80,11 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Edit: ${editingTimeWindow.time_window.category.name}`}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Edit: ${editingTimeWindow.time_window.category.name}`}
+    >
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <TimeWindowForm
           onClose={onClose}
@@ -89,7 +99,6 @@ const EditDailyPlanTimeWindowModal: React.FC<EditDailyPlanTimeWindowModalProps> 
           errors={errors}
           isSubmitting={isSubmitting}
           reset={reset}
-onFormSubmit={handleSubmit(handleFormSubmit)}
         />
       </form>
     </Modal>

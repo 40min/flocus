@@ -21,7 +21,7 @@ export interface DailyPlanResponse {
   id: string;
   user_id: string;
   plan_date: string; // ISO datetime string
-  self_reflection: SelfReflection;
+  self_reflection: SelfReflection | null;
 
   time_windows: TimeWindowResponse[];
 

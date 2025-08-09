@@ -8,6 +8,7 @@ import {
   hhMMToMinutes,
   localToUtc,
   minutesToDate,
+  recalculateTimeWindowsWithGapFitting,
   utcToLocal,
 } from './utils';
 import { TimeWindowAllocation } from '../types/dailyPlan';
@@ -19,9 +20,10 @@ import { startOfDay } from 'date-fns';
 const originalConsoleWarn = console.warn;
 
 // Helper to create a mock TimeWindowAllocation for testing
-const createMockAllocation = (id: string, start: number, end: number): TimeWindowAllocation => ({
+const createMockAllocation = (id: string, start: number, end: number, description?: string): TimeWindowAllocation => ({
   time_window: {
     id,
+    description: description || `Window ${id}`,
     start_time: start,
     end_time: end,
     category: { id: 'cat1', name: 'Test', user_id: 'user1', is_deleted: false },
@@ -260,6 +262,179 @@ describe('utils', () => {
     it('should return false if there are no existing windows', () => {
       const newWindow: TimeWindowCreateRequest = { start_time: 600, end_time: 720, category_id: 'cat1' }; // 10:00 - 12:00
       expect(checkTimeWindowOverlap(newWindow, [])).toBe(false);
+    });
+  });
+
+  describe('recalculateTimeWindowsWithGapFitting', () => {
+    it('should fit dragged window into available gap when there is enough space', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw2', 720, 780, 'Lunch break'), // 12:00 - 13:00 (60 min) - dragged to middle
+        createMockAllocation('tw3', 840, 900, 'Afternoon work'), // 14:00 - 15:00 (60 min)
+      ];
+
+      // Drag lunch break (index 1) to fit between morning work and afternoon work
+      // Available gap: 10:00 - 14:00 (240 minutes), lunch break needs 60 minutes
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 1);
+
+      expect(result).toHaveLength(3);
+      expect(result![0].time_window.start_time).toBe(540); // Morning work unchanged
+      expect(result![0].time_window.end_time).toBe(600);
+      expect(result![1].time_window.start_time).toBe(600); // Lunch break fits right after morning work
+      expect(result![1].time_window.end_time).toBe(660);
+      expect(result![2].time_window.start_time).toBe(840); // Afternoon work unchanged
+      expect(result![2].time_window.end_time).toBe(900);
+    });
+
+    it('should fit dragged window at the beginning when moved to first position', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw2', 720, 780, 'Lunch break'), // 12:00 - 13:00 (60 min) - dragged to first
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw3', 840, 900, 'Afternoon work'), // 14:00 - 15:00 (60 min)
+      ];
+
+      // Drag lunch break to first position, should fit before morning work
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 0);
+
+      expect(result).toHaveLength(3);
+      expect(result![0].time_window.start_time).toBe(480); // Lunch break fits before morning work (8:00 - 9:00)
+      expect(result![0].time_window.end_time).toBe(540);
+      expect(result![1].time_window.start_time).toBe(540); // Morning work unchanged
+      expect(result![1].time_window.end_time).toBe(600);
+      expect(result![2].time_window.start_time).toBe(840); // Afternoon work unchanged
+      expect(result![2].time_window.end_time).toBe(900);
+    });
+
+    it('should fit dragged window at the end when moved to last position', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw2', 720, 780, 'Lunch break'), // 12:00 - 13:00 (60 min)
+        createMockAllocation('tw3', 840, 900, 'Afternoon work'), // 14:00 - 15:00 (60 min) - dragged to last
+      ];
+
+      // Drag afternoon work to last position (it's already last, but test the logic)
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 2);
+
+      expect(result).toHaveLength(3);
+      expect(result![0].time_window.start_time).toBe(540); // Others unchanged
+      expect(result![0].time_window.end_time).toBe(600);
+      expect(result![1].time_window.start_time).toBe(720);
+      expect(result![1].time_window.end_time).toBe(780);
+      expect(result![2].time_window.start_time).toBe(780); // Fits right after lunch break
+      expect(result![2].time_window.end_time).toBe(840);
+    });
+
+    it('should shorten dragged window when it does not fit in available gap', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw2', 720, 900, 'Long lunch'), // 12:00 - 15:00 (180 min) - dragged to middle
+        createMockAllocation('tw3', 660, 720, 'Short break'), // 11:00 - 12:00 (60 min)
+      ];
+
+      // Drag long lunch (index 1) to middle position
+      // Available gap between morning work (ends at 10:00) and short break (starts at 11:00) is only 60 minutes
+      // Long lunch needs 180 minutes, so it should be shortened to fit
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 1);
+
+      expect(result).toHaveLength(3);
+      expect(result![0].time_window.start_time).toBe(540); // Morning work unchanged
+      expect(result![0].time_window.end_time).toBe(600);
+      expect(result![1].time_window.start_time).toBe(600); // Long lunch shortened to fit
+      expect(result![1].time_window.end_time).toBe(660); // Only 60 minutes instead of 180
+      expect(result![2].time_window.start_time).toBe(660); // Short break unchanged
+      expect(result![2].time_window.end_time).toBe(720);
+    });
+
+    it('should return null when there is no space for the dragged window', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw2', 720, 780, 'Lunch break'), // 12:00 - 13:00 (60 min) - dragged to middle
+        createMockAllocation('tw3', 600, 720, 'No gap window'), // 10:00 - 12:00 (120 min)
+      ];
+
+      // Drag lunch break (index 1) to middle position
+      // There's no gap between morning work (ends at 10:00) and no gap window (starts at 10:00)
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 1);
+
+      expect(result).toBeNull(); // Should cancel the drag
+    });
+
+    it('should handle the example from requirements: B before A', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw2', 600, 660, 'B'), // 10:00 - 11:00 (60 min) - dragged to first
+        createMockAllocation('tw1', 540, 600, 'A'), // 09:00 - 10:00 (60 min)
+      ];
+
+      // B is dragged before A, should become B (8:00 - 9:00), A (unchanged)
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 0);
+
+      expect(result).toHaveLength(2);
+      expect(result![0].time_window.start_time).toBe(480); // B becomes 8:00 - 9:00
+      expect(result![0].time_window.end_time).toBe(540);
+      expect(result![1].time_window.start_time).toBe(540); // A unchanged
+      expect(result![1].time_window.end_time).toBe(600);
+    });
+
+    it('should handle empty array', () => {
+      const result = recalculateTimeWindowsWithGapFitting([], 0);
+      expect(result).toEqual([]);
+    });
+
+    it('should handle single window', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Only window'),
+      ];
+
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 0);
+
+      expect(result).toHaveLength(1);
+      expect(result![0].time_window.start_time).toBe(540);
+      expect(result![0].time_window.end_time).toBe(600);
+    });
+
+    it('should preserve task assignments and other properties', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        {
+          ...createMockAllocation('tw1', 540, 600, 'Morning work'),
+          tasks: [{ id: 'task1', title: 'Task 1' } as any],
+        },
+        createMockAllocation('tw2', 720, 780, 'Lunch break'),
+      ];
+
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 1);
+
+      expect(result![0].tasks).toHaveLength(1);
+      expect(result![0].tasks[0].id).toBe('task1');
+      expect(result![0].time_window.description).toBe('Morning work');
+      expect(result![1].time_window.description).toBe('Lunch break');
+    });
+
+    it('should only modify the dragged window, leaving others unchanged', () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation('tw1', 540, 600, 'Morning work'), // 09:00 - 10:00 (60 min)
+        createMockAllocation('tw2', 720, 840, 'Long lunch'), // 12:00 - 14:00 (120 min) - dragged to middle
+        createMockAllocation('tw3', 900, 960, 'Afternoon work'), // 15:00 - 16:00 (60 min)
+      ];
+
+      // Drag long lunch (index 1) to middle position
+      // Available gap: 10:00 - 15:00 (300 minutes), long lunch needs 120 minutes
+      const result = recalculateTimeWindowsWithGapFitting(timeWindows, 1);
+
+      expect(result).toHaveLength(3);
+      // Morning work should be completely unchanged
+      expect(result![0].time_window.start_time).toBe(540);
+      expect(result![0].time_window.end_time).toBe(600);
+      expect(result![0].time_window.description).toBe('Morning work');
+
+      // Only long lunch should change
+      expect(result![1].time_window.start_time).toBe(600); // Moved to fit after morning work
+      expect(result![1].time_window.end_time).toBe(720); // Keeps original duration
+      expect(result![1].time_window.description).toBe('Long lunch');
+
+      // Afternoon work should be completely unchanged
+      expect(result![2].time_window.start_time).toBe(900);
+      expect(result![2].time_window.end_time).toBe(960);
+      expect(result![2].time_window.description).toBe('Afternoon work');
     });
   });
 });

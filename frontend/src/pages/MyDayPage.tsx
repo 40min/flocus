@@ -19,6 +19,7 @@ import TimeWindowBalloon from "../components/TimeWindowBalloon";
 import {
   formatDurationFromSeconds,
   recalculateTimeWindows,
+  recalculateTimeWindowsWithGapFitting,
 } from "../lib/utils";
 import { useDailyStats } from "../hooks/useDailyStats";
 import CreateTimeWindowModal from "../components/modals/CreateTimeWindowModal";
@@ -120,12 +121,13 @@ const MyDayPage: React.FC = () => {
       setLocalTimeWindows(newTimeWindows);
       return { previousPlan };
     },
-    onError: (err, newTimeWindows, context: any) => {
+    onError: (error, variables, context: any) => {
       if (context?.previousPlan) {
         setLocalTimeWindows(context.previousPlan.time_windows);
       }
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
       showMessage("Failed to update plan.", "error");
+      console.error("Failed to update daily plan:", error);
     },
   });
 
@@ -349,7 +351,17 @@ const MyDayPage: React.FC = () => {
           (item) => item.time_window.id === over.id
         );
         const movedItems = arrayMove(items, oldIndex, newIndex);
-        return recalculateTimeWindows(movedItems);
+        const recalculatedItems = recalculateTimeWindowsWithGapFitting(
+          movedItems,
+          newIndex
+        );
+
+        // If recalculation returns null, cancel the drag by returning original items
+        if (recalculatedItems === null) {
+          return items;
+        }
+
+        return recalculatedItems;
       });
     }
     setActiveAllocation(null);

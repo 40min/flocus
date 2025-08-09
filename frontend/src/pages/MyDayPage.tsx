@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Save, PlusCircle } from "lucide-react";
+import { PlusCircle, Check } from "lucide-react";
 import Button from "components/Button";
 import {
   createDailyPlan,
@@ -81,6 +81,9 @@ const MyDayPage: React.FC = () => {
   const [showYesterdayReview, setShowYesterdayReview] = useState(false);
   const [prevDayReflection, setPrevDayReflection] =
     useState<SelfReflection | null>(null);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const createPlanMutation = useMutation({
     mutationFn: createDailyPlan,
@@ -121,6 +124,10 @@ const MyDayPage: React.FC = () => {
       setLocalTimeWindows(newTimeWindows);
       return { previousPlan };
     },
+    onSuccess: () => {
+      setShowSavedIndicator(true);
+      setTimeout(() => setShowSavedIndicator(false), 2000);
+    },
     onError: (error, variables, context: any) => {
       if (context?.previousPlan) {
         setLocalTimeWindows(context.previousPlan.time_windows);
@@ -156,9 +163,34 @@ const MyDayPage: React.FC = () => {
     }
   }, [prevDayPlan, fetchedDailyPlan, selectedTemplate]);
 
+  // Debounced save function to prevent duplicate requests
+  const debouncedSave = useCallback(
+    (timeWindows: TimeWindowAllocation[]) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        if (dailyPlan) {
+          updatePlanMutation.mutate(timeWindows);
+        }
+      }, 300); // 300ms debounce
+    },
+    [dailyPlan, updatePlanMutation]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleAssignTask = (timeWindowId: string, task: Task) => {
     setLocalTimeWindows((currentWindows) => {
-      return currentWindows.map((alloc) => {
+      const updatedWindows = currentWindows.map((alloc) => {
         if (alloc.time_window.id === timeWindowId) {
           if (alloc.tasks.some((existingTask) => existingTask.id === task.id)) {
             return alloc;
@@ -170,6 +202,11 @@ const MyDayPage: React.FC = () => {
         }
         return alloc;
       });
+
+      // Auto-save the changes with debounce
+      debouncedSave(updatedWindows);
+
+      return updatedWindows;
     });
   };
 
@@ -178,7 +215,7 @@ const MyDayPage: React.FC = () => {
       stopCurrentTask();
     }
     setLocalTimeWindows((currentWindows) => {
-      return currentWindows.map((alloc) => {
+      const updatedWindows = currentWindows.map((alloc) => {
         if (alloc.time_window.id === timeWindowId) {
           return {
             ...alloc,
@@ -187,6 +224,11 @@ const MyDayPage: React.FC = () => {
         }
         return alloc;
       });
+
+      // Auto-save the changes with debounce
+      debouncedSave(updatedWindows);
+
+      return updatedWindows;
     });
   };
 
@@ -227,7 +269,11 @@ const MyDayPage: React.FC = () => {
       ...localTimeWindows,
       newTimeWindowAllocation,
     ].sort((a, b) => a.time_window.start_time - b.time_window.start_time);
-    setLocalTimeWindows(recalculateTimeWindows(updatedTimeWindows));
+    const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
+    setLocalTimeWindows(recalculatedWindows);
+
+    // Auto-save the changes with debounce
+    debouncedSave(recalculatedWindows);
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
@@ -243,7 +289,11 @@ const MyDayPage: React.FC = () => {
     const updatedTimeWindows = localTimeWindows.filter(
       (alloc) => alloc.time_window.id !== timeWindowId
     );
-    setLocalTimeWindows(recalculateTimeWindows(updatedTimeWindows));
+    const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
+    setLocalTimeWindows(recalculatedWindows);
+
+    // Auto-save the changes with debounce
+    debouncedSave(recalculatedWindows);
   };
 
   const handleOpenEditModal = (allocation: TimeWindowAllocation) => {
@@ -280,14 +330,9 @@ const MyDayPage: React.FC = () => {
       .sort((a, b) => a.time_window.start_time - b.time_window.start_time);
 
     setLocalTimeWindows(updatedTimeWindows);
-  };
 
-  const handleSaveDailyPlan = async () => {
-    if (!dailyPlan) {
-      showMessage("No daily plan to save.", "error");
-      return;
-    }
-    updatePlanMutation.mutate(localTimeWindows);
+    // Auto-save the changes with debounce
+    debouncedSave(updatedTimeWindows);
   };
 
   const savePrevDayReflection = async (reflection: SelfReflection) => {
@@ -360,6 +405,9 @@ const MyDayPage: React.FC = () => {
         if (recalculatedItems === null) {
           return items;
         }
+
+        // Auto-save the changes with debounce
+        debouncedSave(recalculatedItems);
 
         return recalculatedItems;
       });
@@ -488,11 +536,17 @@ const MyDayPage: React.FC = () => {
                   Plan your perfect day
                 </p>
               </div>
-              <div>
+              <div className="flex items-center gap-4">
                 <p className="text-slate-600 text-sm md:text-base">
                   Total time spent today:{" "}
                   {formatDurationFromSeconds(dailyStats?.total_seconds_spent)}
                 </p>
+                {showSavedIndicator && (
+                  <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    <Check size={12} />
+                    Saved
+                  </div>
+                )}
               </div>
             </header>
             <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
@@ -568,15 +622,6 @@ const MyDayPage: React.FC = () => {
                   >
                     <PlusCircle size={18} />
                     Add Time Window
-                  </Button>
-                  <Button
-                    variant="slate"
-                    size="medium"
-                    onClick={handleSaveDailyPlan}
-                    className="flex items-center gap-2"
-                  >
-                    <Save size={18} />
-                    Save
                   </Button>
                 </div>
               </section>

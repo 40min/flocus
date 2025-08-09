@@ -50,6 +50,7 @@ import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
 import { useSharedTimerContext } from "../context/SharedTimerContext";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
+import GapIndicator from "../components/GapIndicator";
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -366,6 +367,62 @@ const MyDayPage: React.FC = () => {
     setActiveAllocation(null);
   }
 
+  // Function to render time windows with gaps
+  const renderTimeWindowsWithGaps = () => {
+    if (!localTimeWindows || localTimeWindows.length === 0) {
+      return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">
+          <p className="text-lg text-slate-500 mb-2">
+            No time windows planned for today.
+          </p>
+          <p className="text-sm text-slate-500">
+            You can add time windows to your plan by editing it.
+          </p>
+        </div>
+      );
+    }
+
+    const sortedWindows = [...localTimeWindows].sort(
+      (a, b) => a.time_window.start_time - b.time_window.start_time
+    );
+
+    const elements: React.ReactNode[] = [];
+
+    sortedWindows.forEach((alloc, index) => {
+      // Add gap indicator before this time window (except for the first one)
+      if (index > 0) {
+        const prevWindow = sortedWindows[index - 1];
+        const gapMinutes =
+          alloc.time_window.start_time - prevWindow.time_window.end_time;
+
+        if (gapMinutes > 0) {
+          elements.push(
+            <GapIndicator
+              key={`gap-${prevWindow.time_window.id}-${alloc.time_window.id}`}
+              durationMinutes={gapMinutes}
+            />
+          );
+        }
+      }
+
+      // Add the time window
+      elements.push(
+        <SortableTimeWindow
+          key={alloc.time_window.id}
+          allocation={alloc}
+          onDelete={() => handleDeleteTimeWindow(alloc.time_window.id)}
+          onEdit={() => handleOpenEditModal(alloc)}
+          onAssignTask={(task) => handleAssignTask(alloc.time_window.id, task)}
+          onUnassignTask={(taskId) =>
+            handleUnassignTask(alloc.time_window.id, taskId)
+          }
+        />
+      );
+    });
+
+    return elements;
+  };
+
   const isLoading = isLoadingTodayPlan || isLoadingPrevDayPlan;
 
   if (isLoading) {
@@ -489,33 +546,7 @@ const MyDayPage: React.FC = () => {
                     )}
                     strategy={verticalListSortingStrategy}
                   >
-                    {localTimeWindows && localTimeWindows.length > 0 ? (
-                      localTimeWindows.map((alloc) => (
-                        <SortableTimeWindow
-                          key={alloc.time_window.id}
-                          allocation={alloc}
-                          onDelete={() =>
-                            handleDeleteTimeWindow(alloc.time_window.id)
-                          }
-                          onEdit={() => handleOpenEditModal(alloc)}
-                          onAssignTask={(task) =>
-                            handleAssignTask(alloc.time_window.id, task)
-                          }
-                          onUnassignTask={(taskId) =>
-                            handleUnassignTask(alloc.time_window.id, taskId)
-                          }
-                        />
-                      ))
-                    ) : (
-                      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">
-                        <p className="text-lg text-slate-500 mb-2">
-                          No time windows planned for today.
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          You can add time windows to your plan by editing it.
-                        </p>
-                      </div>
-                    )}
+                    {renderTimeWindowsWithGaps()}
                   </SortableContext>
                   <DragOverlay>
                     {activeAllocation ? (

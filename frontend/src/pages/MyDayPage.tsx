@@ -22,7 +22,7 @@ import {
   recalculateTimeWindowsWithGapFitting,
 } from "../lib/utils";
 import { useDailyStats } from "../hooks/useDailyStats";
-import CreateTimeWindowModal from "../components/modals/CreateTimeWindowModal";
+import TimeWindowModal from "../components/modals/TimeWindowModal";
 import type { TimeWindow, TimeWindowCreateRequest } from "../types/timeWindow";
 import type { Task } from "../types/task";
 import { useMessage } from "../context/MessageContext";
@@ -49,7 +49,6 @@ import { useTodayDailyPlan, usePrevDayDailyPlan } from "../hooks/useDailyPlan";
 import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
 import { useSharedTimerContext } from "../context/SharedTimerContext";
-import EditDailyPlanTimeWindowModal from "components/modals/EditDailyPlanTimeWindowModal";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
 
 const MyDayPage: React.FC = () => {
@@ -279,7 +278,7 @@ const MyDayPage: React.FC = () => {
       })
       .sort((a, b) => a.time_window.start_time - b.time_window.start_time);
 
-    setLocalTimeWindows(recalculateTimeWindows(updatedTimeWindows));
+    setLocalTimeWindows(updatedTimeWindows);
   };
 
   const handleSaveDailyPlan = async () => {
@@ -728,19 +727,20 @@ const MyDayPage: React.FC = () => {
           ))}
         </div>
       </Modal>
-      <CreateTimeWindowModal
+      <TimeWindowModal
         isOpen={isTimeWindowModalOpen}
         onClose={() => setIsTimeWindowModalOpen(false)}
-        onSubmitSuccess={handleAddTimeWindow}
+        onCreateSuccess={handleAddTimeWindow}
         categories={categories}
         existingTimeWindows={localTimeWindows}
       />
       {dailyPlan && editingTimeWindow && (
-        <EditDailyPlanTimeWindowModal
+        <TimeWindowModal
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
-          onSubmit={handleUpdateTimeWindow}
+          onEditSubmit={handleUpdateTimeWindow}
           editingTimeWindow={editingTimeWindow}
+          categories={categories}
           existingTimeWindows={localTimeWindows}
         />
       )}

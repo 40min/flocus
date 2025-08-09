@@ -29,17 +29,16 @@ jest.mock("hooks/useTemplates");
 jest.mock("hooks/useCategories");
 jest.mock("services/dailyPlanService");
 jest.mock("services/userDailyStatsService");
-jest.mock("components/modals/CreateTimeWindowModal", () => ({
+jest.mock("components/modals/TimeWindowModal", () => ({
   __esModule: true,
-  default: ({ isOpen }: any) => (isOpen ? null : null),
-}));
-
-jest.mock("components/modals/EditDailyPlanTimeWindowModal", () => ({
-  __esModule: true,
-  default: ({ isOpen }: any) =>
+  default: ({ isOpen, editingTimeWindow }: any) =>
     isOpen ? (
-      <div data-testid="edit-modal">
-        <p>Mock Edit Modal</p>
+      <div
+        data-testid={
+          editingTimeWindow ? "edit-modal" : "create-time-window-modal"
+        }
+      >
+        <p>{editingTimeWindow ? "Mock Edit Modal" : "Mock Create Modal"}</p>
       </div>
     ) : null,
 }));

@@ -2,7 +2,7 @@ import { useMenuState } from "./hooks/useMenuState";
 import React, { useEffect } from "react";
 
 import { Route, Routes, Navigate, Outlet } from "react-router-dom";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import DevTools from "./components/DevTools";
 
 import MyDayPage from "./pages/MyDayPage";
 import DashboardPage from "./pages/DashboardPage"; // New import
@@ -50,6 +50,12 @@ const AppLayout: React.FC = () => {
   useEffect(() => {
     // Request notification permission on app load
     notificationService.requestPermission();
+
+    // Initialize performance monitoring in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("🚀 Development tools initialized");
+      console.log("📊 Performance monitoring active");
+    }
   }, []);
 
   return (
@@ -65,9 +71,7 @@ const AppLayout: React.FC = () => {
         )}
       >
         <Outlet />
-        {process.env.NODE_ENV === "development" && (
-          <ReactQueryDevtools initialIsOpen={false} />
-        )}
+        <DevTools />
       </main>
     </div>
   );

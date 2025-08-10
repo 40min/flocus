@@ -56,3 +56,5 @@ prd/
 designs/
 mcp_servers/*
 backend/backups/*
+
+.kiro

@@ -1,5 +1,18 @@
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 module.exports = {
   webpack: {
+    plugins: [
+      // Add bundle analyzer only when ANALYZE environment variable is set
+      ...(process.env.ANALYZE === 'true' ? [
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'server',
+          openAnalyzer: true,
+          generateStatsFile: true,
+          statsFilename: 'bundle-stats.json',
+        })
+      ] : []),
+    ],
     configure: (webpackConfig, { env, paths }) => {
       // Add a rule to ignore source map warnings from react-datepicker
       // We are looking for the source-map-loader rule

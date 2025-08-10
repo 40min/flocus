@@ -40,23 +40,6 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
   };
 
   /**
-   * Formats time without AM/PM for start time in range format
-   * @param dateString - The ISO date string to format.
-   * @returns A formatted time string without AM/PM.
-   */
-  const formatTimeWithoutAmPm = (dateString: string): string => {
-    const date = new Date(dateString);
-
-    return date
-      .toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-      .replace(/\s?(AM|PM)$/i, "");
-  };
-
-  /**
    * Converts ISO date string to minutes since midnight
    * @param dateString - The ISO date string
    * @returns Minutes since midnight
@@ -106,11 +89,6 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
               className="relative flex items-start"
               style={{ height: `${gapHeight}px` }}
             >
-              {/* Gap duration label - moved to right side */}
-              <span className="absolute left-full pl-1 text-xs text-gray-400 font-medium whitespace-nowrap">
-                {formatDurationFromMinutes(gapMinutes)}
-              </span>
-
               {/* Gap bar - solid gray area */}
               <div
                 className="absolute left-1/2 -translate-x-1/2 bg-gray-200 border border-gray-300 rounded-sm"
@@ -141,26 +119,9 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
           className="relative flex items-start"
           style={{ height: `${barHeight}px` }}
         >
-          {/* Time labels positioned to the left of the central line */}
+          {/* Start time label positioned to the left of the central line */}
           <div className="absolute right-full pr-1 text-xs text-gray-400 font-medium whitespace-nowrap">
-            {durationMinutes < 30 ? (
-              // For intervals < 30 minutes, show in one line
-              <div>
-                {formatTimeWithoutAmPm(timeWindow.start_time)} -{" "}
-                {formatTime(timeWindow.end_time)}
-              </div>
-            ) : (
-              // For longer intervals, show start and end times separately
-              <>
-                <div>{formatTime(timeWindow.start_time)}</div>
-                <div
-                  className="absolute"
-                  style={{ top: `${barHeight - 20}px` }}
-                >
-                  {formatTime(timeWindow.end_time)}
-                </div>
-              </>
-            )}
+            {formatTime(timeWindow.start_time)}
           </div>
 
           {/* Color-coded bar representing the time window duration */}
@@ -192,7 +153,7 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
 
   return (
     // The root element is an <aside> tag with relative positioning for its children.
-    <aside className={`relative w-28 flex-shrink-0 p-4 ${className || ""}`}>
+    <aside className={`relative w-24 flex-shrink-0 p-4 ${className || ""}`}>
       {/* The central vertical line - now thinner since we have solid bars */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-200"></div>
 

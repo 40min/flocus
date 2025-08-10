@@ -19,7 +19,7 @@ import TimeWindowBalloon from "../components/TimeWindowBalloon";
 import {
   formatDurationFromSeconds,
   recalculateTimeWindows,
-  recalculateTimeWindowsWithGapFitting,
+  recalculateTimeWindowsWithShifting,
 } from "../lib/utils";
 import { useDailyStats } from "../hooks/useDailyStats";
 import TimeWindowModal from "../components/modals/TimeWindowModal";
@@ -396,15 +396,10 @@ const MyDayPage: React.FC = () => {
           (item) => item.time_window.id === over.id
         );
         const movedItems = arrayMove(items, oldIndex, newIndex);
-        const recalculatedItems = recalculateTimeWindowsWithGapFitting(
+        const recalculatedItems = recalculateTimeWindowsWithShifting(
           movedItems,
           newIndex
         );
-
-        // If recalculation returns null, cancel the drag by returning original items
-        if (recalculatedItems === null) {
-          return items;
-        }
 
         // Auto-save the changes with debounce
         debouncedSave(recalculatedItems);

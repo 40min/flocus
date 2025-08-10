@@ -1043,7 +1043,7 @@ describe("MyDayPage", () => {
       });
     });
 
-    it("uses gap-fitting behavior when reordering time windows", async () => {
+    it("uses shifting behavior when reordering time windows", async () => {
       // Create a daily plan with gaps between time windows
       const dailyPlanWithGaps: DailyPlanResponse = {
         id: "plan_gaps",
@@ -1106,8 +1106,8 @@ describe("MyDayPage", () => {
         expect(screen.getByText("Afternoon work")).toBeInTheDocument();
       });
 
-      // The new gap-fitting behavior should be used when drag and drop occurs
-      // This test verifies that the component uses the new function
+      // The new shifting behavior should be used when drag and drop occurs
+      // This test verifies that the component uses the new shifting function
       const morningWorkElement = getSortableTimeWindow("tw1");
       const lunchBreakElement = getSortableTimeWindow("tw2");
 
@@ -1121,7 +1121,7 @@ describe("MyDayPage", () => {
       });
     });
 
-    it("cancels drag when there is no space for the dragged window", async () => {
+    it("shifts subsequent windows when dragging with no gaps", async () => {
       // Create a daily plan with no gaps between time windows
       const dailyPlanNoGaps: DailyPlanResponse = {
         id: "plan_no_gaps",
@@ -1159,7 +1159,7 @@ describe("MyDayPage", () => {
               id: "tw3",
               description: "Lunch break",
               start_time: 780, // 01:00 PM
-              end_time: 840, // 02:00 PM (60 min) - try to drag between tw1 and tw2
+              end_time: 840, // 02:00 PM (60 min) - drag between tw1 and tw2
               category: mockCategories[1],
               day_template_id: "",
               user_id: "user1",
@@ -1184,7 +1184,7 @@ describe("MyDayPage", () => {
         expect(screen.getByText("Lunch break")).toBeInTheDocument();
       });
 
-      // Try to drag lunch break between morning work and continuous work (no space)
+      // Drag lunch break between morning work and continuous work
       const lunchBreakElement = getSortableTimeWindow("tw3");
       const continuousWorkElement = getSortableTimeWindow("tw2");
 
@@ -1193,7 +1193,7 @@ describe("MyDayPage", () => {
         continuousWorkElement
       );
 
-      // The drag should be cancelled, so all windows should remain in their original positions
+      // With shifting behavior, the drag should succeed and shift subsequent windows
       await waitFor(() => {
         expect(screen.getByText("Morning work")).toBeInTheDocument();
         expect(screen.getByText("Continuous work")).toBeInTheDocument();

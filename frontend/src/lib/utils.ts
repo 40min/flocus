@@ -434,3 +434,60 @@ export const recalculateTimeWindowsWithGapFitting = (
 
   return result;
 };
+
+export const recalculateTimeWindowsWithShifting = (
+  timeWindows: TimeWindowAllocation[],
+  draggedIndex: number
+): TimeWindowAllocation[] => {
+  if (!timeWindows || timeWindows.length === 0) {
+    return [];
+  }
+
+  const result = [...timeWindows];
+  const draggedWindow = result[draggedIndex];
+  const draggedDuration =
+    draggedWindow.time_window.end_time - draggedWindow.time_window.start_time;
+
+  // Calculate the new start time for the dragged window
+  let newStartTime: number;
+
+  if (draggedIndex === 0) {
+    // First position - keep the dragged window's original start time
+    newStartTime = draggedWindow.time_window.start_time;
+  } else {
+    // Position after previous window - start immediately after the previous window ends
+    newStartTime = result[draggedIndex - 1].time_window.end_time;
+  }
+
+  // Update the dragged window with its new position (duration stays the same)
+  result[draggedIndex] = {
+    ...draggedWindow,
+    time_window: {
+      ...draggedWindow.time_window,
+      start_time: newStartTime,
+      end_time: newStartTime + draggedDuration,
+    },
+  };
+
+  // Shift all subsequent windows to start after the dragged window
+  let currentEndTime = newStartTime + draggedDuration;
+
+  for (let i = draggedIndex + 1; i < result.length; i++) {
+    const currentWindow = result[i];
+    const currentDuration =
+      currentWindow.time_window.end_time - currentWindow.time_window.start_time;
+
+    result[i] = {
+      ...currentWindow,
+      time_window: {
+        ...currentWindow.time_window,
+        start_time: currentEndTime,
+        end_time: currentEndTime + currentDuration,
+      },
+    };
+
+    currentEndTime += currentDuration;
+  }
+
+  return result;
+};

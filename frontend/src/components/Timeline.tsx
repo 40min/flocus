@@ -19,9 +19,9 @@ interface TimelineProps {
 }
 
 /**
- * Renders a vertical timeline with markers for each time window.
- * Each marker shows the start time and a color-coded dot.
- * Gaps between time windows are shown as small gray dots with duration.
+ * Renders a vertical timeline with solid areas representing time windows and gaps.
+ * Time windows are shown as colored bars with their duration.
+ * Gaps between time windows are shown as gray bars with duration.
  */
 const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
   /**
@@ -40,6 +40,23 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
   };
 
   /**
+   * Formats time without AM/PM for start time in range format
+   * @param dateString - The ISO date string to format.
+   * @returns A formatted time string without AM/PM.
+   */
+  const formatTimeWithoutAmPm = (dateString: string): string => {
+    const date = new Date(dateString);
+
+    return date
+      .toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(/\s?(AM|PM)$/i, "");
+  };
+
+  /**
    * Converts ISO date string to minutes since midnight
    * @param dateString - The ISO date string
    * @returns Minutes since midnight
@@ -50,7 +67,16 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
   };
 
   /**
-   * Renders timeline elements including time windows and gaps
+   * Calculate the height for a time interval based on its duration
+   * @param durationMinutes - Duration in minutes
+   * @returns Height in pixels (minimum 20px, 2px per minute)
+   */
+  const calculateBarHeight = (durationMinutes: number): number => {
+    return Math.max(20, durationMinutes * 2);
+  };
+
+  /**
+   * Renders timeline elements including time windows and gaps as solid areas
    */
   const renderTimelineElements = () => {
     if (!timeWindows || timeWindows.length === 0) {
@@ -72,40 +98,91 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
         const gapMinutes = currentStartMinutes - prevEndMinutes;
 
         if (gapMinutes > 0) {
+          const gapHeight = calculateBarHeight(gapMinutes);
+
           elements.push(
             <div
               key={`gap-${prevWindow.id}-${timeWindow.id}`}
-              className="relative flex items-center mb-10"
+              className="relative flex items-start"
+              style={{ height: `${gapHeight}px` }}
             >
-              {/* Gap duration label */}
-              <span className="absolute right-full pr-4 text-xs text-gray-400 font-medium whitespace-nowrap">
+              {/* Gap duration label - moved to right side */}
+              <span className="absolute left-full pl-1 text-xs text-gray-400 font-medium whitespace-nowrap">
                 {formatDurationFromMinutes(gapMinutes)}
               </span>
 
-              {/* Small gray dot for gap */}
+              {/* Gap bar - solid gray area */}
               <div
-                className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-gray-400"
+                className="absolute left-1/2 -translate-x-1/2 bg-gray-200 border border-gray-300 rounded-sm"
+                style={{
+                  width: "6px",
+                  height: `${gapHeight}px`,
+                }}
                 title={`Gap: ${formatDurationFromMinutes(gapMinutes)}`}
-              ></div>
+              >
+                {/* Optional: Add a pattern or dots to indicate it's a gap */}
+                <div className="w-full h-full bg-gradient-to-b from-gray-300 to-gray-200 rounded-sm opacity-50"></div>
+              </div>
             </div>
           );
         }
       }
 
-      // Add the time window marker
-      elements.push(
-        <div key={timeWindow.id} className="relative flex items-center mb-20">
-          {/* Time label, positioned to the left of the central line */}
-          <span className="absolute right-full pr-4 text-sm text-gray-600 font-medium whitespace-nowrap">
-            {formatTime(timeWindow.start_time)}
-          </span>
+      // Calculate time window duration and height
+      const startMinutes = dateToMinutes(timeWindow.start_time);
+      const endMinutes = dateToMinutes(timeWindow.end_time);
+      const durationMinutes = endMinutes - startMinutes;
+      const barHeight = calculateBarHeight(durationMinutes);
 
-          {/* Color-coded dot, centered on the central line */}
+      // Add the time window as a solid bar
+      elements.push(
+        <div
+          key={timeWindow.id}
+          className="relative flex items-start"
+          style={{ height: `${barHeight}px` }}
+        >
+          {/* Time labels positioned to the left of the central line */}
+          <div className="absolute right-full pr-1 text-xs text-gray-400 font-medium whitespace-nowrap">
+            {durationMinutes < 30 ? (
+              // For intervals < 30 minutes, show in one line
+              <div>
+                {formatTimeWithoutAmPm(timeWindow.start_time)} -{" "}
+                {formatTime(timeWindow.end_time)}
+              </div>
+            ) : (
+              // For longer intervals, show start and end times separately
+              <>
+                <div>{formatTime(timeWindow.start_time)}</div>
+                <div
+                  className="absolute"
+                  style={{ top: `${barHeight - 20}px` }}
+                >
+                  {formatTime(timeWindow.end_time)}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Color-coded bar representing the time window duration */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white"
-            style={{ backgroundColor: timeWindow.category.color }}
-            title={timeWindow.category.name} // Add a tooltip for accessibility
-          ></div>
+            className="absolute left-1/2 -translate-x-1/2 border-2 border-white rounded-sm shadow-sm"
+            style={{
+              backgroundColor: timeWindow.category.color,
+              width: "8px",
+              height: `${barHeight}px`,
+            }}
+            title={`${timeWindow.category.name}: ${formatDurationFromMinutes(
+              durationMinutes
+            )}`}
+          >
+            {/* Optional: Add a subtle gradient for visual depth */}
+            <div
+              className="w-full h-full rounded-sm opacity-20"
+              style={{
+                background: `linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(0,0,0,0.1))`,
+              }}
+            ></div>
+          </div>
         </div>
       );
     });
@@ -115,11 +192,11 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
 
   return (
     // The root element is an <aside> tag with relative positioning for its children.
-    <aside className={`relative w-28 flex-shrink-0  p-4 ${className || ""}`}>
-      {/* The central vertical line */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-300"></div>
+    <aside className={`relative w-28 flex-shrink-0 p-4 ${className || ""}`}>
+      {/* The central vertical line - now thinner since we have solid bars */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-200"></div>
 
-      {/* Container for the list of time markers */}
+      {/* Container for the timeline bars */}
       <div className="relative pt-8">{renderTimelineElements()}</div>
     </aside>
   );

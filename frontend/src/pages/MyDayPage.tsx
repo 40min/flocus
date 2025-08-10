@@ -1,34 +1,56 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Save, PlusCircle } from "lucide-react";
+import { PlusCircle, Check } from "lucide-react";
 import Button from "components/Button";
 import {
   createDailyPlan,
   updateDailyPlan as updateDailyPlanService,
 } from "../services/dailyPlanService";
-import {
+import type {
   DailyPlanResponse,
   TimeWindowAllocation,
-  TimeWindowResponse,
   SelfReflection,
 } from "../types/dailyPlan";
 import Timeline from "../components/Timeline";
-import { DayTemplateResponse } from "../types/dayTemplate";
+import type { DayTemplateResponse } from "../types/dayTemplate";
 import Modal from "../components/modals/Modal";
 import TimeWindowBalloon from "../components/TimeWindowBalloon";
-import { formatDurationFromSeconds } from "../lib/utils";
+import {
+  formatDurationFromSeconds,
+  recalculateTimeWindows,
+  recalculateTimeWindowsWithShifting,
+} from "../lib/utils";
 import { useDailyStats } from "../hooks/useDailyStats";
-import CreateTimeWindowModal from "../components/modals/CreateTimeWindowModal";
-import { TimeWindow, TimeWindowCreateRequest } from "../types/timeWindow";
-import { Task } from "../types/task";
+import TimeWindowModal from "../components/modals/TimeWindowModal";
+import type { TimeWindow, TimeWindowCreateRequest } from "../types/timeWindow";
+import type { Task } from "../types/task";
 import { useMessage } from "../context/MessageContext";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useTodayDailyPlan, usePrevDayDailyPlan } from "../hooks/useDailyPlan";
 import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
 import { useSharedTimerContext } from "../context/SharedTimerContext";
-import EditDailyPlanTimeWindowModal from "components/modals/EditDailyPlanTimeWindowModal";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
+import GapIndicator from "../components/GapIndicator";
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -44,6 +66,11 @@ const MyDayPage: React.FC = () => {
   const { data: dailyStats } = useDailyStats();
 
   const [dailyPlan, setDailyPlan] = useState<DailyPlanResponse | null>(null);
+  const [localTimeWindows, setLocalTimeWindows] = useState<
+    TimeWindowAllocation[]
+  >([]);
+  const [activeAllocation, setActiveAllocation] =
+    useState<TimeWindowAllocation | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isTimeWindowModalOpen, setIsTimeWindowModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] =
@@ -54,6 +81,9 @@ const MyDayPage: React.FC = () => {
   const [showYesterdayReview, setShowYesterdayReview] = useState(false);
   const [prevDayReflection, setPrevDayReflection] =
     useState<SelfReflection | null>(null);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const createPlanMutation = useMutation({
     mutationFn: createDailyPlan,
@@ -69,27 +99,57 @@ const MyDayPage: React.FC = () => {
   });
 
   const updatePlanMutation = useMutation({
-    mutationFn: ({ planId, payload }: { planId: string; payload: any }) =>
-      updateDailyPlanService(planId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "prev-day"] });
-      showMessage("Plan updated successfully!", "success");
+    mutationFn: (updatedTimeWindows: TimeWindowAllocation[]) => {
+      if (!dailyPlan) throw new Error("No daily plan to update");
+      const payload = {
+        time_windows: updatedTimeWindows.map((alloc) => ({
+          id: alloc.time_window.id.startsWith("temp-")
+            ? undefined
+            : alloc.time_window.id,
+          description: alloc.time_window.description,
+          start_time: alloc.time_window.start_time,
+          end_time: alloc.time_window.end_time,
+          category_id: alloc.time_window.category.id,
+          task_ids: alloc.tasks.map((t) => t.id),
+        })),
+      };
+      return updateDailyPlanService(dailyPlan.id, payload);
     },
-    onError: (error) => {
+    onMutate: async (newTimeWindows) => {
+      await queryClient.cancelQueries({ queryKey: ["dailyPlan", "today"] });
+      const previousPlan = queryClient.getQueryData<DailyPlanResponse>([
+        "dailyPlan",
+        "today",
+      ]);
+      setLocalTimeWindows(newTimeWindows);
+      return { previousPlan };
+    },
+    onSuccess: () => {
+      setShowSavedIndicator(true);
+      setTimeout(() => setShowSavedIndicator(false), 2000);
+    },
+    onError: (error, variables, context: any) => {
+      if (context?.previousPlan) {
+        setLocalTimeWindows(context.previousPlan.time_windows);
+      }
+      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
       showMessage("Failed to update plan.", "error");
+      console.error("Failed to update daily plan:", error);
     },
   });
 
   useEffect(() => {
-    // When the fetched daily plan changes, update the local state.
-    // This allows local modifications before saving.
     if (fetchedDailyPlan) {
-      setDailyPlan(fetchedDailyPlan);
+      const sortedTimeWindows = [...fetchedDailyPlan.time_windows].sort(
+        (a, b) => a.time_window.start_time - b.time_window.start_time
+      );
+      setDailyPlan({ ...fetchedDailyPlan, time_windows: sortedTimeWindows });
+      setLocalTimeWindows(sortedTimeWindows);
     } else {
       setDailyPlan(null);
+      setLocalTimeWindows([]);
     }
-  }, [fetchedDailyPlan, setDailyPlan]);
+  }, [fetchedDailyPlan]);
 
   useEffect(() => {
     const shouldShowReview = !!(
@@ -101,15 +161,37 @@ const MyDayPage: React.FC = () => {
     if (shouldShowReview) {
       setPrevDayReflection(prevDayPlan.self_reflection);
     }
-  }, [prevDayPlan, fetchedDailyPlan, selectedTemplate, setPrevDayReflection]);
+  }, [prevDayPlan, fetchedDailyPlan, selectedTemplate]);
+
+  // Debounced save function to prevent duplicate requests
+  const debouncedSave = useCallback(
+    (timeWindows: TimeWindowAllocation[]) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        if (dailyPlan) {
+          updatePlanMutation.mutate(timeWindows);
+        }
+      }, 300); // 300ms debounce
+    },
+    [dailyPlan, updatePlanMutation]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleAssignTask = (timeWindowId: string, task: Task) => {
-    setDailyPlan((prevPlan) => {
-      if (!prevPlan) return null;
-
-      const newTimeWindows = prevPlan.time_windows.map((alloc) => {
+    setLocalTimeWindows((currentWindows) => {
+      const updatedWindows = currentWindows.map((alloc) => {
         if (alloc.time_window.id === timeWindowId) {
-          // Avoid adding duplicates
           if (alloc.tasks.some((existingTask) => existingTask.id === task.id)) {
             return alloc;
           }
@@ -121,10 +203,10 @@ const MyDayPage: React.FC = () => {
         return alloc;
       });
 
-      return {
-        ...prevPlan,
-        time_windows: newTimeWindows as TimeWindowResponse[],
-      };
+      // Auto-save the changes with debounce
+      debouncedSave(updatedWindows);
+
+      return updatedWindows;
     });
   };
 
@@ -132,10 +214,8 @@ const MyDayPage: React.FC = () => {
     if (taskId === currentTaskId) {
       stopCurrentTask();
     }
-    setDailyPlan((prevPlan) => {
-      if (!prevPlan) return null;
-
-      const newTimeWindows = prevPlan.time_windows.map((alloc) => {
+    setLocalTimeWindows((currentWindows) => {
+      const updatedWindows = currentWindows.map((alloc) => {
         if (alloc.time_window.id === timeWindowId) {
           return {
             ...alloc,
@@ -144,7 +224,11 @@ const MyDayPage: React.FC = () => {
         }
         return alloc;
       });
-      return { ...prevPlan, time_windows: newTimeWindows };
+
+      // Auto-save the changes with debounce
+      debouncedSave(updatedWindows);
+
+      return updatedWindows;
     });
   };
 
@@ -161,19 +245,18 @@ const MyDayPage: React.FC = () => {
     }
 
     try {
-      // Map time_windows to the expected format for the backend
       const timeWindowsForSave = selectedTemplate.time_windows.map(
         (tw: TimeWindow) => ({
           description: tw.description,
           start_time: tw.start_time,
           end_time: tw.end_time,
           category_id: tw.category?.id || null,
-          task_ids: [], // Assuming no tasks are allocated yet when saving from a template
+          task_ids: [],
         })
       );
 
       await createPlanMutation.mutateAsync(timeWindowsForSave);
-      setSelectedTemplate(null); // Clear selected template after saving
+      setSelectedTemplate(null);
     } catch (err) {
       // Error handling is done by the mutation's onError callback
     }
@@ -182,33 +265,20 @@ const MyDayPage: React.FC = () => {
   const handleAddTimeWindow = (
     newTimeWindowAllocation: TimeWindowAllocation
   ) => {
-    if (dailyPlan) {
-      setDailyPlan((prevDailyPlan) => {
-        if (!prevDailyPlan) return null;
-        return {
-          ...prevDailyPlan,
-          time_windows: [
-            ...prevDailyPlan.time_windows,
-            newTimeWindowAllocation,
-          ],
-        };
-      });
-    } else {
-      // If there's no daily plan yet, create a new one with the added time window
-      setDailyPlan({
-        id: `temp-daily-plan-${Date.now()}`, // Temporary ID
-        user_id: "", // Will be filled on save
-        plan_date: new Date().toISOString(),
-        self_reflection: { positive: "", negative: "", follow_up_notes: "" }, // Initialize self_reflection
+    const updatedTimeWindows = [
+      ...localTimeWindows,
+      newTimeWindowAllocation,
+    ].sort((a, b) => a.time_window.start_time - b.time_window.start_time);
+    const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
+    setLocalTimeWindows(recalculatedWindows);
 
-        time_windows: [newTimeWindowAllocation],
-      });
-    }
+    // Auto-save the changes with debounce
+    debouncedSave(recalculatedWindows);
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
     if (currentTaskId && dailyPlan) {
-      const allocationToDelete = dailyPlan.time_windows.find(
+      const allocationToDelete = localTimeWindows.find(
         (alloc) => alloc.time_window.id === timeWindowId
       );
       if (allocationToDelete?.tasks.some((task) => task.id === currentTaskId)) {
@@ -216,15 +286,14 @@ const MyDayPage: React.FC = () => {
       }
     }
 
-    setDailyPlan((prevDailyPlan) => {
-      if (!prevDailyPlan) return null;
-      return {
-        ...prevDailyPlan,
-        time_windows: prevDailyPlan.time_windows.filter(
-          (alloc) => alloc.time_window.id !== timeWindowId
-        ),
-      };
-    });
+    const updatedTimeWindows = localTimeWindows.filter(
+      (alloc) => alloc.time_window.id !== timeWindowId
+    );
+    const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
+    setLocalTimeWindows(recalculatedWindows);
+
+    // Auto-save the changes with debounce
+    debouncedSave(recalculatedWindows);
   };
 
   const handleOpenEditModal = (allocation: TimeWindowAllocation) => {
@@ -240,60 +309,36 @@ const MyDayPage: React.FC = () => {
   const handleUpdateTimeWindow = (
     updatedData: TimeWindowCreateRequest & { id: string }
   ) => {
-    setDailyPlan((prevPlan) => {
-      if (!prevPlan) return null;
-      const newTimeWindows = prevPlan.time_windows.map((alloc) => {
+    const updatedTimeWindows = localTimeWindows
+      .map((alloc) => {
         if (alloc.time_window.id === updatedData.id) {
-          const updatedTimeWindow = {
-            ...alloc.time_window,
-            description: updatedData.description,
-            start_time: updatedData.start_time,
-            end_time: updatedData.end_time,
+          return {
+            ...alloc,
+            time_window: {
+              ...alloc.time_window,
+              description: updatedData.description,
+              start_time: updatedData.start_time,
+              end_time: updatedData.end_time,
+              category: categories.find(
+                (c) => c.id === updatedData.category_id
+              )!,
+            },
           };
-          return { ...alloc, time_window: updatedTimeWindow };
         }
         return alloc;
-      });
-      return {
-        ...prevPlan,
-        time_windows: newTimeWindows as TimeWindowResponse[],
-      };
-    });
-  };
+      })
+      .sort((a, b) => a.time_window.start_time - b.time_window.start_time);
 
-  const handleSaveDailyPlan = async () => {
-    if (!dailyPlan) {
-      showMessage("No daily plan to save.", "error");
-      return;
-    }
+    setLocalTimeWindows(updatedTimeWindows);
 
-    try {
-      const timeWindowsForSave = dailyPlan.time_windows.map((alloc) => ({
-        description: alloc.time_window.description,
-        start_time: alloc.time_window.start_time,
-        end_time: alloc.time_window.end_time,
-        category_id: alloc.time_window.category?.id || null,
-        task_ids: alloc.tasks.map((task) => task.id),
-      }));
-
-      await updatePlanMutation.mutateAsync({
-        planId: dailyPlan.id,
-        payload: { time_windows: timeWindowsForSave },
-      });
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "prev-day"] });
-      showMessage("Daily plan saved successfully!", "success");
-    } catch (err) {
-      showMessage("Failed to save daily plan.", "error");
-      console.error("Failed to save daily plan:", err);
-    }
+    // Auto-save the changes with debounce
+    debouncedSave(updatedTimeWindows);
   };
 
   const savePrevDayReflection = async (reflection: SelfReflection) => {
     if (prevDayPlan) {
-      await updatePlanMutation.mutateAsync({
-        planId: prevDayPlan.id,
-        payload: { self_reflection: reflection },
+      await updateDailyPlanService(prevDayPlan.id, {
+        self_reflection: reflection,
       });
     }
   };
@@ -325,6 +370,102 @@ const MyDayPage: React.FC = () => {
     }
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragStart(event: DragStartEvent) {
+    const { active } = event;
+    const activeAlloc = localTimeWindows.find(
+      (alloc) => alloc.time_window.id === active.id
+    );
+    setActiveAllocation(activeAlloc || null);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLocalTimeWindows((items) => {
+        const oldIndex = items.findIndex(
+          (item) => item.time_window.id === active.id
+        );
+        const newIndex = items.findIndex(
+          (item) => item.time_window.id === over.id
+        );
+        const movedItems = arrayMove(items, oldIndex, newIndex);
+        const recalculatedItems = recalculateTimeWindowsWithShifting(
+          movedItems,
+          newIndex
+        );
+
+        // Auto-save the changes with debounce
+        debouncedSave(recalculatedItems);
+
+        return recalculatedItems;
+      });
+    }
+    setActiveAllocation(null);
+  }
+
+  // Function to render time windows with gaps
+  const renderTimeWindowsWithGaps = () => {
+    if (!localTimeWindows || localTimeWindows.length === 0) {
+      return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">
+          <p className="text-lg text-slate-500 mb-2">
+            No time windows planned for today.
+          </p>
+          <p className="text-sm text-slate-500">
+            You can add time windows to your plan by editing it.
+          </p>
+        </div>
+      );
+    }
+
+    const sortedWindows = [...localTimeWindows].sort(
+      (a, b) => a.time_window.start_time - b.time_window.start_time
+    );
+
+    const elements: React.ReactNode[] = [];
+
+    sortedWindows.forEach((alloc, index) => {
+      // Add gap indicator before this time window (except for the first one)
+      if (index > 0) {
+        const prevWindow = sortedWindows[index - 1];
+        const gapMinutes =
+          alloc.time_window.start_time - prevWindow.time_window.end_time;
+
+        if (gapMinutes > 0) {
+          elements.push(
+            <GapIndicator
+              key={`gap-${prevWindow.time_window.id}-${alloc.time_window.id}`}
+              durationMinutes={gapMinutes}
+            />
+          );
+        }
+      }
+
+      // Add the time window
+      elements.push(
+        <SortableTimeWindow
+          key={alloc.time_window.id}
+          allocation={alloc}
+          onDelete={() => handleDeleteTimeWindow(alloc.time_window.id)}
+          onEdit={() => handleOpenEditModal(alloc)}
+          onAssignTask={(task) => handleAssignTask(alloc.time_window.id, task)}
+          onUnassignTask={(taskId) =>
+            handleUnassignTask(alloc.time_window.id, taskId)
+          }
+        />
+      );
+    });
+
+    return elements;
+  };
+
   const isLoading = isLoadingTodayPlan || isLoadingPrevDayPlan;
 
   if (isLoading) {
@@ -335,11 +476,51 @@ const MyDayPage: React.FC = () => {
     );
   }
 
+  const SortableTimeWindow = ({
+    allocation,
+    onDelete,
+    onEdit,
+    onAssignTask,
+    onUnassignTask,
+  }: {
+    allocation: TimeWindowAllocation;
+    onDelete: () => void;
+    onEdit: () => void;
+    onAssignTask: (task: Task) => void;
+    onUnassignTask: (taskId: string) => void;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition } =
+      useSortable({ id: allocation.time_window.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        data-testid={`sortable-time-window-${allocation.time_window.id}`}
+      >
+        <TimeWindowBalloon
+          timeWindow={allocation.time_window}
+          tasks={allocation.tasks}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onAssignTask={onAssignTask}
+          onUnassignTask={onUnassignTask}
+        />
+      </div>
+    );
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 rounded-xl">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {dailyPlan ? (
-          // Schedule Editor View
           <>
             <header className="flex items-center justify-between mb-8 md:mb-12">
               <div>
@@ -350,17 +531,23 @@ const MyDayPage: React.FC = () => {
                   Plan your perfect day
                 </p>
               </div>
-              <div>
+              <div className="flex items-center gap-4">
                 <p className="text-slate-600 text-sm md:text-base">
                   Total time spent today:{" "}
                   {formatDurationFromSeconds(dailyStats?.total_seconds_spent)}
                 </p>
+                {showSavedIndicator && (
+                  <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    <Check size={12} />
+                    Saved
+                  </div>
+                )}
               </div>
             </header>
             <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
               <Timeline
                 className="ml-6"
-                timeWindows={dailyPlan.time_windows
+                timeWindows={localTimeWindows
                   .slice()
                   .sort(
                     (a, b) =>
@@ -395,38 +582,32 @@ const MyDayPage: React.FC = () => {
                   })}
               />
               <section className="flex-1 space-y-4">
-                {dailyPlan.time_windows && dailyPlan.time_windows.length > 0 ? (
-                  dailyPlan.time_windows
-                    .slice()
-                    .sort(
-                      (a, b) =>
-                        a.time_window.start_time - b.time_window.start_time
-                    )
-                    .map((alloc) => (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  data-testid="dnd-context"
+                >
+                  <SortableContext
+                    items={localTimeWindows.map(
+                      (alloc) => alloc.time_window.id
+                    )}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {renderTimeWindowsWithGaps()}
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeAllocation ? (
                       <TimeWindowBalloon
-                        key={alloc.time_window.id}
-                        timeWindow={alloc.time_window}
-                        tasks={alloc.tasks}
-                        onDelete={handleDeleteTimeWindow}
-                        onEdit={() => handleOpenEditModal(alloc)}
-                        onAssignTask={(task) =>
-                          handleAssignTask(alloc.time_window.id, task)
-                        }
-                        onUnassignTask={(taskId) =>
-                          handleUnassignTask(alloc.time_window.id, taskId)
-                        }
+                        timeWindow={activeAllocation.time_window}
+                        tasks={activeAllocation.tasks}
+                        isOverlay
                       />
-                    ))
-                ) : (
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center min-h-[200px] flex flex-col items-center justify-center">
-                    <p className="text-lg text-slate-500 mb-2">
-                      No time windows planned for today.
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      You can add time windows to your plan by editing it.
-                    </p>
-                  </div>
-                )}
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+
                 <div className="flex justify-start gap-4 mt-8">
                   <Button
                     variant="slate"
@@ -437,96 +618,75 @@ const MyDayPage: React.FC = () => {
                     <PlusCircle size={18} />
                     Add Time Window
                   </Button>
-                  <Button
-                    variant="slate"
-                    size="medium"
-                    onClick={handleSaveDailyPlan}
-                    className="flex items-center gap-2"
-                  >
-                    <Save size={18} />
-                    Save
-                  </Button>
                 </div>
               </section>
             </main>
           </>
         ) : (
-          // Review & Reflect View (when no plan for today)
           <>
             <header className="text-center mb-12">
-              <h1 className="text-3xl md:text-3xl font-bold mb-4">
-                Daily Planning
+              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+                Welcome to Your Day
               </h1>
-              <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-                Review yesterday's progress, plan today's schedule, and reflect
-                on your journey.
+              <p className="text-lg text-slate-600">
+                Let's get your day planned out.
               </p>
             </header>
-
-            <div className="space-y-16">
-              {/* Section 1: Review Unfinished Tasks */}
+            <div className="flex justify-center items-start gap-8">
               {showYesterdayReview && prevDayPlan && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
-                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                        Review: Previous Day's Tasks
+                      <h2 className="text-2xl font-bold text-slate-800">
+                        Review Yesterday's Plan
                       </h2>
                     </header>
-                    <div className="bg-slate-100 p-6 rounded-xl shadow-sm border border-slate-200 opacity-70 transition-opacity">
-                      <div className="space-y-4">
-                        {prevDayPlan.time_windows
-                          .slice()
-                          .sort(
-                            (a, b) =>
-                              a.time_window.start_time -
-                              b.time_window.start_time
-                          )
-                          .map((alloc) => (
-                            <TimeWindowBalloon
-                              key={alloc.time_window.id}
-                              timeWindow={alloc.time_window}
-                              tasks={alloc.tasks}
-                            />
-                          ))}
+                    <div className="space-y-4">
+                      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 className="font-bold text-lg mb-2">
+                          Completed Tasks
+                        </h3>
+                        <ul className="list-disc list-inside">
+                          {prevDayPlan.time_windows
+                            .flatMap(({ tasks }) => tasks)
+                            .filter((task) => task.status === "done")
+                            .map((task) => (
+                              <li key={task.id}>{task.title}</li>
+                            ))}
+                        </ul>
+                      </div>
+                      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 className="font-bold text-lg mb-2">
+                          Uncompleted Tasks
+                        </h3>
+                        <ul className="list-disc list-inside">
+                          {prevDayPlan.time_windows
+                            .flatMap(({ tasks }) => tasks)
+                            .filter((task) => task.status !== "done")
+                            .map((task) => (
+                              <li key={task.id}>{task.title}</li>
+                            ))}
+                        </ul>
                       </div>
                       <div className="mt-6 flex justify-start gap-4">
-                        <Button
-                          onClick={handleCarryOver}
-                          disabled={
-                            createPlanMutation.isPending ||
-                            updatePlanMutation.isPending
-                          }
-                        >
-                          Carry over unfinished tasks
+                        <Button onClick={handleCarryOver}>
+                          Carry Over Uncompleted Tasks
                         </Button>
-                        <Button
-                          onClick={handleCreateNewPlanFromReview}
-                          variant="secondary"
-                          disabled={
-                            createPlanMutation.isPending ||
-                            updatePlanMutation.isPending
-                          }
-                        >
-                          Create new plan
+                        <Button onClick={handleCreateNewPlanFromReview}>
+                          Create New Plan
                         </Button>
                       </div>
                     </div>
                   </div>
                 </section>
               )}
-
-              {/* Section 3: Self-Reflection */}
               {showYesterdayReview && prevDayPlan && prevDayReflection && (
                 <section className="w-full">
                   <div className="max-w-6xl mx-auto">
                     <header className="mb-6">
-                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
+                      <h2 className="text-2xl font-bold text-slate-800">
                         Self-Reflection
                       </h2>
-                      <p className="text-slate-500 text-sm">
-                        Take a moment to reflect on your day.
-                      </p>
                     </header>
                     <SelfReflectionComponent
                       reflection={prevDayReflection}
@@ -535,144 +695,124 @@ const MyDayPage: React.FC = () => {
                   </div>
                 </section>
               )}
-
-              {/* Section 2: Create New Plan */}
               {!showYesterdayReview && !selectedTemplate && (
                 <section className="w-full">
                   <div className="max-w-7xl mx-auto">
                     <header className="mb-6">
-                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                        No plan for today
+                      <h2 className="text-2xl font-bold text-slate-800">
+                        Choose a Template for Today
                       </h2>
-                      <p className="text-slate-500 text-sm">
-                        Start by creating a new daily plan.
+                      <p className="text-slate-600 mt-1">
+                        Select one of your pre-defined day templates to get
+                        started.
                       </p>
                     </header>
-                    <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center min-h-[300px] flex flex-col items-center justify-center">
-                      {dayTemplates.length > 0 ? (
-                        <>
-                          <p className="text-lg text-slate-500 mb-4">
-                            Choose a template to get started:
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {dayTemplates.map((template: DayTemplateResponse) => (
+                        <Button
+                          key={template.id}
+                          onClick={() => handleSelectTemplate(template)}
+                          variant="secondary"
+                          className="h-auto text-left p-6 flex flex-col items-start"
+                        >
+                          <h3 className="font-bold text-lg">{template.name}</h3>
+                          <p className="text-sm text-slate-500">
+                            {template.description}
                           </p>
-                          <div className="flex flex-wrap justify-center gap-4">
-                            {dayTemplates.map(
-                              (template: DayTemplateResponse) => (
-                                <Button
-                                  key={template.id}
-                                  onClick={() => handleSelectTemplate(template)}
-                                  variant="secondary"
-                                >
-                                  {template.name}
-                                </Button>
-                              )
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-lg text-slate-500 mb-4">
-                            No templates available.
-                          </p>
-                          <Button
-                            onClick={() => setIsTemplateModalOpen(true)}
-                            variant="primary"
-                          >
-                            Create Plan
-                          </Button>
-                        </>
-                      )}
+                        </Button>
+                      ))}
                     </div>
+                    <>
+                      <Button
+                        onClick={() => setIsTemplateModalOpen(true)}
+                        className="mt-6"
+                      >
+                        Or Choose from All Templates
+                      </Button>
+                    </>
                   </div>
                 </section>
               )}
-
-              {/* Template Preview Section */}
               {!showYesterdayReview && selectedTemplate && (
                 <section className="w-full">
                   <div className="max-w-7xl mx-auto">
                     <header className="mb-6">
-                      <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-                        Template Preview: {selectedTemplate.name}
+                      <h2 className="text-2xl font-bold text-slate-800">
+                        Today's Plan from: {selectedTemplate.name}
                       </h2>
-                      <p className="text-slate-500 text-sm">
-                        Review your template and save it as today's plan.
+                      <p className="text-slate-600 mt-1">
+                        Here is the layout for your day. Ready to save?
                       </p>
                     </header>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <div className="space-y-4 mb-6">
-                        {selectedTemplate.time_windows
-                          .slice()
-                          .sort((a, b) => a.start_time - b.start_time)
-                          .map((timeWindow) => (
-                            <TimeWindowBalloon
-                              key={timeWindow.id}
-                              timeWindow={timeWindow}
-                              tasks={[]}
-                            />
-                          ))}
-                      </div>
-                      <div className="flex justify-start gap-4">
-                        <Button
-                          onClick={handleSavePlan}
-                          disabled={createPlanMutation.isPending}
-                        >
-                          Save Plan
-                        </Button>
-                        <Button
-                          onClick={() => setSelectedTemplate(null)}
-                          variant="secondary"
-                        >
-                          Back to Templates
-                        </Button>
-                      </div>
+                    <div className="space-y-4">
+                      {selectedTemplate.time_windows
+                        .slice()
+                        .sort((a, b) => a.start_time - b.start_time)
+                        .map((timeWindow) => (
+                          <TimeWindowBalloon
+                            key={timeWindow.id}
+                            timeWindow={timeWindow}
+                          />
+                        ))}
+                    </div>
+                    <div className="flex justify-start gap-4">
+                      <Button onClick={handleSavePlan} className="mt-6">
+                        Save Today's Plan
+                      </Button>
+                      <Button
+                        onClick={() => setSelectedTemplate(null)}
+                        variant="secondary"
+                        className="mt-6"
+                      >
+                        Choose a Different Template
+                      </Button>
                     </div>
                   </div>
                 </section>
               )}
             </div>
             <footer className="mt-16 pt-8 border-t border-slate-200 text-center">
-              <p className="text-slate-500 text-sm">
-                &copy; {new Date().getFullYear()} Flocus. All rights reserved.
+              <p className="text-slate-500">
+                Flocus - Stay Focused, Stay Productive.
               </p>
             </footer>
           </>
         )}
       </div>
-
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        title="Choose a Day Template"
+        title="Select a Day Template"
       >
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {dayTemplates.map((template: DayTemplateResponse) => (
             <Button
               key={template.id}
               onClick={() => handleSelectTemplate(template)}
               variant="secondary"
-              className="w-full"
+              className="h-auto text-left p-4"
             >
-              {template.name}
+              <h3 className="font-bold">{template.name}</h3>
+              <p className="text-sm text-slate-500">{template.description}</p>
             </Button>
           ))}
         </div>
       </Modal>
-
-      <CreateTimeWindowModal
+      <TimeWindowModal
         isOpen={isTimeWindowModalOpen}
         onClose={() => setIsTimeWindowModalOpen(false)}
-        onSubmitSuccess={handleAddTimeWindow}
+        onCreateSuccess={handleAddTimeWindow}
         categories={categories}
-        existingTimeWindows={dailyPlan?.time_windows || []}
+        existingTimeWindows={localTimeWindows}
       />
-
       {dailyPlan && editingTimeWindow && (
-        <EditDailyPlanTimeWindowModal
+        <TimeWindowModal
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
+          onEditSubmit={handleUpdateTimeWindow}
           editingTimeWindow={editingTimeWindow}
-          onSubmit={handleUpdateTimeWindow}
-          existingTimeWindows={dailyPlan.time_windows}
+          categories={categories}
+          existingTimeWindows={localTimeWindows}
         />
       )}
     </main>

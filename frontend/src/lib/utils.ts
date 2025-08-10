@@ -1,15 +1,9 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import {
-  isToday,
-  isTomorrow,
-  parseISO,
-  isValid,
-  getYear,
-} from 'date-fns';
-import { format as formatTZ, toZonedTime } from 'date-fns-tz';
-import { TimeWindowCreateRequest } from '../types/timeWindow';
-import { TimeWindowAllocation } from '../types/dailyPlan';
+import { isToday, isTomorrow, parseISO, isValid, getYear } from "date-fns";
+import { format as formatTZ, toZonedTime } from "date-fns-tz";
+import { TimeWindowCreateRequest } from "../types/timeWindow";
+import { TimeWindowAllocation } from "../types/dailyPlan";
 
 // ===== STYLING UTILITIES =====
 export function cn(...inputs: ClassValue[]) {
@@ -24,7 +18,7 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Total minutes from 00:00, or null if invalid
  */
 export function hhMMToMinutes(timeStr: string): number | null {
-  if (typeof timeStr !== 'string' || !timeStr.trim()) {
+  if (typeof timeStr !== "string" || !timeStr.trim()) {
     return null;
   }
 
@@ -47,7 +41,7 @@ export function hhMMToMinutes(timeStr: string): number | null {
  */
 export function formatMinutesToHHMM(totalMinutes: number): string {
   if (!Number.isInteger(totalMinutes)) {
-    return '00:00';
+    return "00:00";
   }
 
   const isNegative = totalMinutes < 0;
@@ -59,7 +53,9 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
   const hours = Math.floor(normalizedMinutes / 60);
   const minutes = normalizedMinutes % 60;
 
-  const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`;
   return isNegative ? `-${formattedTime}` : formattedTime;
 }
 
@@ -115,7 +111,7 @@ export function localToUtc(localDate: Date | null): string | null {
   try {
     return localDate.toISOString();
   } catch (error) {
-    console.error('localToUtc: Error converting date to ISO string:', error);
+    console.error("localToUtc: Error converting date to ISO string:", error);
     return null;
   }
 }
@@ -128,28 +124,28 @@ export function localToUtc(localDate: Date | null): string | null {
  * @returns Formatted date string
  */
 export function formatDueDate(dateString: string | null): string {
-  if (!dateString?.trim()) return 'N/A';
+  if (!dateString?.trim()) return "N/A";
 
   const date = utcToLocal(dateString);
-  if (!date) return 'Invalid Date';
+  if (!date) return "Invalid Date";
 
   try {
     if (isToday(date)) {
-      return 'Today';
+      return "Today";
     }
 
     if (isTomorrow(date)) {
-      return 'Tomorrow';
+      return "Tomorrow";
     }
 
     const currentYear = getYear(new Date());
     const dateYear = getYear(date);
 
-    const formatString = dateYear === currentYear ? 'MMMM d' : 'MMMM d, yyyy';
+    const formatString = dateYear === currentYear ? "MMMM d" : "MMMM d, yyyy";
     return formatTZ(date, formatString, { timeZone: LOCAL_TIMEZONE });
   } catch (error) {
-    console.error('formatDueDate: Error formatting date:', error);
-    return 'Invalid Date';
+    console.error("formatDueDate: Error formatting date:", error);
+    return "Invalid Date";
   }
 }
 
@@ -159,16 +155,16 @@ export function formatDueDate(dateString: string | null): string {
  * @returns Formatted date-time string
  */
 export function formatDateTime(dateString: string | undefined | null): string {
-  if (!dateString?.trim()) return 'N/A';
+  if (!dateString?.trim()) return "N/A";
 
   const date = utcToLocal(dateString);
-  if (!date) return 'Invalid Date';
+  if (!date) return "Invalid Date";
 
   try {
-    return formatTZ(date, 'MMM d, yyyy, h:mm a', { timeZone: LOCAL_TIMEZONE });
+    return formatTZ(date, "MMM d, yyyy, h:mm a", { timeZone: LOCAL_TIMEZONE });
   } catch (error) {
-    console.error('formatDateTime: Error formatting date:', error);
-    return 'Invalid Date';
+    console.error("formatDateTime: Error formatting date:", error);
+    return "Invalid Date";
   }
 }
 
@@ -177,12 +173,18 @@ export function formatDateTime(dateString: string | undefined | null): string {
  * @param totalMinutes - Duration in minutes
  * @returns Formatted duration string
  */
-export function formatDurationFromMinutes(totalMinutes: number | undefined | null): string {
-  if (totalMinutes == null || !Number.isInteger(totalMinutes) || totalMinutes < 0) {
-    return 'N/A';
+export function formatDurationFromMinutes(
+  totalMinutes: number | undefined | null
+): string {
+  if (
+    totalMinutes == null ||
+    !Number.isInteger(totalMinutes) ||
+    totalMinutes < 0
+  ) {
+    return "N/A";
   }
 
-  if (totalMinutes === 0) return '0min';
+  if (totalMinutes === 0) return "0min";
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -203,12 +205,18 @@ export function formatDurationFromMinutes(totalMinutes: number | undefined | nul
  * @param totalSeconds - Duration in seconds
  * @returns Formatted duration string
  */
-export function formatDurationFromSeconds(totalSeconds: number | undefined | null): string {
-  if (totalSeconds == null || !Number.isInteger(totalSeconds) || totalSeconds < 0) {
-    return 'N/A';
+export function formatDurationFromSeconds(
+  totalSeconds: number | undefined | null
+): string {
+  if (
+    totalSeconds == null ||
+    !Number.isInteger(totalSeconds) ||
+    totalSeconds < 0
+  ) {
+    return "N/A";
   }
 
-  if (totalSeconds === 0) return '0s';
+  if (totalSeconds === 0) return "0s";
 
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -225,7 +233,7 @@ export function formatDurationFromSeconds(totalSeconds: number | undefined | nul
     return `${totalSeconds}s`;
   }
 
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 // ===== TIME WINDOW UTILITIES =====
@@ -248,17 +256,22 @@ export function checkTimeWindowOverlap(
   const newEnd = newTimeWindow.end_time;
 
   // Validate new time window
-  if (typeof newStart !== 'number' || typeof newEnd !== 'number' || newStart >= newEnd) {
+  if (
+    typeof newStart !== "number" ||
+    typeof newEnd !== "number" ||
+    newStart >= newEnd
+  ) {
     return false;
   }
 
-  return existingTimeWindows.some(allocation => {
+  return existingTimeWindows.some((allocation) => {
     if (!allocation?.time_window) return false;
 
-    const { start_time: existingStart, end_time: existingEnd } = allocation.time_window;
+    const { start_time: existingStart, end_time: existingEnd } =
+      allocation.time_window;
 
     // Validate existing time window
-    if (typeof existingStart !== 'number' || typeof existingEnd !== 'number') {
+    if (typeof existingStart !== "number" || typeof existingEnd !== "number") {
       return false;
     }
 
@@ -284,7 +297,10 @@ export function getCurrentTimeInMinutes(): number {
  * @param endTime - End time in HH:MM format
  * @returns Duration in minutes, or null if invalid
  */
-export function calculateDuration(startTime: string, endTime: string): number | null {
+export function calculateDuration(
+  startTime: string,
+  endTime: string
+): number | null {
   const start = hhMMToMinutes(startTime);
   const end = hhMMToMinutes(endTime);
 
@@ -315,10 +331,163 @@ export function isValidTimeFormat(timeStr: string): boolean {
  * @param interval - Interval to round to (default: 15)
  * @returns Rounded minutes
  */
-export function roundToInterval(minutes: number, interval: number = 15): number {
-  if (!Number.isInteger(minutes) || !Number.isInteger(interval) || interval <= 0) {
+export function roundToInterval(
+  minutes: number,
+  interval: number = 15
+): number {
+  if (
+    !Number.isInteger(minutes) ||
+    !Number.isInteger(interval) ||
+    interval <= 0
+  ) {
     return minutes;
   }
 
   return Math.round(minutes / interval) * interval;
 }
+
+export const recalculateTimeWindows = (
+  timeWindows: TimeWindowAllocation[]
+): TimeWindowAllocation[] => {
+  if (!timeWindows || timeWindows.length === 0) {
+    return [];
+  }
+
+  let currentTime = timeWindows[0].time_window.start_time;
+
+  return timeWindows.map((allocation) => {
+    const duration =
+      allocation.time_window.end_time - allocation.time_window.start_time;
+    const newStartTime = currentTime;
+    const newEndTime = currentTime + duration;
+    currentTime = newEndTime;
+
+    return {
+      ...allocation,
+      time_window: {
+        ...allocation.time_window,
+        start_time: newStartTime,
+        end_time: newEndTime,
+      },
+    };
+  });
+};
+
+export const recalculateTimeWindowsWithGapFitting = (
+  timeWindows: TimeWindowAllocation[],
+  draggedIndex: number
+): TimeWindowAllocation[] | null => {
+  if (!timeWindows || timeWindows.length === 0) {
+    return [];
+  }
+
+  const result = [...timeWindows];
+  const draggedWindow = result[draggedIndex];
+  const originalDuration =
+    draggedWindow.time_window.end_time - draggedWindow.time_window.start_time;
+
+  // Calculate the available time slot for the dragged window
+  let availableStartTime: number;
+  let availableEndTime: number;
+
+  if (draggedIndex === 0) {
+    // First position - can start earlier if needed
+    if (draggedIndex + 1 < result.length) {
+      // There's a next window, so we need to end before it starts
+      availableEndTime = result[draggedIndex + 1].time_window.start_time;
+      availableStartTime = availableEndTime - originalDuration;
+    } else {
+      // It's the only window, keep original timing
+      availableStartTime = timeWindows[0].time_window.start_time;
+      availableEndTime = availableStartTime + originalDuration;
+    }
+  } else if (draggedIndex === result.length - 1) {
+    // Last position - start after the previous window
+    availableStartTime = result[draggedIndex - 1].time_window.end_time;
+    availableEndTime = availableStartTime + originalDuration; // No limit for last position
+  } else {
+    // Middle position - between two windows
+    availableStartTime = result[draggedIndex - 1].time_window.end_time;
+    availableEndTime = result[draggedIndex + 1].time_window.start_time;
+  }
+
+  // Calculate available space
+  const availableSpace = availableEndTime - availableStartTime;
+
+  // If there's no space at all, cancel the drag
+  if (availableSpace <= 0) {
+    return null; // Signal to cancel the drag
+  }
+
+  // Determine the new duration (either original or shortened to fit)
+  const newDuration = Math.min(originalDuration, availableSpace);
+
+  // Only adjust the dragged window's times, leave all others unchanged
+  result[draggedIndex] = {
+    ...draggedWindow,
+    time_window: {
+      ...draggedWindow.time_window,
+      start_time: availableStartTime,
+      end_time: availableStartTime + newDuration,
+    },
+  };
+
+  return result;
+};
+
+export const recalculateTimeWindowsWithShifting = (
+  timeWindows: TimeWindowAllocation[],
+  draggedIndex: number
+): TimeWindowAllocation[] => {
+  if (!timeWindows || timeWindows.length === 0) {
+    return [];
+  }
+
+  const result = [...timeWindows];
+  const draggedWindow = result[draggedIndex];
+  const draggedDuration =
+    draggedWindow.time_window.end_time - draggedWindow.time_window.start_time;
+
+  // Calculate the new start time for the dragged window
+  let newStartTime: number;
+
+  if (draggedIndex === 0) {
+    // First position - keep the dragged window's original start time
+    newStartTime = draggedWindow.time_window.start_time;
+  } else {
+    // Position after previous window - start immediately after the previous window ends
+    newStartTime = result[draggedIndex - 1].time_window.end_time;
+  }
+
+  // Update the dragged window with its new position (duration stays the same)
+  result[draggedIndex] = {
+    ...draggedWindow,
+    time_window: {
+      ...draggedWindow.time_window,
+      start_time: newStartTime,
+      end_time: newStartTime + draggedDuration,
+    },
+  };
+
+  // Shift all subsequent windows to start after the dragged window
+  let currentEndTime = newStartTime + draggedDuration;
+
+  for (let i = draggedIndex + 1; i < result.length; i++) {
+    const currentWindow = result[i];
+    const currentDuration =
+      currentWindow.time_window.end_time - currentWindow.time_window.start_time;
+
+    result[i] = {
+      ...currentWindow,
+      time_window: {
+        ...currentWindow.time_window,
+        start_time: currentEndTime,
+        end_time: currentEndTime + currentDuration,
+      },
+    };
+
+    currentEndTime += currentDuration;
+  }
+
+  return result;
+};

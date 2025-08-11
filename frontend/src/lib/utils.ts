@@ -2,6 +2,19 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { isToday, isTomorrow, parseISO, isValid, getYear } from "date-fns";
 import { format as formatTZ, toZonedTime } from "date-fns-tz";
+import {
+  cloneDeep,
+  isInteger,
+  isString,
+  isNumber,
+  isArray,
+  isNull,
+  isUndefined,
+  round,
+  floor,
+  min,
+  max,
+} from "lodash-es";
 import { TimeWindowCreateRequest } from "../types/timeWindow";
 import { TimeWindowAllocation } from "../types/dailyPlan";
 
@@ -18,7 +31,7 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Total minutes from 00:00, or null if invalid
  */
 export function hhMMToMinutes(timeStr: string): number | null {
-  if (typeof timeStr !== "string" || !timeStr.trim()) {
+  if (!isString(timeStr) || !timeStr.trim()) {
     return null;
   }
 
@@ -40,7 +53,7 @@ export function hhMMToMinutes(timeStr: string): number | null {
  * @returns Formatted time string with 24-hour wraparound
  */
 export function formatMinutesToHHMM(totalMinutes: number): string {
-  if (!Number.isInteger(totalMinutes)) {
+  if (!isInteger(totalMinutes)) {
     return "00:00";
   }
 
@@ -50,7 +63,7 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
   // Handle 24-hour wraparound (1440 minutes = 24 hours = 00:00)
   const normalizedMinutes = absMinutes % (24 * 60);
 
-  const hours = Math.floor(normalizedMinutes / 60);
+  const hours = floor(normalizedMinutes / 60);
   const minutes = normalizedMinutes % 60;
 
   const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
@@ -65,12 +78,12 @@ export function formatMinutesToHHMM(totalMinutes: number): string {
  * @returns Date object set to today with specified time
  */
 export function minutesToDate(minutes: number): Date {
-  if (!Number.isInteger(minutes) || minutes < 0 || minutes >= 24 * 60) {
+  if (!isInteger(minutes) || minutes < 0 || minutes >= 24 * 60) {
     throw new Error(`Invalid minutes value: ${minutes}. Must be 0-1439.`);
   }
 
   const date = new Date();
-  date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  date.setHours(floor(minutes / 60), minutes % 60, 0, 0);
   return date;
 }
 
@@ -177,8 +190,9 @@ export function formatDurationFromMinutes(
   totalMinutes: number | undefined | null
 ): string {
   if (
-    totalMinutes == null ||
-    !Number.isInteger(totalMinutes) ||
+    isNull(totalMinutes) ||
+    isUndefined(totalMinutes) ||
+    !isInteger(totalMinutes) ||
     totalMinutes < 0
   ) {
     return "N/A";
@@ -186,7 +200,7 @@ export function formatDurationFromMinutes(
 
   if (totalMinutes === 0) return "0min";
 
-  const hours = Math.floor(totalMinutes / 60);
+  const hours = floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
   if (hours === 0) {
@@ -209,8 +223,9 @@ export function formatDurationFromSeconds(
   totalSeconds: number | undefined | null
 ): string {
   if (
-    totalSeconds == null ||
-    !Number.isInteger(totalSeconds) ||
+    isNull(totalSeconds) ||
+    isUndefined(totalSeconds) ||
+    !isInteger(totalSeconds) ||
     totalSeconds < 0
   ) {
     return "N/A";
@@ -218,8 +233,8 @@ export function formatDurationFromSeconds(
 
   if (totalSeconds === 0) return "0s";
 
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const hours = floor(totalSeconds / 3600);
+  const minutes = floor((totalSeconds % 3600) / 60);
 
   const parts = [];
   if (hours > 0) {
@@ -248,7 +263,7 @@ export function checkTimeWindowOverlap(
   newTimeWindow: TimeWindowCreateRequest,
   existingTimeWindows: TimeWindowAllocation[]
 ): boolean {
-  if (!newTimeWindow || !Array.isArray(existingTimeWindows)) {
+  if (!newTimeWindow || !isArray(existingTimeWindows)) {
     return false;
   }
 
@@ -256,11 +271,7 @@ export function checkTimeWindowOverlap(
   const newEnd = newTimeWindow.end_time;
 
   // Validate new time window
-  if (
-    typeof newStart !== "number" ||
-    typeof newEnd !== "number" ||
-    newStart >= newEnd
-  ) {
+  if (!isNumber(newStart) || !isNumber(newEnd) || newStart >= newEnd) {
     return false;
   }
 
@@ -271,13 +282,28 @@ export function checkTimeWindowOverlap(
       allocation.time_window;
 
     // Validate existing time window
-    if (typeof existingStart !== "number" || typeof existingEnd !== "number") {
+    if (!isNumber(existingStart) || !isNumber(existingEnd)) {
       return false;
     }
 
     // Check for overlap: (start1 < end2) && (end1 > start2)
     return newStart < existingEnd && newEnd > existingStart;
   });
+}
+
+// ===== TIME NORMALIZATION UTILITIES =====
+
+/**
+ * Normalize time value to ensure it stays within 24-hour boundary
+ * @param minutes - Time in minutes
+ * @returns Normalized time within 0-1439 range
+ */
+export function normalizeTimeMinutes(minutes: number): number {
+  if (!isNumber(minutes) || isNaN(minutes)) return 0;
+
+  // Ensure the value is within 0-1439 range (24 hours)
+  const maxMinutes = 24 * 60 - 1; // 23:59
+  return Math.max(0, Math.min(minutes, maxMinutes));
 }
 
 // ===== ADDITIONAL UTILITY FUNCTIONS =====
@@ -335,56 +361,74 @@ export function roundToInterval(
   minutes: number,
   interval: number = 15
 ): number {
-  if (
-    !Number.isInteger(minutes) ||
-    !Number.isInteger(interval) ||
-    interval <= 0
-  ) {
+  if (!isInteger(minutes) || !isInteger(interval) || interval <= 0) {
     return minutes;
   }
 
-  return Math.round(minutes / interval) * interval;
+  return round(minutes / interval) * interval;
 }
 
 export const recalculateTimeWindows = (
   timeWindows: TimeWindowAllocation[]
 ): TimeWindowAllocation[] => {
-  if (!timeWindows || timeWindows.length === 0) {
+  if (!isArray(timeWindows) || timeWindows.length === 0) {
     return [];
   }
 
   let currentTime = timeWindows[0].time_window.start_time;
+  const maxEndTime = 24 * 60 - 1; // 23:59 in minutes
+  const result: TimeWindowAllocation[] = [];
 
-  return timeWindows.map((allocation) => {
+  for (const allocation of timeWindows) {
     const duration =
       allocation.time_window.end_time - allocation.time_window.start_time;
-    const newStartTime = currentTime;
-    const newEndTime = currentTime + duration;
-    currentTime = newEndTime;
 
-    return {
+    // Check if we've reached the end of the day
+    if (currentTime >= maxEndTime) {
+      break;
+    }
+
+    // Adjust duration if it would exceed the boundary
+    const availableTime = maxEndTime - currentTime;
+    const adjustedDuration = min([duration, availableTime]) ?? duration;
+
+    const newStartTime = currentTime;
+    const newEndTime = currentTime + adjustedDuration;
+
+    result.push({
       ...allocation,
       time_window: {
         ...allocation.time_window,
         start_time: newStartTime,
         end_time: newEndTime,
       },
-    };
-  });
+    });
+
+    currentTime = newEndTime;
+
+    // If we've reached the boundary, stop processing further windows
+    if (currentTime >= maxEndTime) {
+      break;
+    }
+  }
+
+  return result;
 };
 
 export const recalculateTimeWindowsWithGapFitting = (
   timeWindows: TimeWindowAllocation[],
   draggedIndex: number
 ): TimeWindowAllocation[] | null => {
-  if (!timeWindows || timeWindows.length === 0) {
+  if (!isArray(timeWindows) || timeWindows.length === 0) {
     return [];
   }
 
-  const result = [...timeWindows];
+  const result = cloneDeep(timeWindows);
   const draggedWindow = result[draggedIndex];
   const originalDuration =
     draggedWindow.time_window.end_time - draggedWindow.time_window.start_time;
+
+  const maxEndTime = 24 * 60 - 1; // 23:59 in minutes
 
   // Calculate the available time slot for the dragged window
   let availableStartTime: number;
@@ -395,21 +439,33 @@ export const recalculateTimeWindowsWithGapFitting = (
     if (draggedIndex + 1 < result.length) {
       // There's a next window, so we need to end before it starts
       availableEndTime = result[draggedIndex + 1].time_window.start_time;
-      availableStartTime = availableEndTime - originalDuration;
+      availableStartTime = max([0, availableEndTime - originalDuration]) ?? 0;
     } else {
-      // It's the only window, keep original timing
-      availableStartTime = timeWindows[0].time_window.start_time;
-      availableEndTime = availableStartTime + originalDuration;
+      // It's the only window, keep original timing but ensure it doesn't exceed boundary
+      availableStartTime = normalizeTimeMinutes(
+        timeWindows[0].time_window.start_time
+      );
+      availableEndTime = Math.min(
+        availableStartTime + originalDuration,
+        maxEndTime
+      );
     }
   } else if (draggedIndex === result.length - 1) {
-    // Last position - start after the previous window
+    // Last position - start after the previous window but don't exceed day boundary
     availableStartTime = result[draggedIndex - 1].time_window.end_time;
-    availableEndTime = availableStartTime + originalDuration; // No limit for last position
+    availableEndTime = Math.min(
+      availableStartTime + originalDuration,
+      maxEndTime
+    );
   } else {
     // Middle position - between two windows
     availableStartTime = result[draggedIndex - 1].time_window.end_time;
     availableEndTime = result[draggedIndex + 1].time_window.start_time;
   }
+
+  // Ensure times are within valid bounds
+  availableStartTime = normalizeTimeMinutes(availableStartTime);
+  availableEndTime = normalizeTimeMinutes(availableEndTime);
 
   // Calculate available space
   const availableSpace = availableEndTime - availableStartTime;
@@ -420,7 +476,14 @@ export const recalculateTimeWindowsWithGapFitting = (
   }
 
   // Determine the new duration (either original or shortened to fit)
-  const newDuration = Math.min(originalDuration, availableSpace);
+  const newDuration =
+    min([originalDuration, availableSpace]) ?? originalDuration;
+
+  // Ensure the end time doesn't exceed the day boundary
+  const normalizedEndTime = Math.min(
+    availableStartTime + newDuration,
+    maxEndTime
+  );
 
   // Only adjust the dragged window's times, leave all others unchanged
   result[draggedIndex] = {
@@ -428,7 +491,7 @@ export const recalculateTimeWindowsWithGapFitting = (
     time_window: {
       ...draggedWindow.time_window,
       start_time: availableStartTime,
-      end_time: availableStartTime + newDuration,
+      end_time: normalizedEndTime,
     },
   };
 
@@ -439,11 +502,11 @@ export const recalculateTimeWindowsWithShifting = (
   timeWindows: TimeWindowAllocation[],
   draggedIndex: number
 ): TimeWindowAllocation[] => {
-  if (!timeWindows || timeWindows.length === 0) {
+  if (!isArray(timeWindows) || timeWindows.length === 0) {
     return [];
   }
 
-  const result = [...timeWindows];
+  const result = cloneDeep(timeWindows);
   const draggedWindow = result[draggedIndex];
   const draggedDuration =
     draggedWindow.time_window.end_time - draggedWindow.time_window.start_time;
@@ -459,35 +522,95 @@ export const recalculateTimeWindowsWithShifting = (
     newStartTime = result[draggedIndex - 1].time_window.end_time;
   }
 
-  // Update the dragged window with its new position (duration stays the same)
+  // Ensure the dragged window doesn't exceed 24-hour boundary
+  const maxEndTime = 24 * 60 - 1; // 23:59 in minutes
+  const adjustedDuration =
+    min([draggedDuration, maxEndTime - newStartTime]) ?? draggedDuration;
+
+  // Update the dragged window with its new position (duration may be adjusted)
   result[draggedIndex] = {
     ...draggedWindow,
     time_window: {
       ...draggedWindow.time_window,
       start_time: newStartTime,
-      end_time: newStartTime + draggedDuration,
+      end_time: newStartTime + adjustedDuration,
     },
   };
 
   // Shift all subsequent windows to start after the dragged window
-  let currentEndTime = newStartTime + draggedDuration;
+  let currentEndTime = newStartTime + adjustedDuration;
 
   for (let i = draggedIndex + 1; i < result.length; i++) {
     const currentWindow = result[i];
     const currentDuration =
       currentWindow.time_window.end_time - currentWindow.time_window.start_time;
 
+    // Check if this window would exceed the 24-hour boundary
+    if (currentEndTime >= maxEndTime) {
+      // If we've reached the end of the day, truncate remaining windows
+      result.splice(i);
+      break;
+    }
+
+    // Adjust duration if it would exceed the boundary
+    const availableTime = maxEndTime - currentEndTime;
+    const adjustedCurrentDuration =
+      min([currentDuration, availableTime]) ?? currentDuration;
+
     result[i] = {
       ...currentWindow,
       time_window: {
         ...currentWindow.time_window,
         start_time: currentEndTime,
-        end_time: currentEndTime + currentDuration,
+        end_time: currentEndTime + adjustedCurrentDuration,
       },
     };
 
-    currentEndTime += currentDuration;
+    currentEndTime += adjustedCurrentDuration;
+
+    // If we've reached the boundary, stop processing further windows
+    if (currentEndTime >= maxEndTime) {
+      result.splice(i + 1);
+      break;
+    }
   }
 
   return result;
 };
+// ===== ADDITIONAL LODASH-POWERED UTILITIES =====
+
+/**
+ * Re-export commonly used lodash-es functions for tree-shaking
+ * These are the most frequently used utility functions across the application
+ */
+export {
+  cloneDeep,
+  isInteger,
+  isString,
+  isNumber,
+  isArray,
+  isNull,
+  isUndefined,
+  round,
+  floor,
+  min,
+  max,
+} from "lodash-es";
+
+/**
+ * Additional lodash-es utilities that might be useful
+ */
+export {
+  debounce,
+  throttle,
+  isEmpty,
+  isEqual,
+  pick,
+  omit,
+  merge,
+  uniq,
+  sortBy,
+  groupBy,
+  findIndex,
+  chunk,
+} from "lodash-es";

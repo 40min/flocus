@@ -8,6 +8,7 @@ import {
   hhMMToMinutes,
   localToUtc,
   minutesToDate,
+  normalizeTimeMinutes,
   recalculateTimeWindowsWithGapFitting,
   recalculateTimeWindowsWithShifting,
   utcToLocal,
@@ -479,6 +480,31 @@ describe("utils", () => {
     });
   });
 
+  describe("normalizeTimeMinutes", () => {
+    it("should return the same value for valid minutes", () => {
+      expect(normalizeTimeMinutes(720)).toBe(720); // 12:00
+      expect(normalizeTimeMinutes(0)).toBe(0); // 00:00
+      expect(normalizeTimeMinutes(1439)).toBe(1439); // 23:59
+    });
+
+    it("should clamp values that exceed 24-hour boundary", () => {
+      expect(normalizeTimeMinutes(1440)).toBe(1439); // Should be clamped to 23:59
+      expect(normalizeTimeMinutes(1500)).toBe(1439); // Should be clamped to 23:59
+      expect(normalizeTimeMinutes(2000)).toBe(1439); // Should be clamped to 23:59
+    });
+
+    it("should clamp negative values to 0", () => {
+      expect(normalizeTimeMinutes(-1)).toBe(0);
+      expect(normalizeTimeMinutes(-100)).toBe(0);
+    });
+
+    it("should handle non-number inputs", () => {
+      expect(normalizeTimeMinutes(NaN)).toBe(0);
+      expect(normalizeTimeMinutes(null as any)).toBe(0);
+      expect(normalizeTimeMinutes(undefined as any)).toBe(0);
+    });
+  });
+
   describe("recalculateTimeWindowsWithShifting", () => {
     it("should shift subsequent windows when dragging to first position", () => {
       const timeWindows: TimeWindowAllocation[] = [
@@ -589,6 +615,52 @@ describe("utils", () => {
       // Single window should keep its original timing
       expect(result[0].time_window.start_time).toBe(540); // 09:00 AM
       expect(result[0].time_window.end_time).toBe(600); // 10:00 AM
+    });
+
+    it("should handle time windows that would exceed 24-hour boundary", () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation("tw1", 1380, 1440, "Late evening"), // 23:00-24:00 (invalid end)
+        createMockAllocation("tw2", 1440, 1500, "Midnight+"), // Invalid start time
+      ];
+
+      const result = recalculateTimeWindowsWithShifting(timeWindows, 0);
+
+      // Should adjust times to stay within boundary
+      expect(result).toHaveLength(1); // Second window should be removed as it exceeds boundary
+      expect(result[0].time_window.start_time).toBe(1380);
+      expect(result[0].time_window.end_time).toBe(1439); // Clamped to 23:59
+    });
+
+    it("should truncate windows that would push beyond day boundary", () => {
+      const timeWindows: TimeWindowAllocation[] = [
+        createMockAllocation("tw1", 1200, 1260, "Afternoon"), // 20:00-21:00
+        createMockAllocation("tw2", 1260, 1320, "Evening"), // 21:00-22:00
+        createMockAllocation("tw3", 1320, 1380, "Late evening"), // 22:00-23:00
+        createMockAllocation("tw4", 1380, 1440, "Very late"), // 23:00-24:00 (would exceed)
+      ];
+
+      // Drag first window to start very late
+      const modifiedWindows = [...timeWindows];
+      modifiedWindows[0] = createMockAllocation(
+        "tw1",
+        1400,
+        1460,
+        "Very late start"
+      ); // Would push others beyond boundary
+
+      const result = recalculateTimeWindowsWithShifting(modifiedWindows, 0);
+
+      // Should truncate windows that would exceed the boundary
+      expect(result.length).toBeLessThan(4);
+
+      // All remaining windows should have valid times
+      result.forEach((allocation) => {
+        expect(allocation.time_window.start_time).toBeGreaterThanOrEqual(0);
+        expect(allocation.time_window.end_time).toBeLessThan(1440);
+        expect(allocation.time_window.start_time).toBeLessThan(
+          allocation.time_window.end_time
+        );
+      });
     });
   });
 });

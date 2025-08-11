@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Category } from "../../types/category";
 import { TimeWindowAllocation } from "../../types/dailyPlan";
 import { checkTimeWindowOverlap, hhMMToMinutes } from "../../lib/utils";
-import Button from "components/Button";
+import { Button } from "@/components/ui/button";
 
 export interface TimeWindowFormInputs {
   description?: string;

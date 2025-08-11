@@ -51,7 +51,7 @@ This document outlines the mapping strategy from existing custom components to S
 ### Before Migration
 
 ```typescript
-import { Button } from "../components/Button";
+import { Button } from "@/components/ui/button";
 ```
 
 ### After Migration

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2 } from 'lucide-react';
-import { Category } from '../types/category';
-import { deleteCategory } from '../services/categoryService';
-import { useCategories } from '../hooks/useCategories';
-import Button from '../components/Button';
-import CreateCategoryModal from '../components/modals/CreateCategoryModal';
-import { colorOptions } from 'constants/colors';
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Edit, Trash2 } from "lucide-react";
+import { Category } from "../types/category";
+import { deleteCategory } from "../services/categoryService";
+import { useCategories } from "../hooks/useCategories";
+import { Button } from "../components/ui/button";
+import CreateCategoryModal from "../components/modals/CreateCategoryModal";
+import { colorOptions } from "constants/colors";
 
 const CategoriesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -33,7 +33,7 @@ const CategoriesPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteCategory(id);
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     } catch (err) {
       console.error("Failed to delete category:", err);
       // Optionally, display an error message to the user
@@ -41,17 +41,29 @@ const CategoriesPage: React.FC = () => {
   };
 
   const handleModalSubmitSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    queryClient.invalidateQueries({ queryKey: ["categories"] });
     // The modal will close itself, but we also ensure our state is clean.
     handleModalClose();
   };
 
   const getColorDetails = (colorValue: string | undefined) => {
-    return colorOptions.find(option => option.value === colorValue) || { name: 'Unknown', value: '#000000', bgColor: 'bg-gray-500', textColor: 'text-gray-700', ringColor: 'ring-gray-500' };
+    return (
+      colorOptions.find((option) => option.value === colorValue) || {
+        name: "Unknown",
+        value: "#000000",
+        bgColor: "bg-gray-500",
+        textColor: "text-gray-700",
+        ringColor: "ring-gray-500",
+      }
+    );
   };
 
   if (isLoading) {
-    return <div className="text-center py-8 text-slate-500">Loading categories...</div>;
+    return (
+      <div className="text-center py-8 text-slate-500">
+        Loading categories...
+      </div>
+    );
   }
 
   return (
@@ -60,7 +72,11 @@ const CategoriesPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
       </div>
 
-      {error && <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">{error.message}</div>}
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
+          {error.message}
+        </div>
+      )}
 
       <CreateCategoryModal
         isOpen={isModalOpen}
@@ -71,7 +87,9 @@ const CategoriesPage: React.FC = () => {
 
       <div className="bg-white shadow-sm rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-slate-800">All Categories</h2>
+          <h2 className="text-xl font-semibold text-slate-800">
+            All Categories
+          </h2>
           <Button
             onClick={handleAddCategoryClick}
             variant="slate"
@@ -84,17 +102,33 @@ const CategoriesPage: React.FC = () => {
         </div>
         <ul className="divide-y divide-slate-200">
           {categories.length === 0 ? (
-            <li className="p-6 text-center text-slate-500">No categories found. Click "Add New Category" to create one.</li>
+            <li className="p-6 text-center text-slate-500">
+              No categories found. Click "Add New Category" to create one.
+            </li>
           ) : (
             categories.map((category) => {
-              const { bgColor, name: colorName } = getColorDetails(category.color);
+              const { bgColor, name: colorName } = getColorDetails(
+                category.color
+              );
               return (
-                <li key={category.id} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors duration-150">
+                <li
+                  key={category.id}
+                  className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors duration-150"
+                >
                   <div className="flex items-center">
-                    <span className={`h-4 w-4 rounded-full mr-3 ${bgColor}`} title={colorName}></span>
+                    <span
+                      className={`h-4 w-4 rounded-full mr-3 ${bgColor}`}
+                      title={colorName}
+                    ></span>
                     <div>
-                      <p className="text-sm font-medium text-slate-900">{category.name}</p>
-                      {category.description && <p className="text-sm text-slate-600">{category.description}</p>}
+                      <p className="text-sm font-medium text-slate-900">
+                        {category.name}
+                      </p>
+                      {category.description && (
+                        <p className="text-sm text-slate-600">
+                          {category.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">

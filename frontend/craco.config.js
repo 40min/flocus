@@ -1,25 +1,32 @@
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const BundleAnalyzerPlugin =
+  require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
+const path = require("path");
 
 module.exports = {
   webpack: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
     plugins: [
       // Add bundle analyzer only when ANALYZE environment variable is set
-      ...(process.env.ANALYZE === 'true' ? [
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'server',
-          openAnalyzer: true,
-          generateStatsFile: true,
-          statsFilename: 'bundle-stats.json',
-        })
-      ] : []),
+      ...(process.env.ANALYZE === "true"
+        ? [
+            new BundleAnalyzerPlugin({
+              analyzerMode: "server",
+              openAnalyzer: true,
+              generateStatsFile: true,
+              statsFilename: "bundle-stats.json",
+            }),
+          ]
+        : []),
     ],
     configure: (webpackConfig, { env, paths }) => {
       // Add a rule to ignore source map warnings from react-datepicker
       // We are looking for the source-map-loader rule
-      const oneOfRule = webpackConfig.module.rules.find(rule => rule.oneOf);
+      const oneOfRule = webpackConfig.module.rules.find((rule) => rule.oneOf);
       if (oneOfRule) {
         const sourceMapLoaderRule = oneOfRule.oneOf.find(
-          rule => rule.loader && rule.loader.includes('source-map-loader')
+          (rule) => rule.loader && rule.loader.includes("source-map-loader")
         );
 
         if (sourceMapLoaderRule) {
@@ -27,8 +34,12 @@ module.exports = {
           const newSourceMapLoaderRule = { ...sourceMapLoaderRule };
           // Ensure 'exclude' is an array, even if it's undefined initially
           newSourceMapLoaderRule.exclude = [
-            ...(Array.isArray(newSourceMapLoaderRule.exclude) ? newSourceMapLoaderRule.exclude : (newSourceMapLoaderRule.exclude ? [newSourceMapLoaderRule.exclude] : [])),
-            /node_modules\/react-datepicker\//  // Exclude react-datepicker from source-map-loader
+            ...(Array.isArray(newSourceMapLoaderRule.exclude)
+              ? newSourceMapLoaderRule.exclude
+              : newSourceMapLoaderRule.exclude
+              ? [newSourceMapLoaderRule.exclude]
+              : []),
+            /node_modules\/react-datepicker\//, // Exclude react-datepicker from source-map-loader
           ];
 
           // Find the index of the original source-map-loader rule
@@ -63,11 +74,17 @@ module.exports = {
   jest: {
     configure: (config) => {
       config.transformIgnorePatterns = [
-        'node_modules/(?!date-fns|date-fns-tz)/',
+        "node_modules/(?!date-fns|date-fns-tz)/",
       ];
 
+      config.moduleDirectories = ["node_modules", "src"];
 
-      config.moduleDirectories = ['node_modules', 'src'];
+      // Add module name mapping for path aliases
+      config.moduleNameMapper = {
+        ...config.moduleNameMapper,
+        "^@/(.*)$": "<rootDir>/src/$1",
+      };
+
       return config;
     },
   },

@@ -1,6 +1,6 @@
 import React from "react";
 import Modal from "./Modal";
-import Button from "components/Button";
+import { Button } from "@/components/ui/button";
 import { Task } from "types/task";
 import { formatDateTime, formatDurationFromSeconds } from "lib/utils";
 import { CalendarDays, PlayCircle, StopCircle, Timer } from "lucide-react";

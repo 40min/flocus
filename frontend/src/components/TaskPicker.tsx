@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Task } from "../types/task";
 import { useTasksByCategory } from "../hooks/useTasks";
-import Button from "./Button";
+import { Button } from "@/components/ui/button";
 
 interface TaskPickerProps {
   categoryId: string;

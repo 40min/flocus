@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { PlusCircle, Check } from "lucide-react";
-import Button from "components/Button";
+import { Button } from "@/components/ui/button";
 import {
   createDailyPlan,
   updateDailyPlan as updateDailyPlanService,

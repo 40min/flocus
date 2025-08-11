@@ -1,5 +1,5 @@
 import React from "react";
-import Button from "components/Button";
+import { Button } from "@/components/ui/button";
 import Input from "components/Input";
 import { SelfReflection } from "types/dailyPlan";
 import { getLlmReflectionSuggestion } from "services/dailyPlanService";

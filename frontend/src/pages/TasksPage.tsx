@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDueDate, formatDurationFromSeconds } from "lib/utils";
 import { Plus, Edit, Trash2, Info } from "lucide-react"; // Updated icons
-import Button from "components/Button";
+import { Button } from "@/components/ui/button";
 import { Task, TaskCreateRequest } from "types/task";
 import * as taskService from "services/taskService";
 import CreateTaskModal from "components/modals/CreateTaskModal";

@@ -17,7 +17,7 @@ import { DailyPlanResponse } from "../types/dailyPlan";
 import { cn, formatDurationFromSeconds } from "../lib/utils";
 import { useSharedTimerContext } from "../context/SharedTimerContext";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
-import Button from "./Button";
+import { Button } from "@/components/ui/button";
 
 export const TaskCard = ({
   task,

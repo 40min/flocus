@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useDraggable } from "@dnd-kit/core";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   CheckCircle,
   Clock,
@@ -197,6 +198,10 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
   const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(
     dailyPlan || null
   );
+  const [animationParent] = useAutoAnimate({
+    duration: 250,
+    easing: "ease-in-out",
+  });
 
   return (
     <>
@@ -212,7 +217,10 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
       </div>
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
-          <ul className="space-y-3 h-full overflow-y-auto pr-2 relative z-10">
+          <ul
+            ref={animationParent}
+            className="space-y-3 h-full overflow-y-auto pr-2 relative z-10"
+          >
             {currentTimeWindow === null ? (
               <p className="text-text-secondary text-sm">
                 No works planned for this time.

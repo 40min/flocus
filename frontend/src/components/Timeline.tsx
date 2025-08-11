@@ -1,4 +1,5 @@
 import React from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { formatDurationFromMinutes } from "../lib/utils";
 
 // In a larger application, this interface would likely live in a shared types file (e.g., `src/types.ts`)
@@ -24,6 +25,10 @@ interface TimelineProps {
  * Gaps between time windows are shown as gray bars with duration.
  */
 const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
+  const [animationParent] = useAutoAnimate({
+    duration: 300,
+    easing: "ease-in-out",
+  });
   /**
    * Formats an ISO date string into a localized time string (e.g., "9:00 AM").
    * @param dateString - The ISO date string to format.
@@ -37,6 +42,39 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  /**
+   * Formats time range for display based on duration
+   * @param startTime - Start time ISO string
+   * @param endTime - End time ISO string
+   * @param durationMinutes - Duration in minutes
+   * @returns Formatted time range string
+   */
+  const formatTimeRange = (
+    startTime: string,
+    endTime: string,
+    durationMinutes: number
+  ): string => {
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    // Short intervals: show "10:15 - 10:30 AM" format (start time without AM/PM)
+    const startTimeStr = startDate
+      .toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(/ (AM|PM)$/, ""); // Remove AM/PM from start time
+
+    const endTimeStr = endDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    return `${startTimeStr} - ${endTimeStr}`;
   };
 
   /**
@@ -89,6 +127,11 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
               className="relative flex items-start"
               style={{ height: `${gapHeight}px` }}
             >
+              {/* Gap label positioned to the right of the central line */}
+              <div className="absolute left-full pl-1 text-xs text-gray-400 font-medium whitespace-nowrap">
+                {formatDurationFromMinutes(gapMinutes)}
+              </div>
+
               {/* Gap bar - solid gray area */}
               <div
                 className="absolute left-1/2 -translate-x-1/2 bg-gray-200 border border-gray-300 rounded-sm"
@@ -119,9 +162,20 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
           className="relative flex items-start"
           style={{ height: `${barHeight}px` }}
         >
-          {/* Start time label positioned to the left of the central line */}
+          {/* Time label positioned to the left of the central line */}
           <div className="absolute right-full pr-1 text-xs text-gray-400 font-medium whitespace-nowrap">
-            {formatTime(timeWindow.start_time)}
+            {durationMinutes >= 30 ? (
+              <>
+                <div>{formatTime(timeWindow.start_time)}</div>
+                <div>{formatTime(timeWindow.end_time)}</div>
+              </>
+            ) : (
+              formatTimeRange(
+                timeWindow.start_time,
+                timeWindow.end_time,
+                durationMinutes
+              )
+            )}
           </div>
 
           {/* Color-coded bar representing the time window duration */}
@@ -153,12 +207,14 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
 
   return (
     // The root element is an <aside> tag with relative positioning for its children.
-    <aside className={`relative w-24 flex-shrink-0 p-4 ${className || ""}`}>
+    <aside className={`relative w-28 flex-shrink-0 p-4 ${className || ""}`}>
       {/* The central vertical line - now thinner since we have solid bars */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gray-200"></div>
 
       {/* Container for the timeline bars */}
-      <div className="relative pt-8">{renderTimelineElements()}</div>
+      <div ref={animationParent} className="relative pt-8">
+        {renderTimelineElements()}
+      </div>
     </aside>
   );
 };

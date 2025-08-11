@@ -3,17 +3,7 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Timeline from "./Timeline";
 
-// Mock the utils function
-jest.mock("../lib/utils", () => ({
-  formatDurationFromMinutes: jest.fn((minutes) => {
-    if (minutes === 0) return "0min";
-    if (minutes < 60) return `${minutes}min`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (remainingMinutes === 0) return `${hours}h`;
-    return `${hours}h ${remainingMinutes}min`;
-  }),
-}));
+// No need to mock the utils function - the real function works correctly
 
 describe("Timeline", () => {
   const mockTimeWindows = [
@@ -102,7 +92,7 @@ describe("Timeline", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
       const coloredBars = container.querySelectorAll(
-        "[style*='backgroundColor']"
+        "[style*='background-color']"
       );
       expect(coloredBars).toHaveLength(3);
 
@@ -116,7 +106,7 @@ describe("Timeline", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
       const coloredBars = container.querySelectorAll(
-        "[style*='backgroundColor']"
+        "[style*='background-color']"
       );
       coloredBars.forEach((bar) => {
         expect(bar).toHaveStyle({ width: "8px" });
@@ -127,7 +117,7 @@ describe("Timeline", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
       const coloredBars = container.querySelectorAll(
-        "[style*='backgroundColor']"
+        "[style*='background-color']"
       );
 
       // First time window: 90 minutes -> 180px height
@@ -156,7 +146,7 @@ describe("Timeline", () => {
 
       const { container } = render(<Timeline timeWindows={shortTimeWindow} />);
 
-      const coloredBar = container.querySelector("[style*='backgroundColor']");
+      const coloredBar = container.querySelector("[style*='background-color']");
       expect(coloredBar).toHaveStyle({ height: "20px" }); // Minimum height
     });
   });
@@ -166,8 +156,8 @@ describe("Timeline", () => {
       const shortTimeWindow = [
         {
           id: "short",
-          start_time: "2024-01-01T10:15:00.000Z",
-          end_time: "2024-01-01T10:30:00.000Z", // 15 minutes
+          start_time: "2024-01-01T08:15:00.000Z",
+          end_time: "2024-01-01T08:30:00.000Z", // 15 minutes
           category: {
             id: "cat1",
             name: "Short",
@@ -210,8 +200,8 @@ describe("Timeline", () => {
       const shortTimeWindow = [
         {
           id: "short",
-          start_time: "2024-01-01T14:15:00.000Z", // 2:15 PM
-          end_time: "2024-01-01T14:30:00.000Z", // 2:30 PM
+          start_time: "2024-01-01T12:15:00.000Z", // 2:15 PM
+          end_time: "2024-01-01T12:30:00.000Z", // 2:30 PM
           category: {
             id: "cat1",
             name: "Short",
@@ -321,7 +311,7 @@ describe("Timeline", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
       const coloredBars = container.querySelectorAll(
-        "[style*='backgroundColor']"
+        "[style*='background-color']"
       );
       expect(coloredBars[0]).toHaveAttribute("title", "Work: 1h 30min");
       expect(coloredBars[1]).toHaveAttribute("title", "Break: 20min");
@@ -359,7 +349,7 @@ describe("Timeline", () => {
       );
 
       const coloredBars = container.querySelectorAll(
-        "[style*='backgroundColor']"
+        "[style*='background-color']"
       );
       // Should be sorted: Work (blue), Break (green), Meeting (yellow)
       expect(coloredBars[0]).toHaveStyle({ backgroundColor: "#3B82F6" });

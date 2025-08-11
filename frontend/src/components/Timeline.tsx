@@ -127,12 +127,7 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
               className="relative flex items-start"
               style={{ height: `${gapHeight}px` }}
             >
-              {/* Gap label positioned to the right of the central line */}
-              <div className="absolute left-full pl-1 text-xs text-gray-400 font-medium whitespace-nowrap">
-                {formatDurationFromMinutes(gapMinutes)}
-              </div>
-
-              {/* Gap bar - solid gray area */}
+              {/* Gap bar - solid gray area (no duration label) */}
               <div
                 className="absolute left-1/2 -translate-x-1/2 bg-gray-200 border border-gray-300 rounded-sm"
                 style={{
@@ -164,17 +159,10 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
         >
           {/* Time label positioned to the left of the central line */}
           <div className="absolute right-full pr-1 text-xs text-gray-400 font-medium whitespace-nowrap">
-            {durationMinutes >= 30 ? (
-              <>
-                <div>{formatTime(timeWindow.start_time)}</div>
-                <div>{formatTime(timeWindow.end_time)}</div>
-              </>
-            ) : (
-              formatTimeRange(
-                timeWindow.start_time,
-                timeWindow.end_time,
-                durationMinutes
-              )
+            {formatTimeRange(
+              timeWindow.start_time,
+              timeWindow.end_time,
+              durationMinutes
             )}
           </div>
 

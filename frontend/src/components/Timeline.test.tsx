@@ -174,7 +174,7 @@ describe("Timeline", () => {
       expect(timeLabel?.textContent).toMatch(/10:15.*10:30.*AM/);
     });
 
-    it("displays long intervals (>= 30 minutes) in two-line format", () => {
+    it("displays all intervals in single-line format", () => {
       const longTimeWindow = [
         {
           id: "long",
@@ -190,10 +190,9 @@ describe("Timeline", () => {
 
       const { container } = render(<Timeline timeWindows={longTimeWindow} />);
 
-      const timeLabels = container.querySelectorAll(
-        ".absolute.right-full.pr-1 div"
-      );
-      expect(timeLabels).toHaveLength(2); // Start and end time separately
+      const timeLabel = container.querySelector(".absolute.right-full.pr-1");
+      expect(timeLabel).toBeInTheDocument();
+      expect(timeLabel?.textContent).toMatch(/11:00.*12:00.*PM/);
     });
 
     it("formats time correctly without AM/PM for start time in compact format", () => {
@@ -230,25 +229,24 @@ describe("Timeline", () => {
       expect(gapBars).toHaveLength(2);
     });
 
-    it("positions gap labels on the right side", () => {
+    it("does not display gap duration labels", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
+      // Gap labels should not be present
       const gapLabels = container.querySelectorAll(".absolute.left-full.pl-1");
-      expect(gapLabels.length).toBeGreaterThan(0);
-
-      gapLabels.forEach((label) => {
-        expect(label).toHaveClass("text-xs", "text-gray-400", "font-medium");
-      });
+      expect(gapLabels).toHaveLength(0);
     });
 
-    it("calculates gap durations correctly", () => {
-      // Gap 1: 10:30 AM to 11:00 AM = 30 minutes
-      // Gap 2: 11:20 AM to 12:00 PM = 40 minutes
+    it("still calculates gap heights correctly even without labels", () => {
+      // Gap 1: 10:30 AM to 11:00 AM = 30 minutes -> 60px height
+      // Gap 2: 11:20 AM to 12:00 PM = 40 minutes -> 80px height
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
-      const gapLabels = container.querySelectorAll(".absolute.left-full.pl-1");
-      expect(gapLabels[0]).toHaveTextContent("30min");
-      expect(gapLabels[1]).toHaveTextContent("40min");
+      const gapBars = container.querySelectorAll(
+        ".bg-gray-200.border.border-gray-300"
+      );
+      expect(gapBars[0]).toHaveStyle({ height: "60px" });
+      expect(gapBars[1]).toHaveStyle({ height: "80px" });
     });
 
     it("renders gap bars with correct dimensions", () => {
@@ -287,15 +285,14 @@ describe("Timeline", () => {
       });
     });
 
-    it("uses reduced padding for gap labels (pl-1)", () => {
+    it("maintains gap bars without labels", () => {
       const { container } = render(<Timeline timeWindows={mockTimeWindows} />);
 
-      const gapLabels = container.querySelectorAll(".absolute.left-full.pl-1");
-      expect(gapLabels.length).toBeGreaterThan(0);
-
-      gapLabels.forEach((label) => {
-        expect(label).toHaveClass("pl-1");
-      });
+      // Gap bars should still exist, just without labels
+      const gapBars = container.querySelectorAll(
+        ".bg-gray-200.border.border-gray-300"
+      );
+      expect(gapBars).toHaveLength(2);
     });
 
     it("uses compact timeline width (w-28)", () => {

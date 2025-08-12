@@ -1,22 +1,30 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useMemo } from 'react';
-import { useUpdateTask } from '../hooks/useTasks';
-import { useQueryClient } from '@tanstack/react-query';
-import { getTodayStats, incrementPomodoro } from '../services/userDailyStatsService';
-import * as notificationService from '../services/notificationService';
-import { useAuth } from './AuthContext';
-
-
-
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
+import { useUpdateTask } from "../hooks/useTasks";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  getTodayStats,
+  incrementPomodoro,
+} from "../services/userDailyStatsService";
+import * as notificationService from "../services/notificationService";
+import { useAuth } from "../hooks/useAuth";
 
 const CYCLES_BEFORE_LONG_BREAK = 4;
-const LOCAL_STORAGE_KEY = 'pomodoroTimerState';
+const LOCAL_STORAGE_KEY = "pomodoroTimerState";
 const EXPIRATION_THRESHOLD = 60 * 60 * 1000; // 1 hour
 
-type Mode = 'work' | 'shortBreak' | 'longBreak';
+type Mode = "work" | "shortBreak" | "longBreak";
 
 // Default state constants
 const DEFAULT_TIMER_STATE = {
-  mode: 'work' as Mode,
+  mode: "work" as Mode,
   timeRemaining: 25 * 60, // Default to 25 minutes for work
   isActive: false,
   pomodorosCompleted: 0,
@@ -56,7 +64,9 @@ interface SharedTimerContextType {
   currentTaskDescription: string | undefined;
   setCurrentTaskId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setCurrentTaskName: React.Dispatch<React.SetStateAction<string | undefined>>;
-  setCurrentTaskDescription: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setCurrentTaskDescription: React.Dispatch<
+    React.SetStateAction<string | undefined>
+  >;
   stopCurrentTask: () => Promise<void>;
   resetForNewTask: () => Promise<void>;
   handleMarkAsDone: (taskId: string) => void;
@@ -96,32 +106,49 @@ function getInitialTimerState() {
 
     return restoredState;
   } catch (error) {
-    console.error('Failed to restore timer state:', error);
+    console.error("Failed to restore timer state:", error);
     return DEFAULT_TIMER_STATE;
   }
 }
 
-const SharedTimerContext = createContext<SharedTimerContextType | undefined>(undefined);
+const SharedTimerContext = createContext<SharedTimerContextType | undefined>(
+  undefined
+);
 
-export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const initialState = getInitialTimerState();
   const [mode, setMode] = useState<Mode>(initialState.mode);
-  const [timeRemaining, setTimeRemaining] = useState(initialState.timeRemaining);
+  const [timeRemaining, setTimeRemaining] = useState(
+    initialState.timeRemaining
+  );
   const [isActive, setIsActive] = useState(initialState.isActive);
-  const [pomodorosCompleted, setPomodorosCompleted] = useState(initialState.pomodorosCompleted);
-  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(initialState.currentTaskId);
-  const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(initialState.currentTaskName);
-  const [currentTaskDescription, setCurrentTaskDescription] = useState<string | undefined>(initialState.currentTaskDescription);
+  const [pomodorosCompleted, setPomodorosCompleted] = useState(
+    initialState.pomodorosCompleted
+  );
+  const [currentTaskId, setCurrentTaskId] = useState<string | undefined>(
+    initialState.currentTaskId
+  );
+  const [currentTaskName, setCurrentTaskName] = useState<string | undefined>(
+    initialState.currentTaskName
+  );
+  const [currentTaskDescription, setCurrentTaskDescription] = useState<
+    string | undefined
+  >(initialState.currentTaskDescription);
 
   const { mutateAsync: updateTask } = useUpdateTask();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const DURATION_MAP = useMemo(() => ({
-    work: (user?.preferences?.pomodoro_working_interval || 25) * 60,
-    shortBreak: (user?.preferences?.pomodoro_timeout_minutes || 5) * 60,
-    longBreak: (user?.preferences?.pomodoro_long_timeout_minutes || 15) * 60,
-  }), [user?.preferences]);
+  const DURATION_MAP = useMemo(
+    () => ({
+      work: (user?.preferences?.pomodoro_working_interval || 25) * 60,
+      shortBreak: (user?.preferences?.pomodoro_timeout_minutes || 5) * 60,
+      longBreak: (user?.preferences?.pomodoro_long_timeout_minutes || 15) * 60,
+    }),
+    [user?.preferences]
+  );
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -141,7 +168,10 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const stopCurrentTask = useCallback(async () => {
     if (currentTaskId) {
       try {
-        await updateTask({ taskId: currentTaskId, taskData: { status: 'pending' } });
+        await updateTask({
+          taskId: currentTaskId,
+          taskData: { status: "pending" },
+        });
       } catch (error) {
         console.error("Failed to update task status to 'pending':", error);
       }
@@ -154,18 +184,21 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const switchToNextMode = useCallback(async () => {
     setIsActive(false);
 
-    let notificationTitle = '';
-    let notificationBody = '';
+    let notificationTitle = "";
+    let notificationBody = "";
 
-    if (mode === 'work') {
+    if (mode === "work") {
       await stopCurrentTask();
       const newPomodorosCount = pomodorosCompleted + 1;
       setPomodorosCompleted(newPomodorosCount);
-      const nextMode = newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
+      const nextMode =
+        newPomodorosCount % CYCLES_BEFORE_LONG_BREAK === 0
+          ? "longBreak"
+          : "shortBreak";
       setMode(nextMode);
       setTimeRemaining(DURATION_MAP[nextMode]);
 
-      notificationTitle = 'Work session finished!';
+      notificationTitle = "Work session finished!";
       notificationBody = currentTaskName
         ? `Great job on "${currentTaskName}"! Time for a break.`
         : "Time for a break.";
@@ -175,7 +208,10 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
         console.error("Failed to increment pomodoro count:", error);
         // Optionally, add logic to handle this failure, e.g., retry or notify user
       }
-      if (user?.preferences.pomodoro_timer_sound && user.preferences.pomodoro_timer_sound !== 'none') {
+      if (
+        user?.preferences.pomodoro_timer_sound &&
+        user.preferences.pomodoro_timer_sound !== "none"
+      ) {
         try {
           new Audio(`/sounds/${user.preferences.pomodoro_timer_sound}`).play();
         } catch (err) {
@@ -186,28 +222,39 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
       notificationTitle = "Break's over!";
       notificationBody = currentTaskName
         ? `Time to get back to: "${currentTaskName}"`
-        : 'Time to get back to work!';
-      setMode('work');
+        : "Time to get back to work!";
+      setMode("work");
       setTimeRemaining(DURATION_MAP.work);
     }
 
     if (user?.preferences.system_notifications_enabled) {
-      notificationService.showNotification(notificationTitle, { body: notificationBody });
+      notificationService.showNotification(notificationTitle, {
+        body: notificationBody,
+      });
     }
-  }, [mode, pomodorosCompleted, stopCurrentTask, DURATION_MAP, user, currentTaskName]);
+  }, [
+    mode,
+    pomodorosCompleted,
+    stopCurrentTask,
+    DURATION_MAP,
+    user,
+    currentTaskName,
+  ]);
 
   // Timer countdown effect
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isActive && timeRemaining > 0) {
-      interval = setInterval(() => setTimeRemaining(prev => prev - 1), 1000);
+      interval = setInterval(() => setTimeRemaining((prev) => prev - 1), 1000);
     } else if (isActive && timeRemaining <= 0) {
       const handleTimerComplete = async () => {
         await switchToNextMode();
       };
       handleTimerComplete();
     }
-    return () => { if (interval) clearInterval(interval); };
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isActive, timeRemaining, switchToNextMode]);
 
   // Persist state to localStorage
@@ -228,22 +275,38 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
     }
-  }, [mode, timeRemaining, isActive, pomodorosCompleted, currentTaskId, currentTaskName, currentTaskDescription]);
+  }, [
+    mode,
+    timeRemaining,
+    isActive,
+    pomodorosCompleted,
+    currentTaskId,
+    currentTaskName,
+    currentTaskDescription,
+  ]);
 
   const handleStartPause = useCallback(async () => {
     if (currentTaskId) {
       try {
-        if (isActive) { // Pausing the timer
-          await updateTask({ taskId: currentTaskId, taskData: { status: 'pending' } });
-        } else { // Starting or resuming the timer
-          await updateTask({ taskId: currentTaskId, taskData: { status: 'in_progress' } });
+        if (isActive) {
+          // Pausing the timer
+          await updateTask({
+            taskId: currentTaskId,
+            taskData: { status: "pending" },
+          });
+        } else {
+          // Starting or resuming the timer
+          await updateTask({
+            taskId: currentTaskId,
+            taskData: { status: "in_progress" },
+          });
         }
       } catch (error) {
-        console.error('Failed to update task status:', error);
+        console.error("Failed to update task status:", error);
         return;
       }
     }
-    setIsActive(prev => !prev);
+    setIsActive((prev) => !prev);
   }, [isActive, currentTaskId, updateTask]);
 
   const handleReset = useCallback(async () => {
@@ -255,7 +318,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const resetForNewTask = useCallback(async () => {
     await stopCurrentTask();
     setIsActive(false);
-    setMode('work');
+    setMode("work");
     setTimeRemaining(DURATION_MAP.work);
   }, [stopCurrentTask, DURATION_MAP]);
 
@@ -263,38 +326,47 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
     await switchToNextMode();
   }, [switchToNextMode]);
 
-  const handleMarkAsDone = useCallback(async (taskId: string) => {
-    if (currentTaskId === taskId) {
-      setIsActive(false);
-      setCurrentTaskId(undefined);
-      setCurrentTaskName(undefined);
-      setCurrentTaskDescription(undefined);
-    }
-    await updateTask(
-      { taskId: taskId, taskData: { status: 'done' } },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
-        },
-      },
-    );
-  }, [currentTaskId, updateTask, queryClient]);
+  const handleMarkAsDone = useCallback(
+    async (taskId: string) => {
+      if (currentTaskId === taskId) {
+        setIsActive(false);
+        setCurrentTaskId(undefined);
+        setCurrentTaskName(undefined);
+        setCurrentTaskDescription(undefined);
+      }
+      await updateTask(
+        { taskId: taskId, taskData: { status: "done" } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+          },
+        }
+      );
+    },
+    [currentTaskId, updateTask, queryClient]
+  );
 
   const formatTime = useCallback((seconds: number) => {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const secs = (seconds % 60).toString().padStart(2, '0');
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
     return `${mins}:${secs}`;
   }, []);
 
-  const isBreak = mode !== 'work';
-  const timerColor = isBreak ? 'border-accent-DEFAULT' : 'border-primary-DEFAULT';
-  const buttonBgColor = isBreak ? 'bg-accent-DEFAULT hover:bg-accent-dark' : 'bg-primary-DEFAULT hover:bg-primary-dark';
-  const buttonTextColor = 'text-white';
+  const isBreak = mode !== "work";
+  const timerColor = isBreak
+    ? "border-accent-DEFAULT"
+    : "border-primary-DEFAULT";
+  const buttonBgColor = isBreak
+    ? "bg-accent-DEFAULT hover:bg-accent-dark"
+    : "bg-primary-DEFAULT hover:bg-primary-dark";
+  const buttonTextColor = "text-white";
 
   const modeText = {
-    work: 'Focus',
-    shortBreak: 'Short Break',
-    longBreak: 'Long Break',
+    work: "Focus",
+    shortBreak: "Short Break",
+    longBreak: "Long Break",
   };
 
   const value = {
@@ -333,7 +405,9 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({ childre
 export const useSharedTimerContext = () => {
   const context = useContext(SharedTimerContext);
   if (!context) {
-    throw new Error('useSharedTimerContext must be used within a SharedTimerProvider');
+    throw new Error(
+      "useSharedTimerContext must be used within a SharedTimerProvider"
+    );
   }
   return context;
 };

@@ -68,8 +68,8 @@ const DevTools: React.FC = () => {
         <div
           style={{
             position: "fixed",
-            bottom: "20px",
-            left: "20px",
+            top: "20px",
+            right: "20px",
             zIndex: 9999,
             display: "flex",
             gap: "8px",

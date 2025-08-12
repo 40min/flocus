@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { User, UserUpdatePayload } from "../types/user";
 import { updateUser } from "../services/userService";
 import { ApiError } from "../lib/errors";
@@ -37,12 +37,13 @@ type UserSettingsFormInputs = z.infer<typeof userSettingsSchema>;
 const UserSettingsPage: React.FC = () => {
   const { user, login, token } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
     setError: setFormError,
     watch,
   } = useForm<UserSettingsFormInputs>({
@@ -70,13 +71,14 @@ const UserSettingsPage: React.FC = () => {
   const updateUserMutation = useMutation<User, Error, UserUpdatePayload>({
     mutationFn: (payload: UserUpdatePayload) => updateUser(user!.id, payload),
     onSuccess: async () => {
-      setSuccessMessage("Account updated successfully!");
+      setSuccessMessage("Settings saved successfully!");
       setValue("password", "");
+      setHasUnsavedChanges(false);
       if (token) await login(token);
       setTimeout(() => setSuccessMessage(null), 3000);
     },
     onError: (err) => {
-      let message = "Failed to update account.";
+      let message = "Failed to save settings.";
       if (err instanceof ApiError || err instanceof Error) {
         message = err.message;
       }
@@ -118,6 +120,11 @@ const UserSettingsPage: React.FC = () => {
       setValue("last_name", "");
     }
   }, [user, setValue]);
+
+  // Track form changes for unsaved changes indicator
+  useEffect(() => {
+    setHasUnsavedChanges(isDirty);
+  }, [isDirty]);
 
   const onSubmit: SubmitHandler<UserSettingsFormInputs> = async (data) => {
     if (!user) return;
@@ -251,6 +258,21 @@ const UserSettingsPage: React.FC = () => {
               )}
             </div>
           </div>
+          <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+            <Button
+              variant="slate"
+              size="medium"
+              type="submit"
+              disabled={
+                isSubmitting ||
+                updateUserMutation.isPending ||
+                !hasUnsavedChanges
+              }
+              className="flex items-center gap-2 min-w-[100px]"
+            >
+              {updateUserMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </section>
 
         <section className="bg-white shadow-sm rounded-xl border border-slate-200 p-6">
@@ -355,19 +377,22 @@ const UserSettingsPage: React.FC = () => {
               </label>
             </div>
           </div>
+          <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+            <Button
+              variant="slate"
+              size="medium"
+              type="submit"
+              disabled={
+                isSubmitting ||
+                updateUserMutation.isPending ||
+                !hasUnsavedChanges
+              }
+              className="flex items-center gap-2 min-w-[100px]"
+            >
+              {updateUserMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </section>
-
-        <div className="pt-2 flex justify-end">
-          <Button
-            variant="slate"
-            size="medium"
-            type="submit"
-            disabled={isSubmitting || updateUserMutation.isPending}
-            className="flex items-center gap-2"
-          >
-            {updateUserMutation.isPending ? "Updating..." : "Update Account"}
-          </Button>
-        </div>
       </form>
     </div>
   );

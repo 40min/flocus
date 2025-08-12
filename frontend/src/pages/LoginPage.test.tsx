@@ -1,209 +1,264 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthContext, AuthContextType } from '../context/AuthContext';
-import LoginPage from './LoginPage';
-import * as authService from '../services/authService';
-import { User } from '../types/user';
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LoginPage from "./LoginPage";
+import * as authService from "../services/authService";
+import { useAuthStore } from "../stores/authStore";
 
 // Mock authService
-jest.mock('../services/authService');
-const mockedLoginUser = authService.loginUser as jest.MockedFunction<typeof authService.loginUser>;
+jest.mock("../services/authService");
+const mockedLoginUser = authService.loginUser as jest.MockedFunction<
+  typeof authService.loginUser
+>;
 
 const mockNavigate = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
 }));
 
-const mockUser: User = {
-  id: '1',
-  username: 'testuser',
-  email: 'test@example.com',
-  first_name: 'Test',
-  last_name: 'User',
-  preferences: {
-    pomodoro_timeout_minutes: 25,
-    pomodoro_long_timeout_minutes: 15,
-    system_notifications_enabled: true,
-    pomodoro_working_interval: 25,
-    pomodoro_timer_sound: 'bell.mp3',
-  },
-};
+// Mock the auth store
+jest.mock("../stores/authStore");
+const mockUseAuthStore = useAuthStore as jest.MockedFunction<
+  typeof useAuthStore
+>;
 
 const mockLogin = jest.fn();
 const mockLogout = jest.fn();
+const mockSetNavigate = jest.fn();
 
-const initialAuthContextValue: AuthContextType = {
-  isAuthenticated: false,
-  user: null,
-  token: null,
-  login: mockLogin,
-  logout: mockLogout,
-  isLoading: false,
-};
-
-const renderLoginPage = (authContextValue: AuthContextType = initialAuthContextValue) => {
+const renderLoginPage = () => {
   return render(
-    <AuthContext.Provider value={authContextValue}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<div>Home Page</div>} />
-        </Routes>
-      </Router>
-    </AuthContext.Provider>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<div>Home Page</div>} />
+      </Routes>
+    </Router>
   );
 };
 
-describe('LoginPage', () => {
+describe("LoginPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Set initial route to /login for each test
-    window.history.pushState({}, 'Test page', '/login');
+    window.history.pushState({}, "Test page", "/login");
+
+    // Mock the auth store with default values
+    mockUseAuthStore.mockReturnValue({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: mockLogin,
+      logout: mockLogout,
+      fetchUserData: jest.fn(),
+      setLoading: jest.fn(),
+      setNavigate: mockSetNavigate,
+    });
   });
 
-  test('renders login form correctly', () => {
+  test("renders login form correctly", () => {
     renderLoginPage();
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-    expect(screen.getByText(/don't have an account\? register here/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /sign in/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/don't have an account\? register here/i)
+    ).toBeInTheDocument();
   });
 
-  test('allows typing in username and password fields', async () => {
+  test("allows typing in username and password fields", async () => {
     renderLoginPage();
-    const usernameInput = screen.getByLabelText(/username/i) as HTMLInputElement;
-    const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
+    const usernameInput = screen.getByLabelText(
+      /username/i
+    ) as HTMLInputElement;
+    const passwordInput = screen.getByLabelText(
+      /password/i
+    ) as HTMLInputElement;
 
-    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    fireEvent.change(usernameInput, { target: { value: "testuser" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
 
-    expect(usernameInput.value).toBe('testuser');
-    expect(passwordInput.value).toBe('password123');
+    expect(usernameInput.value).toBe("testuser");
+    expect(passwordInput.value).toBe("password123");
   });
 
-  test('submits form and calls loginUser and AuthContext.login on successful login, then navigates to home', async () => {
-    mockedLoginUser.mockImplementationOnce(() =>
-      new Promise(resolve => setTimeout(() => resolve({ access_token: 'fake_token', token_type: 'bearer' }), 20))
+  test("submits form and calls loginUser and login on successful login, then navigates to home", async () => {
+    mockedLoginUser.mockImplementationOnce(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () => resolve({ access_token: "fake_token", token_type: "bearer" }),
+            20
+          )
+        )
     );
-    mockLogin.mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 20)));
+    mockLogin.mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(resolve, 20))
+    );
 
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/username/i), {
+      target: { value: "testuser" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    const signingInButton = await screen.findByRole('button', { name: /signing in.../i });
+    const signingInButton = await screen.findByRole("button", {
+      name: /signing in.../i,
+    });
     expect(signingInButton).toBeDisabled();
 
     await waitFor(() => {
-      expect(mockedLoginUser).toHaveBeenCalledWith({ username: 'testuser', password: 'password123' });
+      expect(mockedLoginUser).toHaveBeenCalledWith({
+        username: "testuser",
+        password: "password123",
+      });
     });
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('fake_token');
+      expect(mockLogin).toHaveBeenCalledWith("fake_token");
     });
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/');
+      expect(mockNavigate).toHaveBeenCalledWith("/");
     });
   });
 
-  test('displays error message on failed login (generic error)', async () => {
-    mockedLoginUser.mockRejectedValueOnce(new Error('Login failed'));
+  test("displays error message on failed login (generic error)", async () => {
+    mockedLoginUser.mockRejectedValueOnce(new Error("Login failed"));
 
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'wronguser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrongpassword' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/username/i), {
+      target: { value: "wronguser" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Login failed')).toBeInTheDocument();
+      expect(screen.getByText("Login failed")).toBeInTheDocument();
     });
     expect(mockLogin).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('displays specific error message from AxiosError on failed login', async () => {
-    const axiosError = new Error('Request failed with status code 400') as any;
+  test("displays specific error message from AxiosError on failed login", async () => {
+    const axiosError = new Error("Request failed with status code 400") as any;
     axiosError.isAxiosError = true;
-    axiosError.response = { data: { detail: 'Invalid credentials provided.' } };
+    axiosError.response = { data: { detail: "Invalid credentials provided." } };
     mockedLoginUser.mockRejectedValueOnce(axiosError);
 
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrongpassword' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/username/i), {
+      target: { value: "testuser" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Request failed with status code 400')).toBeInTheDocument();
+      expect(
+        screen.getByText("Request failed with status code 400")
+      ).toBeInTheDocument();
     });
     expect(mockLogin).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('displays validation errors when fields are empty and form is submitted', async () => {
+  test("displays validation errors when fields are empty and form is submitted", async () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Username is required')).toBeInTheDocument();
+      expect(screen.getByText("Username is required")).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByText('Password is required')).toBeInTheDocument();
+      expect(screen.getByText("Password is required")).toBeInTheDocument();
     });
   });
 
-  test('clears validation errors when user types in input fields after submission', async () => {
+  test("clears validation errors when user types in input fields after submission", async () => {
     renderLoginPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Username is required')).toBeInTheDocument();
+      expect(screen.getByText("Username is required")).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByText('Password is required')).toBeInTheDocument();
+      expect(screen.getByText("Password is required")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'u' } });
-    await waitFor(() => expect(screen.queryByText('Username is required')).not.toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/username/i), {
+      target: { value: "u" },
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("Username is required")).not.toBeInTheDocument()
+    );
 
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'p' } });
-    await waitFor(() => expect(screen.queryByText('Password is required')).not.toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "p" },
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("Password is required")).not.toBeInTheDocument()
+    );
   });
 
   test('navigates to register page when "Register here" link is clicked', () => {
     renderLoginPage();
-    const registerLink = screen.getByRole('link', { name: /don't have an account\? register here/i });
+    const registerLink = screen.getByRole("link", {
+      name: /don't have an account\? register here/i,
+    });
     fireEvent.click(registerLink);
-    expect(registerLink).toHaveAttribute('href', '/register');
+    expect(registerLink).toHaveAttribute("href", "/register");
   });
 
-  test('shows loading state on submit button during login process', async () => {
+  test("shows loading state on submit button during login process", async () => {
     mockedLoginUser.mockImplementation(() => {
-      return new Promise(resolve => setTimeout(() => resolve({ access_token: 'token', token_type: 'bearer' }), 100));
+      return new Promise((resolve) =>
+        setTimeout(
+          () => resolve({ access_token: "token", token_type: "bearer" }),
+          100
+        )
+      );
     });
     mockLogin.mockResolvedValueOnce(undefined);
 
     renderLoginPage();
 
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'testuser' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/username/i), {
+      target: { value: "testuser" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    const signingInButtonDuringLoad = await screen.findByRole('button', { name: /signing in.../i });
+    const signingInButtonDuringLoad = await screen.findByRole("button", {
+      name: /signing in.../i,
+    });
     expect(signingInButtonDuringLoad).toBeInTheDocument();
     expect(signingInButtonDuringLoad).toBeDisabled();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /sign in/i })
+      ).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /sign in/i })
+      ).not.toBeDisabled();
     });
   });
 });

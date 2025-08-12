@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import Input from "components/Input";
+import Input from "./Input";
 import { SelfReflection } from "types/dailyPlan";
 import { getLlmReflectionSuggestion } from "services/dailyPlanService";
 import { Sparkles } from "lucide-react";
@@ -20,10 +20,22 @@ const SuggestionBox: React.FC<SuggestionBoxProps> = ({
     <p className="font-semibold mb-1">Suggestion:</p>
     <p>{suggestion}</p>
     <div className="flex justify-end gap-2 mt-2">
-      <Button type="button" onClick={onApprove} variant="primary" size="small">
+      <Button
+        type="button"
+        onClick={onApprove}
+        variant="slate"
+        size="medium"
+        className="flex items-center gap-2"
+      >
         Approve
       </Button>
-      <Button type="button" onClick={onReject} variant="secondary" size="small">
+      <Button
+        type="button"
+        onClick={onReject}
+        variant="secondary"
+        size="medium"
+        className="flex items-center gap-2"
+      >
         Reject
       </Button>
     </div>
@@ -125,16 +137,20 @@ const SelfReflectionComponent: React.FC<SelfReflectionComponentProps> = ({
         </label>
         <Button
           type="button"
-          variant="ghost"
-          size="icon"
+          variant="slate"
+          size="medium"
           onClick={handlers.handleImprove}
           disabled={handlers.isLoading}
           title={`Improve ${label}`}
+          className="flex items-center gap-2"
         >
           {handlers.isLoading ? (
             <span className="text-xs">Improving...</span>
           ) : (
-            <Sparkles className="h-4 w-4" />
+            <>
+              <Sparkles className="h-4 w-4" />
+              <span>Improve</span>
+            </>
           )}
         </Button>
       </div>

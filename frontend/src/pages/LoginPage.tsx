@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { loginUser } from "../services/authService";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "../lib/errors";
-import Input from "components/Input";
+import Input from "../components/Input";
 import { RetroGrid } from "../components/magicui/RetroGrid";
 
 const loginSchema = z.object({

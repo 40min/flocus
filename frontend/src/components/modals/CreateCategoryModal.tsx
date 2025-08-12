@@ -10,7 +10,7 @@ import {
 import { ApiError } from "lib/errors";
 import * as categoryService from "services/categoryService";
 import { Button } from "@/components/ui/button";
-import Input from "components/Input";
+import Input from "../Input";
 import Modal from "./Modal";
 
 import { colorOptions } from "constants/colors";

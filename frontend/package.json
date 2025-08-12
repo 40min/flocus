@@ -8,9 +8,11 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@formkit/auto-animate": "^0.8.2",
-    "@hookform/resolvers": "^5.1.1",
+    "@hookform/resolvers": "^5.2.1",
     "@mui/material": "^7.1.0",
     "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@tanstack/react-query": "^5.80.6",
     "@testing-library/dom": "^10.4.0",
@@ -29,7 +31,7 @@
     "react": "^19.1.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.1.0",
-    "react-hook-form": "^7.57.0",
+    "react-hook-form": "^7.62.0",
     "react-markdown": "^8.0.7",
     "react-router": "^6.22.3",
     "react-router-dom": "^6.22.3",
@@ -39,7 +41,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
-    "zod": "^3.25.56"
+    "zod": "^3.25.76"
   },
   "scripts": {
     "start": "craco start",

@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import Input from "components/Input";
+import Input from "../components/Input";
 import * as z from "zod";
 import { registerUser } from "../services/authService";
 import { ApiError } from "../lib/errors";

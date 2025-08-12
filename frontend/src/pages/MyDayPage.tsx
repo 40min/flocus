@@ -669,10 +669,20 @@ const MyDayPage: React.FC = () => {
                         </ul>
                       </div>
                       <div className="mt-6 flex justify-start gap-4">
-                        <Button onClick={handleCarryOver}>
+                        <Button
+                          onClick={handleCarryOver}
+                          variant="slate"
+                          size="medium"
+                          className="flex items-center gap-2"
+                        >
                           Carry Over Uncompleted Tasks
                         </Button>
-                        <Button onClick={handleCreateNewPlanFromReview}>
+                        <Button
+                          onClick={handleCreateNewPlanFromReview}
+                          variant="slate"
+                          size="medium"
+                          className="flex items-center gap-2"
+                        >
                           Create New Plan
                         </Button>
                       </div>

@@ -71,7 +71,7 @@ const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({
           </span>
         </div>
         <div className="flex justify-end pt-4">
-          <Button variant="primary" size="medium" onClick={onClose}>
+          <Button variant="slate" size="medium" onClick={onClose}>
             Close
           </Button>
         </div>

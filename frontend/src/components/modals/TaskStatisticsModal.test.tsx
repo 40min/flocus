@@ -145,7 +145,13 @@ describe("TaskStatisticsModal", () => {
       />
     );
 
-    fireEvent.click(screen.getByText("Close"));
+    // Click the visible Close button (the one with text content, not the X button)
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    const visibleCloseButton = closeButtons.find(
+      (button) =>
+        button.textContent === "Close" && !button.querySelector(".sr-only")
+    );
+    fireEvent.click(visibleCloseButton!);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 });

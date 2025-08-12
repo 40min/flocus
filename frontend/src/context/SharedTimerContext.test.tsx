@@ -8,6 +8,7 @@ import {
 import * as notificationService from "../services/notificationService";
 import { getTodayStats } from "../services/userDailyStatsService";
 import { useUpdateTask } from "../hooks/useTasks";
+import { useAuth } from "../hooks/useAuth";
 import {
   QueryClient,
   QueryClientProvider,
@@ -18,6 +19,7 @@ import { MemoryRouter } from "react-router-dom";
 
 jest.mock("../hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
+jest.mock("../hooks/useAuth");
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
   useQueryClient: jest.fn(),
@@ -28,6 +30,7 @@ jest.mock("../services/notificationService", () => ({
 }));
 const mockedShowNotification =
   notificationService.showNotification as jest.Mock;
+const mockedUseAuth = useAuth as jest.Mock;
 
 // Mock Notification API
 const mockNotification = jest.fn();
@@ -159,6 +162,16 @@ const renderWithProviders = async (
     ...defaultAuthContextValue,
     ...customAuthContextValue,
   };
+
+  // Mock useAuth to return the user from the context
+  mockedUseAuth.mockReturnValue({
+    user: authContextValue.user,
+    token: authContextValue.token,
+    isAuthenticated: authContextValue.isAuthenticated,
+    isLoading: authContextValue.isLoading,
+    login: authContextValue.login,
+    logout: authContextValue.logout,
+  });
 
   await act(async () => {
     render(
@@ -443,10 +456,9 @@ describe("SharedTimerContext", () => {
       fireEvent.click(screen.getByText("Start/Pause"));
     });
 
+    // Use skip button to trigger switchToNextMode directly
     await act(() => {
-      jest.advanceTimersByTime(
-        defaultMockUser.preferences.pomodoro_working_interval * 60 * 1000
-      );
+      fireEvent.click(screen.getByText("Skip"));
     });
 
     await waitFor(() => {

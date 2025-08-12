@@ -132,7 +132,7 @@ describe("UserSettingsPage", () => {
       fireEvent.click(
         screen.getByRole("checkbox", { name: "System notifications" })
       );
-      fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
     });
 
     await waitFor(() => {
@@ -152,7 +152,7 @@ describe("UserSettingsPage", () => {
     });
 
     expect(
-      await screen.findByText("Account updated successfully!")
+      await screen.findByText("Settings saved successfully!")
     ).toBeInTheDocument();
     expect(mockLogin).toHaveBeenCalledWith("test-token");
   });
@@ -163,22 +163,51 @@ describe("UserSettingsPage", () => {
     renderComponent(mockUser);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+      // Make a change to enable the button
+      fireEvent.change(screen.getByLabelText("First Name"), {
+        target: { value: "Updated" },
+      });
     });
 
-    expect(await screen.findByText(errorMessage)).toBeInTheDocument();
+    // Wait for the button to be enabled
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
+    });
+
+    await waitFor(() => {
+      expect(mockedUpdateUser).toHaveBeenCalled();
+    });
+    expect(await screen.findByText("Failed to update")).toBeInTheDocument();
   });
 
   it("disables the submit button while the form is submitting", async () => {
     mockedUpdateUser.mockResolvedValue({ ...mockUser });
     renderComponent(mockUser);
 
-    fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+    await act(async () => {
+      // Make a change to enable the button
+      fireEvent.change(screen.getByLabelText("First Name"), {
+        target: { value: "Updated" },
+      });
+    });
 
+    // Wait for the button to be enabled
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Update Account" })
-      ).toBeDisabled();
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: "Save" })[0]).toBeDisabled();
     });
   });
 
@@ -192,7 +221,17 @@ describe("UserSettingsPage", () => {
       fireEvent.change(screen.getByLabelText("Email"), {
         target: { value: "not-an-email" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+    });
+
+    // Wait for the button to be enabled
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
     });
 
     expect(
@@ -213,7 +252,17 @@ describe("UserSettingsPage", () => {
         screen.getByRole("combobox", { name: "Pomodoro working interval" }),
         { target: { value: "60" } }
       );
-      fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+    });
+
+    // Wait for the button to be enabled
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
     });
 
     await waitFor(() => {
@@ -238,11 +287,25 @@ describe("UserSettingsPage", () => {
     renderComponent(mockUser);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Update Account" }));
+      // Make a change to enable the button
+      fireEvent.change(screen.getByLabelText("First Name"), {
+        target: { value: "Updated" },
+      });
+    });
+
+    // Wait for the button to be enabled
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
     });
 
     expect(
-      await screen.findByText("Account updated successfully!")
+      await screen.findByText("Settings saved successfully!")
     ).toBeInTheDocument();
 
     await act(async () => {
@@ -250,7 +313,7 @@ describe("UserSettingsPage", () => {
     });
 
     expect(
-      screen.queryByText("Account updated successfully!")
+      screen.queryByText("Settings saved successfully!")
     ).not.toBeInTheDocument();
     jest.useRealTimers();
   });

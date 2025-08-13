@@ -15,7 +15,7 @@ import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
 import { Task } from "types/task";
 import { DailyPlanResponse } from "../types/dailyPlan";
 import { cn, formatDurationFromSeconds } from "../lib/utils";
-import { useSharedTimerContext } from "../context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
 import { Button } from "@/components/ui/button";
 
@@ -32,7 +32,7 @@ export const TaskCard = ({
     handleStartPause,
     stopCurrentTask,
     handleMarkAsDone,
-  } = useSharedTimerContext();
+  } = useTimer();
 
   const { mutate: deleteTask } = useDeleteTask();
   const { isPending: isUpdating } = useUpdateTask();

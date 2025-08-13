@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, XCircle, PlusCircle, Edit3 } from "lucide-react";
 import AssignedTaskBalloon from "./AssignedTaskBalloon";
 import TaskPicker from "./TaskPicker";
-import { useSharedTimerContext } from "../context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
 
 interface TimeWindowBalloonProps extends React.HTMLAttributes<HTMLDivElement> {
   timeWindow: TimeWindowType;
@@ -58,7 +58,7 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
     },
     ref
   ) => {
-    const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
+    const { currentTaskId, stopCurrentTask } = useTimer();
     const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
 
     const { id, description, start_time, end_time, category } = timeWindow;

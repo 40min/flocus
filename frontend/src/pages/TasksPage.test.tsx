@@ -16,7 +16,7 @@ import { Category } from "types/category";
 import { User } from "types/user";
 import { useTasks, useTasksByCategory, useUpdateTask } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
-import { SharedTimerProvider } from "context/SharedTimerContext";
+import { TimerProvider } from "../components/TimerProvider";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
 import { getTodayStats } from "services/userDailyStatsService";
 import { formatDurationFromSeconds } from "../lib/utils";
@@ -155,9 +155,9 @@ const renderTasksPage = (
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={mockAuthContextValue}>
-          <SharedTimerProvider>
+          <TimerProvider>
             <TasksPage />
-          </SharedTimerProvider>
+          </TimerProvider>
         </AuthContext.Provider>
       </QueryClientProvider>
     </Router>

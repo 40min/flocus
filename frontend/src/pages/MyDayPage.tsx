@@ -48,14 +48,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { useTodayDailyPlan, usePrevDayDailyPlan } from "../hooks/useDailyPlan";
 import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
-import { useSharedTimerContext } from "../context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
 import GapIndicator from "../components/GapIndicator";
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showMessage } = useMessage();
-  const { stopCurrentTask, currentTaskId } = useSharedTimerContext();
+  const { stopCurrentTask, currentTaskId } = useTimer();
 
   const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } =
     useTodayDailyPlan();

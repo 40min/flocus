@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
-import { format } from 'date-fns';
-import CurrentTasks, { TaskCard } from '../components/CurrentTasks';
-import PomodoroTimer from '../components/PomodoroTimer';
-import { useTodayDailyPlan } from '../hooks/useDailyPlan';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { useSharedTimerContext } from '../context/SharedTimerContext';
-import { useUpdateTask } from '../hooks/useTasks';
-import { Task } from 'types/task';
-import DailyStats from 'components/DailyStats';
+import React, { useState } from "react";
+import { format } from "date-fns";
+import CurrentTasks, { TaskCard } from "../components/CurrentTasks";
+import PomodoroTimer from "../components/PomodoroTimer";
+import { useTodayDailyPlan } from "../hooks/useDailyPlan";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from "@dnd-kit/core";
+import { useTimer } from "../hooks/useTimer";
+import { useUpdateTask } from "../hooks/useTasks";
+import { Task } from "types/task";
+import DailyStats from "components/DailyStats";
 
 const DashboardPage: React.FC = () => {
-  const { setCurrentTaskId, setCurrentTaskName, setCurrentTaskDescription, currentTaskId, setIsActive, isActive } = useSharedTimerContext();
+  const {
+    setCurrentTaskId,
+    setCurrentTaskName,
+    setCurrentTaskDescription,
+    currentTaskId,
+    setIsActive,
+    isActive,
+  } = useTimer();
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -20,7 +32,7 @@ const DashboardPage: React.FC = () => {
     const { active } = event;
     if (dailyPlan) {
       for (const timeWindow of dailyPlan.time_windows) {
-        const task = timeWindow.tasks.find(t => t.id === active.id);
+        const task = timeWindow.tasks.find((t) => t.id === active.id);
         if (task) {
           setActiveTask(task);
           break;
@@ -37,7 +49,7 @@ const DashboardPage: React.FC = () => {
     if (dailyPlan) {
       let taskToStart;
       for (const timeWindow of dailyPlan.time_windows) {
-        const foundTask = timeWindow.tasks.find(task => task.id === taskId);
+        const foundTask = timeWindow.tasks.find((task) => task.id === taskId);
         if (foundTask) {
           taskToStart = foundTask;
           break;
@@ -50,12 +62,15 @@ const DashboardPage: React.FC = () => {
           setCurrentTaskName(taskToStart.title);
           setCurrentTaskDescription(taskToStart.description);
 
-          await updateTask({ taskId: taskId, taskData: { status: 'in_progress' } });
+          await updateTask({
+            taskId: taskId,
+            taskData: { status: "in_progress" },
+          });
           if (!isActive) {
             setIsActive(true);
           }
         } catch (error) {
-          console.error('Failed to start task:', error);
+          console.error("Failed to start task:", error);
         }
       }
     }
@@ -64,7 +79,7 @@ const DashboardPage: React.FC = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const taskId = event.active.id as string;
 
-    if (event.over?.id === 'pomodoro-drop-zone') {
+    if (event.over?.id === "pomodoro-drop-zone") {
       await activateAndStartTask(taskId);
     }
     setActiveTask(null);
@@ -75,7 +90,7 @@ const DashboardPage: React.FC = () => {
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-esteban italic font-semibold text-text-DEFAULT flex items-center gap-2">
-            {format(new Date(), 'EEEE, MMMM do')}
+            {format(new Date(), "EEEE, MMMM do")}
           </h1>
           <DailyStats />
         </div>
@@ -96,14 +111,19 @@ const DashboardPage: React.FC = () => {
                   ) : isError ? (
                     <p className="text-red-500">Error loading daily plan.</p>
                   ) : (
-                    <CurrentTasks dailyPlan={dailyPlan} onSelectTask={activateAndStartTask} />
+                    <CurrentTasks
+                      dailyPlan={dailyPlan}
+                      onSelectTask={activateAndStartTask}
+                    />
                   )}
                 </div>
               </aside>
             </div>
           </div>
           <DragOverlay>
-            {activeTask ? <TaskCard task={activeTask} onSelectTask={() => {}} /> : null}
+            {activeTask ? (
+              <TaskCard task={activeTask} onSelectTask={() => {}} />
+            ) : null}
           </DragOverlay>
         </DndContext>
       </main>

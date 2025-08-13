@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Task, TaskCreateRequest, TaskUpdateRequest } from "types/task";
 import { Category } from "types/category";
-import { useSharedTimerContext } from "context/SharedTimerContext";
+import { useTimer } from "../../hooks/useTimer";
 import * as taskService from "services/taskService";
 import { useLlmSuggestions } from "hooks/useLlmSuggestions";
 import { Button } from "@/components/ui/button";
@@ -68,8 +68,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     },
   });
 
-  const { currentTaskId, stopCurrentTask, resetForNewTask } =
-    useSharedTimerContext();
+  const { currentTaskId, stopCurrentTask, resetForNewTask } = useTimer();
 
   const title = watch("title"); // Watch the title field for changes
 

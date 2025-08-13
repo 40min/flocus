@@ -19,7 +19,7 @@ import { DailyPlanResponse } from "types/dailyPlan";
 import { DayTemplateResponse } from "types/dayTemplate";
 import { Category } from "types/category";
 import { Task } from "types/task";
-import { SharedTimerProvider } from "context/SharedTimerContext";
+import { TimerProvider } from "../components/TimerProvider";
 import { getTodayStats } from "services/userDailyStatsService";
 import { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 
@@ -197,7 +197,7 @@ const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MessageProvider>
-          <SharedTimerProvider>{children}</SharedTimerProvider>
+          <TimerProvider>{children}</TimerProvider>
         </MessageProvider>
       </AuthProvider>
     </QueryClientProvider>
@@ -942,9 +942,11 @@ describe("MyDayPage", () => {
       };
 
       // We need to mock the SharedTimerProvider to return our mock context
-      jest.doMock("context/SharedTimerContext", () => ({
-        useSharedTimerContext: () => mockSharedTimerContext,
-        SharedTimerProvider: ({ children }: { children: React.ReactNode }) =>
+      jest.doMock("../hooks/useTimer", () => ({
+        useTimer: () => mockSharedTimerContext,
+      }));
+      jest.doMock("../components/TimerProvider", () => ({
+        TimerProvider: ({ children }: { children: React.ReactNode }) =>
           children,
       }));
 

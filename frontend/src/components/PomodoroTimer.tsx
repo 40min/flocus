@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "../lib/utils";
 import { useDroppable } from "@dnd-kit/core";
-import { useSharedTimerContext } from "../context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
 import { Button } from "@/components/ui/button";
 
 const PomodoroTimer: React.FC = () => {
@@ -20,7 +20,7 @@ const PomodoroTimer: React.FC = () => {
     timerColor,
     currentTaskName,
     currentTaskDescription,
-  } = useSharedTimerContext();
+  } = useTimer();
 
   const { setNodeRef, isOver } = useDroppable({
     id: "pomodoro-drop-zone",

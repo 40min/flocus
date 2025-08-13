@@ -5,10 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import CurrentTasks from "./CurrentTasks";
 import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
-import {
-  useSharedTimerContext,
-  SharedTimerProvider,
-} from "../context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
+import { TimerProvider } from "./TimerProvider";
 import { AuthContext, AuthContextType } from "../context/AuthContext";
 import { DndContext } from "@dnd-kit/core";
 import { Task } from "types/task";
@@ -17,15 +15,14 @@ import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
 import { getTodayStats } from "../services/userDailyStatsService";
 
 jest.mock("../hooks/useCurrentTimeWindow");
-jest.mock("../context/SharedTimerContext", () => ({
-  ...jest.requireActual("../context/SharedTimerContext"),
-  useSharedTimerContext: jest.fn(),
+jest.mock("../hooks/useTimer", () => ({
+  useTimer: jest.fn(),
 }));
 jest.mock("hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
 
 const mockedUseCurrentTimeWindow = useCurrentTimeWindow as jest.Mock;
-const mockedUseSharedTimerContext = useSharedTimerContext as jest.Mock;
+const mockedUseTimer = useTimer as jest.Mock;
 const mockedUseDeleteTask = useDeleteTask as jest.Mock;
 const mockedUseUpdateTask = useUpdateTask as jest.Mock;
 
@@ -83,9 +80,9 @@ const renderWithDnd = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <AuthContext.Provider value={mergedAuthContextValue as AuthContextType}>
-          <SharedTimerProvider>
+          <TimerProvider>
             <DndContext onDragEnd={() => {}}>{component}</DndContext>
-          </SharedTimerProvider>
+          </TimerProvider>
         </AuthContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>
@@ -106,7 +103,7 @@ describe("CurrentTasks", () => {
 
   beforeEach(() => {
     (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: null,
       isActive: false,
       handleStartPause: mockHandleStartPause,
@@ -182,7 +179,7 @@ describe("CurrentTasks", () => {
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
     });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "task1", // Task One is active
       isActive: true,
       handleStartPause: mockHandleStartPause,
@@ -245,7 +242,7 @@ describe("CurrentTasks", () => {
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
     });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "task1",
       isActive: true,
       handleStartPause: mockHandleStartPause,
@@ -271,7 +268,7 @@ describe("CurrentTasks", () => {
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
     });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "task1",
       isActive: true,
       handleStartPause: mockHandleStartPause,
@@ -300,7 +297,7 @@ describe("CurrentTasks", () => {
       currentTasks: mockTasks,
     });
     // Case 1: Timer not active
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "task1",
       isActive: false,
       handleStartPause: mockHandleStartPause,
@@ -318,7 +315,7 @@ describe("CurrentTasks", () => {
     expect(pauseButton).toBeDisabled();
 
     // Case 2: Timer active, but different task is active
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "another-task-id",
       isActive: true,
       handleStartPause: mockHandleStartPause,
@@ -362,7 +359,7 @@ describe("CurrentTasks", () => {
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
     });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: "task1",
       isActive: true,
       handleStartPause: mockHandleStartPause,
@@ -416,7 +413,7 @@ describe("CurrentTasks", () => {
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
     });
-    mockedUseSharedTimerContext.mockReturnValue({
+    mockedUseTimer.mockReturnValue({
       currentTaskId: null,
       isActive: false,
       handleStartPause: mockHandleStartPause,

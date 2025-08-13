@@ -6,7 +6,7 @@ import "./styles/index.css";
 import App from "./App";
 import { AuthInitializer } from "./components/AuthInitializer";
 import { MessageProvider } from "./context/MessageContext";
-import { SharedTimerProvider } from "./context/SharedTimerContext";
+import { TimerProvider } from "./components/TimerProvider";
 
 const queryClient = new QueryClient();
 
@@ -18,11 +18,11 @@ root.render(
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthInitializer>
-          <SharedTimerProvider>
+          <TimerProvider>
             <MessageProvider>
               <App />
             </MessageProvider>
-          </SharedTimerProvider>
+          </TimerProvider>
         </AuthInitializer>
       </QueryClientProvider>
     </Router>

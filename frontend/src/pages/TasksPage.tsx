@@ -8,7 +8,7 @@ import * as taskService from "services/taskService";
 import CreateTaskModal from "components/modals/CreateTaskModal";
 import { useTasks, useTasksByCategory } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
-import { useSharedTimerContext } from "context/SharedTimerContext";
+import { useTimer } from "../hooks/useTimer";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
 
 const statusOptions = [
@@ -33,7 +33,7 @@ const TasksPage: React.FC = () => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
-  const { currentTaskId, stopCurrentTask } = useSharedTimerContext();
+  const { currentTaskId, stopCurrentTask } = useTimer();
 
   const queryClient = useQueryClient();
   const {

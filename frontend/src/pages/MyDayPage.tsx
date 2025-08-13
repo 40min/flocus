@@ -502,7 +502,6 @@ const MyDayPage: React.FC = () => {
         ref={setNodeRef}
         style={style}
         {...attributes}
-        {...listeners}
         data-testid={`sortable-time-window-${allocation.time_window.id}`}
       >
         <TimeWindowBalloon
@@ -512,6 +511,7 @@ const MyDayPage: React.FC = () => {
           onEdit={onEdit}
           onAssignTask={onAssignTask}
           onUnassignTask={onUnassignTask}
+          dragListeners={listeners}
         />
       </div>
     );

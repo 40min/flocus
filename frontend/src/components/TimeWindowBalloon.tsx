@@ -1,4 +1,5 @@
 import React, { forwardRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { TimeWindow as TimeWindowType } from "types/timeWindow";
 import type { Task as TaskType } from "types/task";
 import {
@@ -20,6 +21,7 @@ interface TimeWindowBalloonProps extends React.HTMLAttributes<HTMLDivElement> {
   onAssignTask?: (task: TaskType) => void;
   onUnassignTask?: (taskId: string) => void;
   isOverlay?: boolean;
+  dragListeners?: any;
 }
 
 const getTextColor = (bgColor: string): string => {
@@ -58,6 +60,7 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
       onAssignTask,
       onUnassignTask,
       isOverlay,
+      dragListeners,
       ...props
     },
     ref
@@ -105,7 +108,7 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
         >
           <header className="mb-4">
             <div className="flex items-start justify-between">
-              <div className="flex-1">
+              <div className="flex-1 cursor-move" {...(dragListeners || {})}>
                 <h4
                   className={cn(
                     "text-base md:text-lg font-bold",
@@ -202,6 +205,8 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
                     setIsTaskPickerOpen(true);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   variant="secondary"
                   size="icon"
                   className="w-8 h-8 rounded-full hover:text-blue-600"
@@ -212,17 +217,20 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
               )}
             </div>
           </section>
-          {isTaskPickerOpen && onAssignTask && (
-            <TaskPicker
-              categoryId={category.id}
-              assignedTaskIds={tasks.map((t) => t.id)}
-              onSelectTask={(task) => {
-                onAssignTask(task);
-                setIsTaskPickerOpen(false);
-              }}
-              onClose={() => setIsTaskPickerOpen(false)}
-            />
-          )}
+          {isTaskPickerOpen &&
+            onAssignTask &&
+            createPortal(
+              <TaskPicker
+                categoryId={category.id}
+                assignedTaskIds={tasks.map((t) => t.id)}
+                onSelectTask={(task) => {
+                  onAssignTask(task);
+                  setIsTaskPickerOpen(false);
+                }}
+                onClose={() => setIsTaskPickerOpen(false)}
+              />,
+              document.body
+            )}
         </div>
       </article>
     );

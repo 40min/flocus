@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import TaskStatisticsModal from "./TaskStatisticsModal";
 import { Task } from "types/task";
-import { formatDateTime, formatDurationFromSeconds } from "../../lib/utils";
+import { formatDateTime, formatDurationFromSeconds } from "../../utils/utils";
 
 const mockTaskWithStats: Task = {
   id: "task1",

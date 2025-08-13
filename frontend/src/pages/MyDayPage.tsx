@@ -20,7 +20,7 @@ import {
   formatDurationFromSeconds,
   recalculateTimeWindows,
   recalculateTimeWindowsWithShifting,
-} from "../lib/utils";
+} from "../utils/utils";
 import { useDailyStats } from "../hooks/useDailyStats";
 import TimeWindowModal from "../components/modals/TimeWindowModal";
 import type { TimeWindow, TimeWindowCreateRequest } from "../types/timeWindow";

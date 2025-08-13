@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Input from "../components/Input";
 import * as z from "zod";
 import { registerUser } from "../services/authService";
-import { ApiError } from "../lib/errors";
+import { ApiError } from "../errors/errors";
 import { RetroGrid } from "../components/magicui/RetroGrid";
 import { AxiosError } from "axios";
 

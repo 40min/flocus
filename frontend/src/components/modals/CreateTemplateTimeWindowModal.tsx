@@ -3,7 +3,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { TimeWindow, TimeWindowInput } from "../../types/timeWindow";
 import { TimeWindowAllocation } from "../../types/dailyPlan";
 import { Category } from "../../types/category";
-import { minutesToDate, hhMMToMinutes } from "../../lib/utils";
+import { minutesToDate, hhMMToMinutes } from "../../utils/utils";
 import { Plus, Edit } from "lucide-react";
 import Modal from "./Modal";
 import TimeWindowForm, {

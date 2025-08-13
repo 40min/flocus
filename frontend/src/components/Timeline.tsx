@@ -1,6 +1,6 @@
 import React from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { formatDurationFromMinutes } from "../lib/utils";
+import { formatDurationFromMinutes } from "../utils/utils";
 
 // In a larger application, this interface would likely live in a shared types file (e.g., `src/types.ts`)
 interface TimeWindow {

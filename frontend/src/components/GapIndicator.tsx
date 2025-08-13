@@ -1,5 +1,5 @@
 import React from "react";
-import { cn, formatDurationFromMinutes } from "lib/utils";
+import { cn, formatDurationFromMinutes } from "../utils/utils";
 
 interface GapIndicatorProps {
   durationMinutes: number;

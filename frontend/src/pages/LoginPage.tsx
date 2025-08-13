@@ -6,7 +6,7 @@ import * as z from "zod";
 import { useAuth } from "../hooks/useAuth";
 import { loginUser } from "../services/authService";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "../lib/errors";
+import { ApiError } from "../errors/errors";
 import Input from "../components/Input";
 import { RetroGrid } from "../components/magicui/RetroGrid";
 

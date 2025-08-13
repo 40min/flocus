@@ -1,7 +1,7 @@
-import React from 'react';
-import { useDailyStats } from 'hooks/useDailyStats';
-import { formatDurationFromSeconds } from 'lib/utils';
-import { Timer, CheckCircle } from 'lucide-react';
+import React from "react";
+import { useDailyStats } from "hooks/useDailyStats";
+import { formatDurationFromSeconds } from "../utils/utils";
+import { Timer, CheckCircle } from "lucide-react";
 
 const DailyStats: React.FC = () => {
   const { data: stats, isLoading, isError, error } = useDailyStats();
@@ -18,7 +18,7 @@ const DailyStats: React.FC = () => {
   }
 
   if (isError) {
-    console.error('Failed to load daily stats:', error);
+    console.error("Failed to load daily stats:", error);
     return (
       <div className="flex items-center gap-6 text-sm text-red-500">
         <div className="flex items-center gap-2">
@@ -33,10 +33,15 @@ const DailyStats: React.FC = () => {
     <div className="flex items-center gap-6 text-sm text-slate-600">
       <div className="flex items-center gap-2" title="Total time worked today">
         <Timer className="h-5 w-5" />
-        <span className="font-medium">{formatDurationFromSeconds(stats?.total_seconds_spent ?? 0)}</span>
+        <span className="font-medium">
+          {formatDurationFromSeconds(stats?.total_seconds_spent ?? 0)}
+        </span>
         <span className="hidden sm:inline">Time Worked</span>
       </div>
-      <div className="flex items-center gap-2" title="Pomodoros completed today">
+      <div
+        className="flex items-center gap-2"
+        title="Pomodoros completed today"
+      >
         <CheckCircle className="h-5 w-5 text-green-500" />
         <span className="font-medium">{stats?.pomodoros_completed ?? 0}</span>
         <span className="hidden sm:inline">Pomos Done</span>

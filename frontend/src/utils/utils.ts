@@ -19,7 +19,7 @@ import {
   normalizeTimeMinutes,
   formatDurationFromMinutes,
   formatDurationFromSeconds,
-} from "../utils/dateUtils";
+} from "./dateUtils";
 
 // ===== STYLING UTILITIES =====
 export function cn(...inputs: ClassValue[]) {

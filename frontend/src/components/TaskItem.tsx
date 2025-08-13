@@ -1,6 +1,6 @@
-import React from 'react';
-import { Task as TaskType } from 'types/task';
-import { cn } from 'lib/utils';
+import React from "react";
+import { Task as TaskType } from "types/task";
+import { cn } from "../utils/utils";
 
 interface TaskItemProps {
   task: TaskType;
@@ -22,10 +22,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
   hoverShadowColor,
 }) => {
   const taskItemClasses = cn(
-    'inline-flex items-center px-3 py-2 rounded-full border text-sm font-medium',
-    'cursor-default',
-    'transition-all duration-200 ease-out focus:outline-none',
-    'select-none shadow-sm hover:shadow-md',
+    "inline-flex items-center px-3 py-2 rounded-full border text-sm font-medium",
+    "cursor-default",
+    "transition-all duration-200 ease-out focus:outline-none",
+    "select-none shadow-sm hover:shadow-md",
     baseBgColor,
     baseBorderColor,
     baseTextColor,
@@ -36,7 +36,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   return (
     <span className={taskItemClasses} aria-label={`Task: ${task.title}`}>
-      <span className="truncate max-w-[200px] md:max-w-[300px]">{task.title}</span>
+      <span className="truncate max-w-[200px] md:max-w-[300px]">
+        {task.title}
+      </span>
     </span>
   );
 };

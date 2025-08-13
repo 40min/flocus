@@ -1,7 +1,11 @@
 import React, { forwardRef, useState } from "react";
 import type { TimeWindow as TimeWindowType } from "types/timeWindow";
 import type { Task as TaskType } from "types/task";
-import { cn, formatMinutesToHHMM, formatDurationFromMinutes } from "lib/utils";
+import {
+  cn,
+  formatMinutesToHHMM,
+  formatDurationFromMinutes,
+} from "../utils/utils";
 import { Button } from "@/components/ui/button";
 import { Clock, XCircle, PlusCircle, Edit3 } from "lucide-react";
 import AssignedTaskBalloon from "./AssignedTaskBalloon";

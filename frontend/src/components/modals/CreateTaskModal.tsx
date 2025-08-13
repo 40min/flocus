@@ -11,7 +11,7 @@ import * as taskService from "services/taskService";
 import { useLlmSuggestions } from "hooks/useLlmSuggestions";
 import { Button } from "@/components/ui/button";
 import Modal from "./Modal";
-import { utcToLocal, localToUtc } from "lib/utils";
+import { utcToLocal, localToUtc } from "../../utils/utils";
 import { Sparkles, Bot } from "lucide-react";
 
 const taskFormSchema = z.object({

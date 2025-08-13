@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { deleteDayTemplate } from "../services/dayTemplateService";
-import { formatMinutesToHHMM } from "../lib/utils";
+import { formatMinutesToHHMM } from "../utils/utils";
 import { TimeWindow } from "../types/timeWindow";
 import { useTemplates } from "../hooks/useTemplates";
 import { Button } from "../components/ui/button";

@@ -19,7 +19,7 @@ import { useCategories } from "hooks/useCategories";
 import { TimerProvider } from "../components/TimerProvider";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
 import { getTodayStats } from "services/userDailyStatsService";
-import { formatDurationFromSeconds } from "../lib/utils";
+import { formatDurationFromSeconds } from "../utils/utils";
 
 const mockedTaskStatisticsModal = TaskStatisticsModal as jest.MockedFunction<
   typeof TaskStatisticsModal

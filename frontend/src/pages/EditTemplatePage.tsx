@@ -16,7 +16,7 @@ import {
 } from "../services/dayTemplateService";
 import { useTemplateById } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
-import { formatMinutesToHHMM } from "../lib/utils";
+import { formatMinutesToHHMM } from "../utils/utils";
 import { ChevronRight, Trash2, Plus, Edit } from "lucide-react";
 import CreateTemplateTimeWindowModal from "../components/modals/CreateTemplateTimeWindowModal";
 import { Button } from "../components/ui/button";

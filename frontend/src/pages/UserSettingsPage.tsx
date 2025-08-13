@@ -8,7 +8,7 @@ import * as z from "zod";
 import { useAuth } from "../hooks/useAuth";
 import { User, UserUpdatePayload } from "../types/user";
 import { updateUser } from "../services/userService";
-import { ApiError } from "../lib/errors";
+import { ApiError } from "../errors/errors";
 
 const preferencesSchema = z.object({
   pomodoro_timeout_minutes: z.coerce.number(),

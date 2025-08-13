@@ -19,8 +19,8 @@
     "paths": {
       "@/*": ["*"],
       "@/components/*": ["components/*"],
-      "@/lib/*": ["lib/*"],
-      "@/utils/*": ["lib/*"]
+      "@/utils/*": ["utils/*"],
+      "@/errors/*": ["errors/*"]
     }
   },
   "include": ["src"]

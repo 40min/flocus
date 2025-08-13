@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import Modal from "./Modal";
 import { TimeWindowCreateRequest, TimeWindow } from "../../types/timeWindow";
 import { Category } from "../../types/category";
-import { hhMMToMinutes, minutesToDate } from "../../lib/utils";
+import { hhMMToMinutes, minutesToDate } from "../../utils/utils";
 import { useMessage } from "../../context/MessageContext";
 import { TimeWindowAllocation } from "../../types/dailyPlan";
 import TimeWindowForm, {

@@ -2,7 +2,7 @@ import React from "react";
 import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { cn } from "../lib/utils";
+import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
 import { Button } from "@/components/ui/button";

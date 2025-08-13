@@ -6,7 +6,7 @@ import TimeWindowModal from "./TimeWindowModal";
 import { MessageProvider } from "context/MessageContext";
 import { Category } from "types/category";
 import { TimeWindowAllocation } from "types/dailyPlan";
-import { formatMinutesToHHMM, hhMMToMinutes } from "lib/utils";
+import { formatMinutesToHHMM, hhMMToMinutes } from "../../utils/utils";
 
 // Mock the useMessage hook
 jest.mock("context/MessageContext", () => ({

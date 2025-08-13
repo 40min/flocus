@@ -16,7 +16,7 @@ import { DayTemplateResponse } from "types/dayTemplate";
 import { Category } from "types/category";
 import { AuthProvider } from "context/AuthContext";
 import { MessageProvider } from "context/MessageContext";
-import { NotFoundError } from "lib/errors";
+import { NotFoundError } from "../errors/errors";
 
 // Mocks
 jest.mock("hooks/useTemplates");

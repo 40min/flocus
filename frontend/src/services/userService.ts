@@ -1,8 +1,8 @@
-import api from './api';
-import axios from 'axios';
-import { User, UserUpdatePayload } from '../types/user';
-import { ApiError } from '../lib/errors';
-import { API_ENDPOINTS } from '../constants/apiEndpoints';
+import api from "./api";
+import axios from "axios";
+import { User, UserUpdatePayload } from "../types/user";
+import { ApiError } from "../errors/errors";
+import { API_ENDPOINTS } from "../constants/apiEndpoints";
 
 export const getAllUsers = async (): Promise<User[]> => {
   try {
@@ -10,7 +10,10 @@ export const getAllUsers = async (): Promise<User[]> => {
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
-      throw new ApiError(error.response.data?.detail || 'Failed to fetch users', error.response.status);
+      throw new ApiError(
+        error.response.data?.detail || "Failed to fetch users",
+        error.response.status
+      );
     }
     throw error;
   }
@@ -22,7 +25,10 @@ export const getCurrentUser = async (): Promise<User> => {
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
-      throw new ApiError(error.response.data?.detail || 'Failed to fetch current user', error.response.status);
+      throw new ApiError(
+        error.response.data?.detail || "Failed to fetch current user",
+        error.response.status
+      );
     }
     throw error;
   }
@@ -37,13 +43,22 @@ export const getUserById = async (id: string): Promise<User> => {
   }
 };
 
-export const updateUser = async (id: string, userData: UserUpdatePayload): Promise<User> => {
+export const updateUser = async (
+  id: string,
+  userData: UserUpdatePayload
+): Promise<User> => {
   try {
-    const response = await api.put<User>(API_ENDPOINTS.USER_BY_ID(id), userData);
+    const response = await api.put<User>(
+      API_ENDPOINTS.USER_BY_ID(id),
+      userData
+    );
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
-      throw new ApiError(error.response.data?.detail || 'Failed to update user', error.response.status);
+      throw new ApiError(
+        error.response.data?.detail || "Failed to update user",
+        error.response.status
+      );
     }
     throw error;
   }

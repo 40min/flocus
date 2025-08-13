@@ -13,7 +13,7 @@ import EditTemplatePage from "./pages/EditTemplatePage";
 import * as notificationService from "./services/notificationService";
 import { useAuth } from "./hooks/useAuth";
 import Sidebar from "./components/layout/Sidebar";
-import { cn } from "./lib/utils";
+import { cn } from "./utils/utils";
 import CategoriesPage from "./pages/CategoriesPage";
 
 import TasksPage from "./pages/TasksPage";

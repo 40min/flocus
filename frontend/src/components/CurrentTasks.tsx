@@ -14,7 +14,7 @@ import {
 import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
 import { Task } from "types/task";
 import { DailyPlanResponse } from "../types/dailyPlan";
-import { cn, formatDurationFromSeconds } from "../lib/utils";
+import { cn, formatDurationFromSeconds } from "../utils/utils";
 import { useTimer } from "../hooks/useTimer";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
 import { Button } from "@/components/ui/button";

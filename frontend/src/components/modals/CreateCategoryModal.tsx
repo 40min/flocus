@@ -7,7 +7,7 @@ import {
   CategoryCreateRequest,
   CategoryUpdateRequest,
 } from "types/category";
-import { ApiError } from "lib/errors";
+import { ApiError } from "../../errors/errors";
 import * as categoryService from "services/categoryService";
 import { Button } from "@/components/ui/button";
 import Input from "../Input";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { format } from "date-fns";
+import { dayjs } from "../utils/dateUtils";
 import CurrentTasks, { TaskCard } from "../components/CurrentTasks";
 import PomodoroTimer from "../components/PomodoroTimer";
 import { useTodayDailyPlan } from "../hooks/useDailyPlan";
@@ -90,7 +90,7 @@ const DashboardPage: React.FC = () => {
       <header className="w-full px-6 py-8 md:px-12 md:py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-esteban italic font-semibold text-text-DEFAULT flex items-center gap-2">
-            {format(new Date(), "EEEE, MMMM do")}
+            {dayjs().format("dddd, MMMM Do")}
           </h1>
           <DailyStats />
         </div>

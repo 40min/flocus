@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { dayjs } from "../utils/dateUtils";
 import { PlusCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -525,7 +525,7 @@ const MyDayPage: React.FC = () => {
             <header className="flex items-center justify-between mb-8 md:mb-12">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">
-                  {format(new Date(dailyPlan.plan_date), "EEEE, MMMM d")}
+                  {dayjs(dailyPlan.plan_date).format("dddd, MMMM D")}
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">
                   Plan your perfect day

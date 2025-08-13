@@ -15,8 +15,7 @@ import {
 } from "./utils";
 import { TimeWindowAllocation } from "../types/dailyPlan";
 import { TimeWindowCreateRequest } from "../types/timeWindow";
-import { toZonedTime } from "date-fns-tz";
-import { startOfDay } from "date-fns";
+import { dayjs } from "../utils/dateUtils";
 
 // Keep a reference to the original console.warn
 const originalConsoleWarn = console.warn;

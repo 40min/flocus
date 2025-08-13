@@ -29,20 +29,6 @@ const Timeline: React.FC<TimelineProps> = ({ timeWindows, className }) => {
     duration: 300,
     easing: "ease-in-out",
   });
-  /**
-   * Formats an ISO date string into a localized time string (e.g., "9:00 AM").
-   * @param dateString - The ISO date string to format.
-   * @returns A formatted time string.
-   */
-  const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
-
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
 
   /**
    * Formats time range for display based on duration

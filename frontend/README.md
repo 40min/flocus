@@ -2,7 +2,29 @@
 
 This directory contains the React/TypeScript frontend application for the Personal Scheduler Application.
 
-For an overview of the entire project, please see the main [README.md](../README.md:1).
+For an overview of the entire project, please see the main [README.md](../README.md).
+
+## Documentation
+
+Comprehensive documentation is available in the [docs](./docs/) folder:
+
+- [Architecture](./docs/architecture.md) - Application architecture and design patterns
+- [Development Tools](./docs/development-tools.md) - Development tools and debugging utilities
+- [Testing Strategy](./docs/testing.md) - Testing approach and guidelines
+- [Component Library](./docs/components.md) - Component system and UI patterns
+- [State Management](./docs/state-management.md) - State management patterns and stores
+- [Performance](./docs/performance.md) - Performance optimization and monitoring
+- [Migration Guide](./docs/migration-guide.md) - Library migration and optimization history
+
+## Technology Stack
+
+- **React 19** with TypeScript
+- **Tailwind CSS** for styling
+- **Shadcn/ui** component system with Radix UI primitives
+- **Zustand** for global state management
+- **React Query** for server state management
+- **Day.js** for date/time utilities
+- **React Hook Form** for form management
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

@@ -4,6 +4,7 @@ import timezone from "dayjs/plugin/timezone";
 import relativeTime from "dayjs/plugin/relativeTime";
 import isToday from "dayjs/plugin/isToday";
 import isTomorrow from "dayjs/plugin/isTomorrow";
+import advancedFormat from "dayjs/plugin/advancedFormat";
 import { isInteger, isString, isNumber } from "lodash-es";
 
 // Extend dayjs with required plugins
@@ -12,6 +13,7 @@ dayjs.extend(timezone);
 dayjs.extend(relativeTime);
 dayjs.extend(isToday);
 dayjs.extend(isTomorrow);
+dayjs.extend(advancedFormat);
 
 // Cache timezone to avoid repeated system calls
 const LOCAL_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;

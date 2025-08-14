@@ -18,25 +18,32 @@ interface TimerProviderProps {
 export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const setUserPreferences = useTimerStore((state) => state.setUserPreferences);
+  const clearTimerState = useTimerStore((state) => state.clearTimerState);
 
-  // Initialize timer on mount
+  // Initialize timer when user is authenticated
   useEffect(() => {
     let mounted = true;
 
     const initialize = async () => {
-      if (mounted) {
+      if (mounted && user) {
         await initializeTimer();
       }
     };
 
-    initialize();
+    if (user) {
+      initialize();
+    } else {
+      // Stop timer and clear state if user is not authenticated
+      stopTimerInterval();
+      clearTimerState();
+    }
 
     // Cleanup on unmount
     return () => {
       mounted = false;
       stopTimerInterval();
     };
-  }, []);
+  }, [user, clearTimerState]);
 
   // Update user preferences when user changes
   useEffect(() => {

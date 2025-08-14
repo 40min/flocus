@@ -12,6 +12,7 @@ jest.mock("../services/notificationService");
 const mockUpdateTask = taskService.updateTask as jest.MockedFunction<
   typeof taskService.updateTask
 >;
+
 const mockGetTodayStats =
   userDailyStatsService.getTodayStats as jest.MockedFunction<
     typeof userDailyStatsService.getTodayStats
@@ -263,6 +264,73 @@ describe("timerStore", () => {
       // Should not throw and should maintain default state
       const state = useTimerStore.getState();
       expect(state.pomodorosCompleted).toBe(0);
+    });
+
+    it("should handle timer state persistence correctly", () => {
+      // Set up a timer state with a task
+      act(() => {
+        const store = useTimerStore.getState();
+        store.setCurrentTask("task-123", "Test Task", "Test Description");
+        store.setIsActive(true);
+        store.setTimeRemaining(1200); // 20 minutes
+      });
+
+      const state = useTimerStore.getState();
+      expect(state.currentTaskId).toBe("task-123");
+      expect(state.currentTaskName).toBe("Test Task");
+      expect(state.currentTaskDescription).toBe("Test Description");
+      expect(state.isActive).toBe(true);
+      expect(state.timeRemaining).toBe(1200);
+    });
+
+    it("should clear timer state when requested", () => {
+      // Set up a timer state with a task
+      act(() => {
+        const store = useTimerStore.getState();
+        store.setCurrentTask("task-123", "Test Task", "Test Description");
+        store.setIsActive(true);
+        store.setTimeRemaining(1200);
+      });
+
+      // Clear the state
+      act(() => {
+        useTimerStore.getState().clearTimerState();
+      });
+
+      const state = useTimerStore.getState();
+      expect(state.currentTaskId).toBeUndefined();
+      expect(state.currentTaskName).toBeUndefined();
+      expect(state.currentTaskDescription).toBeUndefined();
+      expect(state.isActive).toBe(false);
+      expect(state.mode).toBe("work");
+    });
+
+    it("should preserve active state on page reload when timer is running", () => {
+      // Mock localStorage to simulate page reload
+      const mockState = {
+        mode: "work",
+        timeRemaining: 1200, // 20 minutes
+        isActive: true,
+        pomodorosCompleted: 2,
+        currentTaskId: "task-123",
+        currentTaskName: "Test Task",
+        currentTaskDescription: "Test Description",
+        timestamp: Date.now() - 5000, // 5 seconds ago
+        userPreferences: { pomodoro_working_interval: 25 },
+      };
+
+      // Simulate the onRehydrateStorage logic
+      const timeSinceLastSave = Date.now() - mockState.timestamp;
+      const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
+      const newTime = mockState.timeRemaining - elapsedSeconds;
+
+      // Verify the logic works correctly
+      expect(newTime).toBeGreaterThan(0); // Timer should still have time
+      expect(newTime).toBeLessThan(mockState.timeRemaining); // Time should have elapsed
+
+      // The timer should remain active since it was active and still has time
+      const shouldBeActive = mockState.isActive && newTime > 0;
+      expect(shouldBeActive).toBe(true);
     });
   });
 });

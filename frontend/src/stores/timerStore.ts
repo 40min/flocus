@@ -53,6 +53,7 @@ interface TimerState {
   stopCurrentTask: () => Promise<void>;
   resetForNewTask: () => Promise<void>;
   markTaskAsDone: (taskId: string) => Promise<void>;
+  clearTimerState: () => void;
 
   // Utility functions
   formatTime: (seconds: number) => string;
@@ -82,48 +83,6 @@ const DEFAULT_TIMER_STATE = {
   timestamp: Date.now(),
   userPreferences: undefined,
 };
-
-// State restoration logic
-function getInitialTimerState() {
-  try {
-    const serializedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!serializedState) return DEFAULT_TIMER_STATE;
-
-    const state = JSON.parse(serializedState);
-    const timeSinceLastSave = Date.now() - state.timestamp;
-
-    if (timeSinceLastSave > EXPIRATION_THRESHOLD) {
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
-      return DEFAULT_TIMER_STATE;
-    }
-
-    let restoredState = {
-      mode: state.mode || DEFAULT_TIMER_STATE.mode,
-      timeRemaining: state.timeRemaining || DEFAULT_TIMER_STATE.timeRemaining,
-      isActive: state.isActive || DEFAULT_TIMER_STATE.isActive,
-      pomodorosCompleted:
-        state.pomodorosCompleted || DEFAULT_TIMER_STATE.pomodorosCompleted,
-      currentTaskId: state.currentTaskId,
-      currentTaskName: state.currentTaskName,
-      currentTaskDescription: state.currentTaskDescription,
-      timestamp: state.timestamp || Date.now(),
-      userPreferences: state.userPreferences,
-    };
-
-    // Handle timer continuation if it was active
-    if (state.isActive) {
-      const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
-      const newTime = state.timeRemaining - elapsedSeconds;
-      restoredState.timeRemaining = newTime > 0 ? newTime : 0;
-      restoredState.isActive = newTime > 0;
-    }
-
-    return restoredState;
-  } catch (error) {
-    console.error("Failed to restore timer state:", error);
-    return DEFAULT_TIMER_STATE;
-  }
-}
 
 export const useTimerStore = create<TimerState>()(
   devtools(
@@ -195,7 +154,7 @@ export const useTimerStore = create<TimerState>()(
           }
         },
 
-        // Initialize from daily stats
+        // Initialize from daily stats and check for in-progress tasks
         initializeFromStats: async () => {
           try {
             const stats = await getTodayStats();
@@ -373,6 +332,14 @@ export const useTimerStore = create<TimerState>()(
             console.error("Failed to mark task as done:", error);
           }
         },
+
+        // Clear timer state (useful for logout)
+        clearTimerState: () => {
+          set({
+            ...DEFAULT_TIMER_STATE,
+            timestamp: Date.now(),
+          });
+        },
       }),
       {
         name: LOCAL_STORAGE_KEY,
@@ -386,7 +353,59 @@ export const useTimerStore = create<TimerState>()(
           currentTaskName: state.currentTaskName,
           currentTaskDescription: state.currentTaskDescription,
           timestamp: Date.now(),
+          userPreferences: state.userPreferences,
         }),
+        // Custom state restoration logic
+        onRehydrateStorage: () => (state) => {
+          if (state) {
+            const timeSinceLastSave = Date.now() - (state.timestamp || 0);
+
+            // If too much time has passed, reset timer state but keep task info
+            if (timeSinceLastSave > EXPIRATION_THRESHOLD) {
+              console.log(
+                "Timer session expired, resetting timer but keeping task"
+              );
+              state.isActive = false;
+              state.mode = "work";
+              state.timeRemaining =
+                (state.userPreferences?.pomodoro_working_interval || 25) * 60;
+              return;
+            }
+
+            // Handle timer continuation if it was active
+            if (state.isActive && timeSinceLastSave < EXPIRATION_THRESHOLD) {
+              const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
+              const newTime = state.timeRemaining - elapsedSeconds;
+
+              if (newTime > 0) {
+                // Timer still has time remaining - keep it running
+                state.timeRemaining = newTime;
+                state.isActive = true; // Continue running if it was active
+                console.log(
+                  `Timer restored and continuing: ${Math.floor(
+                    newTime / 60
+                  )}:${(newTime % 60)
+                    .toString()
+                    .padStart(2, "0")} remaining for task "${
+                    state.currentTaskName
+                  }"`
+                );
+              } else {
+                // Timer would have expired, reset but keep task
+                state.isActive = false;
+                state.mode = "work";
+                state.timeRemaining =
+                  (state.userPreferences?.pomodoro_working_interval || 25) * 60;
+                console.log(
+                  "Timer expired during absence, reset timer but kept task"
+                );
+              }
+            }
+
+            // Update timestamp
+            state.timestamp = Date.now();
+          }
+        },
       }
     ),
     { name: "timer-store" }
@@ -507,13 +526,11 @@ export const initializeTimer = async () => {
   // Don't initialize in test environment
   if (process.env.NODE_ENV === "test") return;
 
-  // Restore state from localStorage if available
-  const restoredState = getInitialTimerState();
-  if (restoredState !== DEFAULT_TIMER_STATE) {
-    useTimerStore.setState(restoredState);
-  }
+  // Zustand persist middleware will automatically restore state from localStorage
+  // with our custom onRehydrateStorage logic handling timer continuation
 
   const { initializeFromStats } = useTimerStore.getState();
   await initializeFromStats();
+
   startTimerInterval();
 };

@@ -66,15 +66,37 @@ const PomodoroTimer: React.FC = () => {
                         </p>
                       ) : (
                         <>
+                          {/* Task name - always show if available */}
                           {currentTaskName && (
-                            <p className="text-xl font-semibold text-text-DEFAULT mb-2">
-                              {currentTaskName}
-                            </p>
+                            <div className="mb-4">
+                              <p className="text-lg md:text-xl font-semibold text-text-DEFAULT mb-1">
+                                {currentTaskName}
+                              </p>
+                              {currentTaskDescription && (
+                                <p
+                                  className="text-sm text-text-secondary max-w-48 mx-auto overflow-hidden"
+                                  style={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  }}
+                                >
+                                  {currentTaskDescription}
+                                </p>
+                              )}
+                            </div>
                           )}
 
                           <div className="text-5xl md:text-6xl font-bold font-mono text-text-DEFAULT">
                             {formatTime(timeRemaining)}
                           </div>
+
+                          {/* Show task status when no task is selected */}
+                          {!currentTaskName && (
+                            <p className="text-sm text-text-secondary mt-2">
+                              Drag a task here to start focusing
+                            </p>
+                          )}
                         </>
                       )}
                       <div className="flex gap-2 justify-center mt-4">
@@ -103,18 +125,29 @@ const PomodoroTimer: React.FC = () => {
             <div className="flex justify-center" tabIndex={0}>
               <Button
                 onClick={handleStartPause}
-                variant="slate"
+                variant={isActive ? "destructive" : "default"}
                 size="fat"
-                className="rounded-full"
-                aria-label="Start/Pause timer"
+                className={cn(
+                  "rounded-full transition-all duration-200 min-w-[120px]",
+                  isActive
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-green-500 hover:bg-green-600 text-white"
+                )}
+                aria-label={isActive ? "Pause timer" : "Start timer"}
+                disabled={!currentTaskName && !isActive} // Disable start if no task selected
               >
                 <div className="flex items-center gap-2 justify-center">
                   {isActive ? (
-                    <Pause className="h-5 w-5" />
+                    <>
+                      <Pause className="h-5 w-5" />
+                      <span>Pause</span>
+                    </>
                   ) : (
-                    <Play className="h-5 w-5" />
+                    <>
+                      <Play className="h-5 w-5" />
+                      <span>Start</span>
+                    </>
                   )}
-                  <span>{isActive ? "Pause" : "Start"}</span>
                 </div>
               </Button>
             </div>
@@ -122,9 +155,24 @@ const PomodoroTimer: React.FC = () => {
               <p className="text-text-light text-xs md:text-sm font-medium">
                 Completed: {pomodorosCompleted}
               </p>
-              {currentTaskDescription && (
+              {/* Task status indicator */}
+              {currentTaskName && (
+                <div className="text-xs text-text-secondary">
+                  {isActive ? (
+                    <span className="text-green-500 font-medium">
+                      ● In Progress
+                    </span>
+                  ) : (
+                    <span className="text-yellow-500 font-medium">
+                      ● Paused
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* Full task description for longer descriptions */}
+              {currentTaskDescription && currentTaskDescription.length > 50 && (
                 <div className="text-sm text-text-secondary mt-4 max-h-20 overflow-y-auto px-4">
-                  <p className="font-semibold">Description:</p>
+                  <p className="font-semibold mb-1">Full Description:</p>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{

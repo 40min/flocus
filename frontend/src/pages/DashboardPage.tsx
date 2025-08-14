@@ -10,19 +10,16 @@ import {
   DragStartEvent,
 } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
+import { useTimerStore } from "../stores/timerStore";
 import { useUpdateTask } from "../hooks/useTasks";
 import { Task } from "types/task";
 import DailyStats from "components/DailyStats";
 
 const DashboardPage: React.FC = () => {
-  const {
-    setCurrentTaskId,
-    setCurrentTaskName,
-    setCurrentTaskDescription,
-    currentTaskId,
-    setIsActive,
-    isActive,
-  } = useTimer();
+  const { currentTaskId, setIsActive, isActive } = useTimer();
+
+  // Get the setCurrentTask function directly from the store
+  const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
   const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
@@ -58,9 +55,7 @@ const DashboardPage: React.FC = () => {
 
       if (taskToStart) {
         try {
-          setCurrentTaskId(taskId);
-          setCurrentTaskName(taskToStart.title);
-          setCurrentTaskDescription(taskToStart.description);
+          setCurrentTask(taskId, taskToStart.title, taskToStart.description);
 
           await updateTask({
             taskId: taskId,

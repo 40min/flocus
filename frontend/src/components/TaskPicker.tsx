@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Task } from "../types/task";
-import { useTasksByCategory } from "../hooks/useTasks";
+import { usePendingTasksByCategory } from "../hooks/useTasks";
 import { Button } from "@/components/ui/button";
 
 interface TaskPickerProps {
@@ -17,7 +17,11 @@ const TaskPicker: React.FC<TaskPickerProps> = ({
   onSelectTask,
   onClose,
 }) => {
-  const { data: tasks, isLoading, error } = useTasksByCategory(categoryId);
+  const {
+    data: tasks,
+    isLoading,
+    error,
+  } = usePendingTasksByCategory(categoryId);
   const [animationParent] = useAutoAnimate({
     duration: 200,
     easing: "ease-in-out",

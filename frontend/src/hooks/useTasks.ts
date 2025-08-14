@@ -1,17 +1,25 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { deleteTask, getAllTasks, updateTask } from '../services/taskService';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteTask, getAllTasks, updateTask } from "../services/taskService";
 
 export const useTasks = () => {
   return useQuery({
-    queryKey: ['tasks'],
+    queryKey: ["tasks"],
     queryFn: () => getAllTasks(),
   });
 };
 
 export const useTasksByCategory = (categoryId: string) => {
   return useQuery({
-    queryKey: ['tasks', { categoryId }],
+    queryKey: ["tasks", { categoryId }],
     queryFn: () => getAllTasks(categoryId),
+    enabled: !!categoryId,
+  });
+};
+
+export const usePendingTasksByCategory = (categoryId: string) => {
+  return useQuery({
+    queryKey: ["tasks", { categoryId, status: "pending" }],
+    queryFn: () => getAllTasks(categoryId, "pending"),
     enabled: !!categoryId,
   });
 };
@@ -19,9 +27,10 @@ export const useTasksByCategory = (categoryId: string) => {
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ taskId, taskData }: { taskId: string; taskData: any }) => updateTask(taskId, taskData),
+    mutationFn: ({ taskId, taskData }: { taskId: string; taskData: any }) =>
+      updateTask(taskId, taskData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 };
@@ -31,8 +40,8 @@ export const useDeleteTask = () => {
   return useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['dailyPlan', 'today'] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
     },
   });
 };

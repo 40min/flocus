@@ -10,9 +10,16 @@ import { ApiError, NotFoundError } from "../errors/errors";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import api from "./api";
 
-export const getAllTasks = async (categoryId?: string): Promise<Task[]> => {
+export const getAllTasks = async (
+  categoryId?: string,
+  status?: string
+): Promise<Task[]> => {
   try {
-    const config = categoryId ? { params: { categoryId } } : {};
+    const params: any = {};
+    if (categoryId) params.categoryId = categoryId;
+    if (status) params.status = status;
+
+    const config = Object.keys(params).length > 0 ? { params } : {};
     const response = await api.get<Task[]>(API_ENDPOINTS.TASKS_BASE, config);
     return response.data;
   } catch (error) {

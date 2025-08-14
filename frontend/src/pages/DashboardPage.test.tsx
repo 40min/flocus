@@ -37,9 +37,44 @@ jest.mock("../services/userDailyStatsService");
 jest.mock("../stores/timerStore", () => ({
   useTimerStore: jest.fn().mockImplementation((selector) => {
     const state = {
+      // Core timer state
+      mode: "work" as const,
+      timeRemaining: 1500,
+      isActive: false,
+      pomodorosCompleted: 0,
+      currentTaskId: undefined,
+      currentTaskName: undefined,
+      currentTaskDescription: undefined,
+      timestamp: Date.now(),
+      userPreferences: undefined,
+
+      // Actions
+      setMode: jest.fn(),
+      setTimeRemaining: jest.fn(),
+      setIsActive: jest.fn(),
+      setPomodorosCompleted: jest.fn(),
       setCurrentTask: mockSetCurrentTask,
-      clearTimerState: mockClearTimerState,
       setUserPreferences: mockSetUserPreferences,
+
+      // Timer controls
+      startPause: jest.fn(),
+      reset: jest.fn(),
+      skip: jest.fn(),
+      stopCurrentTask: jest.fn(),
+      resetForNewTask: jest.fn(),
+      markTaskAsDone: jest.fn(),
+      clearTimerState: mockClearTimerState,
+
+      // Utility functions
+      formatTime: jest.fn(),
+      getDurationMap: jest.fn(),
+      getTimerColors: jest.fn(),
+      getModeText: jest.fn(),
+
+      // Internal actions
+      switchToNextMode: jest.fn(),
+      initializeFromStats: jest.fn(),
+      tick: jest.fn(),
     };
     return selector ? selector(state) : state;
   }),
@@ -134,9 +169,44 @@ describe("DashboardPage - handleDragEnd", () => {
     // Reset the useTimerStore mock
     mockUseTimerStore.mockImplementation((selector) => {
       const state = {
+        // Core timer state
+        mode: "work" as const,
+        timeRemaining: 1500,
+        isActive: false,
+        pomodorosCompleted: 0,
+        currentTaskId: undefined,
+        currentTaskName: undefined,
+        currentTaskDescription: undefined,
+        timestamp: Date.now(),
+        userPreferences: undefined,
+
+        // Actions
+        setMode: jest.fn(),
+        setTimeRemaining: jest.fn(),
+        setIsActive: jest.fn(),
+        setPomodorosCompleted: jest.fn(),
         setCurrentTask: mockSetCurrentTask,
-        clearTimerState: mockClearTimerState,
         setUserPreferences: mockSetUserPreferences,
+
+        // Timer controls
+        startPause: jest.fn(),
+        reset: jest.fn(),
+        skip: jest.fn(),
+        stopCurrentTask: jest.fn(),
+        resetForNewTask: jest.fn(),
+        markTaskAsDone: jest.fn(),
+        clearTimerState: mockClearTimerState,
+
+        // Utility functions
+        formatTime: jest.fn(),
+        getDurationMap: jest.fn(),
+        getTimerColors: jest.fn(),
+        getModeText: jest.fn(),
+
+        // Internal actions
+        switchToNextMode: jest.fn(),
+        initializeFromStats: jest.fn(),
+        tick: jest.fn(),
       };
       return selector ? selector(state) : state;
     });

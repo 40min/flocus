@@ -8,11 +8,13 @@ import { useTodayDailyPlan } from "../hooks/useDailyPlan";
 import { useUpdateTask } from "../hooks/useTasks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getTodayStats } from "../services/userDailyStatsService";
+import { useTimerStore } from "../stores/timerStore";
 
 // Mock hooks
 jest.mock("../hooks/useDailyPlan");
 jest.mock("../hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
+jest.mock("../stores/timerStore");
 
 // Variables to hold mock functions for SharedTimerContext
 const mockSetCurrentTaskId = jest.fn();
@@ -21,6 +23,7 @@ const mockSetCurrentTaskDescription = jest.fn();
 const mockHandleStartPause = jest.fn();
 const mockResetForNewTask = jest.fn();
 const mockHandleMarkAsDone = jest.fn(); // Added mock for handleMarkAsDone
+const mockSetCurrentTask = jest.fn();
 
 // Mock SharedTimerContext
 jest.mock("../hooks/useTimer", () => ({
@@ -41,6 +44,24 @@ jest.mock("../hooks/useTimer", () => ({
     setIsActive: jest.fn(),
     handleMarkAsDone: mockHandleMarkAsDone, // Added mock for handleMarkAsDone
   })),
+}));
+
+// Mock TimerStore
+const mockClearTimerState = jest.fn();
+const mockSetUserPreferences = jest.fn();
+
+jest.mock("../stores/timerStore", () => ({
+  useTimerStore: jest.fn((selector) => {
+    const state = {
+      setCurrentTask: mockSetCurrentTask,
+      clearTimerState: mockClearTimerState,
+      setUserPreferences: mockSetUserPreferences,
+    };
+    return selector ? selector(state) : state;
+  }),
+  initializeTimer: jest.fn(),
+  startTimerInterval: jest.fn(),
+  stopTimerInterval: jest.fn(),
 }));
 
 // Variable to capture onDragEnd from the DndContext mock
@@ -218,9 +239,9 @@ describe("DashboardPage - handleDragEnd", () => {
     });
 
     expect(mockResetForNewTask).not.toHaveBeenCalled();
-    expect(mockSetCurrentTaskId).toHaveBeenCalledWith("task2");
-    expect(mockSetCurrentTaskName).toHaveBeenCalledWith("New Task To Drag");
-    expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith(
+    expect(mockSetCurrentTask).toHaveBeenCalledWith(
+      "task2",
+      "New Task To Drag",
       "description for task 2"
     );
   });
@@ -262,9 +283,9 @@ describe("DashboardPage - handleDragEnd", () => {
     });
 
     expect(mockResetForNewTask).not.toHaveBeenCalled();
-    expect(mockSetCurrentTaskId).toHaveBeenCalledWith("task2");
-    expect(mockSetCurrentTaskName).toHaveBeenCalledWith("New Task To Drag");
-    expect(mockSetCurrentTaskDescription).toHaveBeenCalledWith(
+    expect(mockSetCurrentTask).toHaveBeenCalledWith(
+      "task2",
+      "New Task To Drag",
       "description for task 2"
     );
   });
@@ -424,7 +445,7 @@ describe("DashboardPage - handleDragEnd", () => {
     expect(mockHandleStartPause).not.toHaveBeenCalled();
   });
 
-  it("should not send redundant status update for previous task when new task is dragged to pomodoro zone", async () => {
+  it("should set previous task to pending when new task is dragged to pomodoro zone", async () => {
     const previousTaskId = "task1";
     const newTaskId = "task2";
     const mockMutateAsync = jest.fn().mockResolvedValue({});
@@ -480,15 +501,14 @@ describe("DashboardPage - handleDragEnd", () => {
       await capturedOnDragEnd(dragEndEvent);
     });
 
-    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+    expect(mockMutateAsync).toHaveBeenCalledWith({
+      taskId: previousTaskId,
+      taskData: { status: "pending" },
+    });
     expect(mockMutateAsync).toHaveBeenCalledWith({
       taskId: newTaskId,
       taskData: { status: "in_progress" },
     });
-    expect(mockMutateAsync).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskId: previousTaskId,
-      })
-    );
   });
 });

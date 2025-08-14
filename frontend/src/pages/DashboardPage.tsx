@@ -55,6 +55,14 @@ const DashboardPage: React.FC = () => {
 
       if (taskToStart) {
         try {
+          // If there's a current task in progress, set it to pending first
+          if (currentTaskId) {
+            await updateTask({
+              taskId: currentTaskId,
+              taskData: { status: "pending" },
+            });
+          }
+
           setCurrentTask(taskId, taskToStart.title, taskToStart.description);
 
           await updateTask({

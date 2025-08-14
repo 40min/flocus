@@ -152,6 +152,13 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         ) {
           // If the current task is explicitly set to 'in_progress' via the modal, reset the timer
           await resetForNewTask();
+        } else if (
+          editingTask.id !== currentTaskId &&
+          data.status === "in_progress" &&
+          currentTaskId
+        ) {
+          // If a different task is being set to 'in_progress' while another task is current, stop the current task
+          await stopCurrentTask();
         }
         await taskService.updateTask(
           editingTask.id,

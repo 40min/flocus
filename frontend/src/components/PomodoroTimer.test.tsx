@@ -55,6 +55,12 @@ describe("PomodoroTimer", () => {
   });
 
   it("calls handleStartPause when start/pause button is clicked", () => {
+    // Add a task so the start button is enabled
+    mockUseTimer.mockReturnValue({
+      ...mockContextValue,
+      currentTaskName: "Test Task",
+    });
+
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByRole("button", { name: /start/i }));
     expect(mockContextValue.handleStartPause).toHaveBeenCalledTimes(1);
@@ -107,12 +113,12 @@ describe("PomodoroTimer", () => {
 
     expect(screen.getByText(taskName)).toBeInTheDocument();
 
-    // The description is rendered in two places
+    // The description is rendered in the timer circle
     const descriptionElements = screen.getAllByText(taskDescription);
     expect(descriptionElements).toHaveLength(1);
 
-    // The "Description:" label should also be present
-    expect(screen.getByText("Description:")).toBeInTheDocument();
+    // For longer descriptions, there should be a "Full Description:" label
+    // But this description is short, so it won't show the full description section
   });
 
   it("does not display the task description section when no description is provided", () => {
@@ -125,12 +131,29 @@ describe("PomodoroTimer", () => {
     render(<PomodoroTimer />);
 
     expect(screen.getByText("A task without description")).toBeInTheDocument();
-    expect(screen.queryByText("Description:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Full Description:")).not.toBeInTheDocument();
+  });
+
+  it("displays full description section for long descriptions", () => {
+    const longDescription =
+      "This is a very long description that exceeds 50 characters and should trigger the full description section to appear below the timer.";
+    mockUseTimer.mockReturnValue({
+      ...mockContextValue,
+      currentTaskName: "Task with long description",
+      currentTaskDescription: longDescription,
+    });
+
+    render(<PomodoroTimer />);
+
+    expect(screen.getByText("Full Description:")).toBeInTheDocument();
+    // Use getAllByText since the description appears in multiple places
+    const descriptionElements = screen.getAllByText(longDescription);
+    expect(descriptionElements.length).toBeGreaterThan(0);
   });
 
   it("renders markdown content in the task description", () => {
     const markdownDescription =
-      "A description with a [link](http://example.com) and **bold text**.";
+      "A very long description with a [link](http://example.com) and **bold text** that exceeds fifty characters.";
     mockUseTimer.mockReturnValue({
       ...mockContextValue,
       currentTaskDescription: markdownDescription,

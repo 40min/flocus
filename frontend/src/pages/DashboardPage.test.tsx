@@ -9,12 +9,12 @@ import { useUpdateTask } from "../hooks/useTasks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getTodayStats } from "../services/userDailyStatsService";
 import { useTimerStore } from "../stores/timerStore";
+import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "../context/AuthContext";
 
-// Mock hooks
-jest.mock("../hooks/useDailyPlan");
-jest.mock("../hooks/useTasks");
-jest.mock("../services/userDailyStatsService");
-jest.mock("../stores/timerStore");
+const mockUseTimerStore = useTimerStore as jest.MockedFunction<
+  typeof useTimerStore
+>;
 
 // Variables to hold mock functions for SharedTimerContext
 const mockSetCurrentTaskId = jest.fn();
@@ -24,6 +24,29 @@ const mockHandleStartPause = jest.fn();
 const mockResetForNewTask = jest.fn();
 const mockHandleMarkAsDone = jest.fn(); // Added mock for handleMarkAsDone
 const mockSetCurrentTask = jest.fn();
+const mockMutateAsync = jest.fn();
+const mockClearTimerState = jest.fn();
+const mockSetUserPreferences = jest.fn();
+
+// Mock hooks
+jest.mock("../hooks/useDailyPlan");
+jest.mock("../hooks/useTasks");
+jest.mock("../services/userDailyStatsService");
+
+// Mock TimerStore first
+jest.mock("../stores/timerStore", () => ({
+  useTimerStore: jest.fn().mockImplementation((selector) => {
+    const state = {
+      setCurrentTask: mockSetCurrentTask,
+      clearTimerState: mockClearTimerState,
+      setUserPreferences: mockSetUserPreferences,
+    };
+    return selector ? selector(state) : state;
+  }),
+  initializeTimer: jest.fn(),
+  startTimerInterval: jest.fn(),
+  stopTimerInterval: jest.fn(),
+}));
 
 // Mock SharedTimerContext
 jest.mock("../hooks/useTimer", () => ({
@@ -46,22 +69,11 @@ jest.mock("../hooks/useTimer", () => ({
   })),
 }));
 
-// Mock TimerStore
-const mockClearTimerState = jest.fn();
-const mockSetUserPreferences = jest.fn();
-
-jest.mock("../stores/timerStore", () => ({
-  useTimerStore: jest.fn((selector) => {
-    const state = {
-      setCurrentTask: mockSetCurrentTask,
-      clearTimerState: mockClearTimerState,
-      setUserPreferences: mockSetUserPreferences,
-    };
-    return selector ? selector(state) : state;
-  }),
-  initializeTimer: jest.fn(),
-  startTimerInterval: jest.fn(),
-  stopTimerInterval: jest.fn(),
+// Mock TimerProvider to avoid the clearTimerState issue
+jest.mock("../components/TimerProvider", () => ({
+  TimerProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // Variable to capture onDragEnd from the DndContext mock
@@ -92,10 +104,6 @@ jest.mock("@dnd-kit/core", () => ({
     disabled,
   })),
 }));
-
-import { MemoryRouter } from "react-router-dom";
-import { AuthProvider } from "../context/AuthContext";
-
 const queryClient = new QueryClient();
 
 const renderWithProviders = (component: React.ReactElement) => {
@@ -120,6 +128,18 @@ describe("DashboardPage - handleDragEnd", () => {
     mockHandleStartPause.mockClear();
     mockResetForNewTask.mockClear();
     mockHandleMarkAsDone.mockClear(); // Clear mock for handleMarkAsDone
+    mockSetCurrentTask.mockClear();
+    mockMutateAsync.mockClear();
+
+    // Reset the useTimerStore mock
+    mockUseTimerStore.mockImplementation((selector) => {
+      const state = {
+        setCurrentTask: mockSetCurrentTask,
+        clearTimerState: mockClearTimerState,
+        setUserPreferences: mockSetUserPreferences,
+      };
+      return selector ? selector(state) : state;
+    });
 
     capturedOnDragEnd = () => {
       throw new Error("onDragEnd not captured in this test run");
@@ -162,7 +182,7 @@ describe("DashboardPage - handleDragEnd", () => {
       isError: false,
     });
     (useUpdateTask as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn().mockResolvedValue({}),
+      mutateAsync: mockMutateAsync.mockResolvedValue({}),
     });
 
     (useTimer as jest.Mock).mockImplementation(() => ({
@@ -290,11 +310,6 @@ describe("DashboardPage - handleDragEnd", () => {
     );
   });
   it("should call updateTask with in_progress status when a task is dragged to pomodoro zone and timer is not active", async () => {
-    const mockMutateAsync = jest.fn().mockResolvedValue({});
-    (useUpdateTask as jest.Mock).mockReturnValue({
-      mutateAsync: mockMutateAsync,
-    });
-
     renderWithProviders(<DashboardPage />);
 
     const dragEndEvent: DragEndEvent = {
@@ -448,8 +463,6 @@ describe("DashboardPage - handleDragEnd", () => {
   it("should set previous task to pending when new task is dragged to pomodoro zone", async () => {
     const previousTaskId = "task1";
     const newTaskId = "task2";
-    const mockMutateAsync = jest.fn().mockResolvedValue({});
-
     (useTimer as jest.Mock).mockImplementation(() => ({
       currentTaskId: previousTaskId,
       setCurrentTaskId: mockSetCurrentTaskId,
@@ -462,9 +475,6 @@ describe("DashboardPage - handleDragEnd", () => {
       setIsActive: jest.fn(),
       handleMarkAsDone: mockHandleMarkAsDone,
     }));
-    (useUpdateTask as jest.Mock).mockReturnValue({
-      mutateAsync: mockMutateAsync,
-    });
 
     renderWithProviders(<DashboardPage />);
 

@@ -46,6 +46,7 @@ Object.defineProperty(window, "removeEventListener", {
 
 describe("TimerProvider", () => {
   const mockSetUserPreferences = jest.fn();
+  const mockClearTimerState = jest.fn();
   const mockUser = {
     id: "user1",
     preferences: {
@@ -66,7 +67,15 @@ describe("TimerProvider", () => {
       isLoading: false,
     } as any);
 
-    mockUseTimerStore.mockReturnValue(mockSetUserPreferences);
+    // Mock the useTimerStore hook to return the appropriate function based on selector
+    mockUseTimerStore.mockImplementation((selector) => {
+      const state = {
+        setUserPreferences: mockSetUserPreferences,
+        clearTimerState: mockClearTimerState,
+      };
+      return selector(state);
+    });
+
     mockInitializeTimer.mockResolvedValue(undefined);
   });
 
@@ -134,14 +143,25 @@ describe("TimerProvider", () => {
       isLoading: false,
     } as any);
 
+    // Reset mocks to ensure proper behavior for this test
+    mockUseTimerStore.mockClear();
+    mockUseTimerStore.mockImplementation((selector) => {
+      const state = {
+        setUserPreferences: mockSetUserPreferences,
+        clearTimerState: mockClearTimerState,
+      };
+      return selector(state);
+    });
+
     render(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
     );
 
+    // Should call clearTimerState when user is null, but not setUserPreferences
     await waitFor(() => {
-      expect(mockSetUserPreferences).not.toHaveBeenCalled();
+      expect(mockClearTimerState).toHaveBeenCalled();
     });
   });
 

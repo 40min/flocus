@@ -492,13 +492,33 @@ export const useTimerColors = () => {
 };
 
 export const useTimerModeText = () => {
+  const mode = useTimerStore((state) => state.mode);
+  return useMemo(() => {
+    switch (mode) {
+      case "work":
+        return "Focus";
+      case "shortBreak":
+        return "Short Break";
+      case "longBreak":
+        return "Long Break";
+      default:
+        return "";
+    }
+  }, [mode]);
+};
+
+export const useTimerButtonStates = () => {
+  const mode = useTimerStore((state) => state.mode);
+  const isActive = useTimerStore((state) => state.isActive);
+  const currentTask = useTimerCurrentTask();
+
   return useMemo(
     () => ({
-      work: "Focus",
-      shortBreak: "Short Break",
-      longBreak: "Long Break",
+      resetDisabled: !currentTask?.id,
+      skipBreakVisible: mode !== "work",
+      skipBreakEnabled: mode !== "work" && isActive,
     }),
-    []
+    [mode, isActive, currentTask]
   );
 };
 export const useTimerActions = () => {

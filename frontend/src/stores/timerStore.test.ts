@@ -2,7 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import { useTimerStore, initializeTimer } from "./timerStore";
 import * as taskService from "../services/taskService";
 import * as userDailyStatsService from "../services/userDailyStatsService";
-import * as notificationService from "../services/notificationService";
 
 // Mock dependencies
 jest.mock("../services/taskService");

@@ -56,11 +56,12 @@ describe("PomodoroTimer - Task Display Integration", () => {
 
     render(<PomodoroTimer />, { wrapper: createWrapper() });
 
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
     expect(
       screen.getByText("Complete project documentation")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Write comprehensive docs for the new feature")
+      screen.getByText("(Write comprehensive docs for the new feature)")
     ).toBeInTheDocument();
   });
 
@@ -86,7 +87,8 @@ describe("PomodoroTimer - Task Display Integration", () => {
     const button = screen.getByRole("button", { name: /pause timer/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveClass("bg-red-500");
-    expect(screen.getByText("Pause")).toBeInTheDocument();
+    // Button now only shows icon, no text
+    expect(screen.queryByText("Pause")).not.toBeInTheDocument();
   });
 
   it("shows correct button state when timer is paused", () => {
@@ -101,7 +103,8 @@ describe("PomodoroTimer - Task Display Integration", () => {
     const button = screen.getByRole("button", { name: /start timer/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveClass("bg-green-500");
-    expect(screen.getByText("Start")).toBeInTheDocument();
+    // Button now only shows icon, no text
+    expect(screen.queryByText("Start")).not.toBeInTheDocument();
   });
 
   it("disables start button when no task is selected", () => {
@@ -113,27 +116,30 @@ describe("PomodoroTimer - Task Display Integration", () => {
     expect(button).toBeDisabled();
   });
 
-  it("shows task status indicator when task is active", () => {
+  it("shows task name and description in current task format", () => {
     mockUseTimer.mockReturnValue({
       ...mockTimerData,
       isActive: true,
       currentTaskName: "Test Task",
+      currentTaskDescription: "Task description",
     });
 
     render(<PomodoroTimer />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("● In Progress")).toBeInTheDocument();
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Test Task")).toBeInTheDocument();
+    expect(screen.getByText("(Task description)")).toBeInTheDocument();
   });
 
-  it("shows paused status when task is selected but timer is not active", () => {
+  it("does not show pomos done count in timer panel", () => {
     mockUseTimer.mockReturnValue({
       ...mockTimerData,
-      isActive: false,
-      currentTaskName: "Test Task",
+      pomodorosCompleted: 3,
     });
 
     render(<PomodoroTimer />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("● Paused")).toBeInTheDocument();
+    // Pomos Done is now in the top right corner (DailyStats), not in the timer panel
+    expect(screen.queryByText("Pomos Done: 3")).not.toBeInTheDocument();
   });
 });

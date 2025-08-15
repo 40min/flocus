@@ -277,9 +277,9 @@ export const useTimerStore = create<TimerState>()(
         startPause: async () => {
           const { isActive, currentTaskId, mode } = get();
 
-          // Prevent starting tasks during break modes
-          if (!isActive && mode !== "work") {
-            console.warn("Cannot start tasks during break mode");
+          // Allow starting break timers, but prevent starting work tasks without a task assigned
+          if (!isActive && mode === "work" && !currentTaskId) {
+            console.warn("Cannot start work timer without a task assigned");
             return;
           }
 

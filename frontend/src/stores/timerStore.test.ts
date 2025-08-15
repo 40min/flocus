@@ -71,8 +71,13 @@ describe("timerStore", () => {
       expect(result.current.pomodorosCompleted).toBe(0);
     });
 
-    it("should start/pause timer", async () => {
+    it("should start/pause timer when task is assigned", async () => {
       const { result } = renderHook(() => useTimerStore());
+
+      // First assign a task
+      act(() => {
+        result.current.setCurrentTask("task1", "Test Task", "Description");
+      });
 
       await act(async () => {
         await result.current.startPause();
@@ -370,7 +375,7 @@ describe("timerStore", () => {
       expect(shouldBeActive).toBe(true);
     });
 
-    it("should prevent starting tasks during break mode", async () => {
+    it("should allow starting break timers", async () => {
       const { result } = renderHook(() => useTimerStore());
 
       act(() => {
@@ -379,15 +384,33 @@ describe("timerStore", () => {
         result.current.setCurrentTask("task1", "Test Task", "Description");
       });
 
-      // Try to start the timer during break mode
+      // Try to start the timer during break mode - should now work
+      await act(async () => {
+        await result.current.startPause();
+      });
+
+      // Timer should now be active
+      expect(result.current.isActive).toBe(true);
+      // Task should still be assigned
+      expect(result.current.currentTaskId).toBe("task1");
+    });
+
+    it("should prevent starting work timer without a task", async () => {
+      const { result } = renderHook(() => useTimerStore());
+
+      act(() => {
+        result.current.setMode("work");
+        result.current.setIsActive(false);
+        // No task assigned
+      });
+
+      // Try to start the timer in work mode without a task
       await act(async () => {
         await result.current.startPause();
       });
 
       // Timer should remain inactive
       expect(result.current.isActive).toBe(false);
-      // Task should still be assigned
-      expect(result.current.currentTaskId).toBe("task1");
     });
 
     it("should allow pausing during break mode", async () => {

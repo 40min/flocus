@@ -1,5 +1,4 @@
-import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import PomodoroTimer from "./PomodoroTimer";
 import { useTimer } from "../hooks/useTimer";
 
@@ -30,11 +29,7 @@ describe("PomodoroTimer", () => {
     timerColor: "border-gray-700",
     buttonBgColor: "bg-white hover:bg-gray-200",
     buttonTextColor: "text-gray-900",
-    modeText: {
-      work: "Focus",
-      shortBreak: "Short Break",
-      longBreak: "Long Break",
-    },
+    modeText: "Focus",
     currentTaskId: undefined,
     onTaskComplete: undefined,
     setCurrentTaskId: jest.fn(),
@@ -51,7 +46,8 @@ describe("PomodoroTimer", () => {
     expect(screen.getByText("25:00")).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument();
-    expect(screen.getByText("Completed: 0")).toBeInTheDocument();
+    // Pomos Done is now in the top right corner (DailyStats), not in the timer panel
+    expect(screen.queryByText("Pomos Done: 0")).not.toBeInTheDocument();
   });
 
   it("calls handleStartPause when start/pause button is clicked", () => {
@@ -97,7 +93,8 @@ describe("PomodoroTimer", () => {
     render(<PomodoroTimer />);
     expect(screen.getByText("05:00")).toBeInTheDocument();
 
-    expect(screen.getByText("Completed: 1")).toBeInTheDocument();
+    // Pomos Done is now in the top right corner (DailyStats), not in the timer panel
+    expect(screen.queryByText("Pomos Done: 1")).not.toBeInTheDocument();
   });
 
   it("displays the task name and description when provided", () => {
@@ -111,14 +108,9 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
     expect(screen.getByText(taskName)).toBeInTheDocument();
-
-    // The description is rendered in the timer circle
-    const descriptionElements = screen.getAllByText(taskDescription);
-    expect(descriptionElements).toHaveLength(1);
-
-    // For longer descriptions, there should be a "Full Description:" label
-    // But this description is short, so it won't show the full description section
+    expect(screen.getByText(`(${taskDescription})`)).toBeInTheDocument();
   });
 
   it("does not display the task description section when no description is provided", () => {
@@ -130,13 +122,15 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
     expect(screen.getByText("A task without description")).toBeInTheDocument();
-    expect(screen.queryByText("Full Description:")).not.toBeInTheDocument();
+    // No parentheses should be shown when there's no description
+    expect(screen.queryByText(/\(/)).not.toBeInTheDocument();
   });
 
-  it("displays full description section for long descriptions", () => {
+  it("displays long descriptions in parentheses format", () => {
     const longDescription =
-      "This is a very long description that exceeds 50 characters and should trigger the full description section to appear below the timer.";
+      "This is a very long description that exceeds 50 characters and should appear in parentheses.";
     mockUseTimer.mockReturnValue({
       ...mockContextValue,
       currentTaskName: "Task with long description",
@@ -145,45 +139,40 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
-    expect(screen.getByText("Full Description:")).toBeInTheDocument();
-    // Use getAllByText since the description appears in multiple places
-    const descriptionElements = screen.getAllByText(longDescription);
-    expect(descriptionElements.length).toBeGreaterThan(0);
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task with long description")).toBeInTheDocument();
+    expect(screen.getByText(`(${longDescription})`)).toBeInTheDocument();
   });
 
-  it("renders markdown content in the task description", () => {
+  it("displays markdown content as plain text in parentheses", () => {
     const markdownDescription =
-      "A very long description with a [link](http://example.com) and **bold text** that exceeds fifty characters.";
+      "A description with [link](http://example.com) and **bold text**.";
     mockUseTimer.mockReturnValue({
       ...mockContextValue,
+      currentTaskName: "Task with markdown",
       currentTaskDescription: markdownDescription,
     });
 
     render(<PomodoroTimer />);
 
-    // Check for the link
-    const links = screen.getAllByRole("link", { name: /link/i });
-    expect(links.length).toBe(1);
-    expect(links[0]).toHaveAttribute("href", "http://example.com");
-
-    // Check for the bold text
-    const boldElements = screen.getAllByText("bold text");
-    expect(boldElements.length).toBe(1);
-    expect(boldElements[0].tagName).toBe("STRONG"); // Assuming ReactMarkdown renders bold as <strong>
+    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task with markdown")).toBeInTheDocument();
+    // Markdown is displayed as plain text in parentheses now
+    expect(screen.getByText(`(${markdownDescription})`)).toBeInTheDocument();
   });
 
-  it("disables start button during break mode", () => {
+  it("enables start button during break mode", () => {
     mockUseTimer.mockReturnValue({
       ...mockContextValue,
       mode: "shortBreak",
       isBreak: true,
-      currentTaskName: "Test Task", // Task is assigned but we're in break mode
+      currentTaskName: "Test Task", // Task is assigned and we can start break timer
     });
 
     render(<PomodoroTimer />);
 
     const startButton = screen.getByRole("button", { name: /start/i });
-    expect(startButton).toBeDisabled();
+    expect(startButton).not.toBeDisabled();
   });
 
   it("enables start button when not in break mode and task is assigned", () => {
@@ -198,5 +187,106 @@ describe("PomodoroTimer", () => {
 
     const startButton = screen.getByRole("button", { name: /start/i });
     expect(startButton).not.toBeDisabled();
+  });
+
+  describe("Mode Indicator", () => {
+    it("displays mode indicator when timer is active", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        isActive: true,
+        modeText: "Focus",
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Focus")).toBeInTheDocument();
+    });
+
+    it("displays mode indicator when task is assigned", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        isActive: false,
+        currentTaskName: "Test Task",
+        modeText: "Focus",
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Focus")).toBeInTheDocument();
+    });
+
+    it("does not display mode indicator when timer is idle and no task assigned", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        isActive: false,
+        currentTaskName: undefined,
+        modeText: "Focus",
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.queryByText("Focus")).not.toBeInTheDocument();
+    });
+
+    it("displays correct mode text for short break", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        mode: "shortBreak",
+        isBreak: true,
+        isActive: true,
+        modeText: "Short Break",
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Short Break")).toBeInTheDocument();
+    });
+
+    it("displays correct mode text for long break", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        mode: "longBreak",
+        isBreak: true,
+        isActive: true,
+        modeText: "Long Break",
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Long Break")).toBeInTheDocument();
+    });
+
+    it("applies correct styling for work mode", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        isActive: true,
+        isBreak: false,
+        modeText: "Focus",
+      });
+
+      render(<PomodoroTimer />);
+
+      const modeIndicator = screen.getByText("Focus");
+      expect(modeIndicator).toHaveClass("text-xs");
+      expect(modeIndicator).toHaveClass("text-text-secondary/60");
+      expect(modeIndicator).toHaveClass("font-normal");
+    });
+
+    it("applies correct styling for break mode", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        mode: "shortBreak",
+        isActive: true,
+        isBreak: true,
+        modeText: "Short Break",
+      });
+
+      render(<PomodoroTimer />);
+
+      const modeIndicator = screen.getByText("Short Break");
+      expect(modeIndicator).toHaveClass("text-xs");
+      expect(modeIndicator).toHaveClass("text-text-secondary/60");
+      expect(modeIndicator).toHaveClass("font-normal");
+    });
   });
 });

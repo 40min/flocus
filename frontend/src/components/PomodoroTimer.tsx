@@ -1,7 +1,5 @@
 import React from "react";
 import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
@@ -11,7 +9,6 @@ const PomodoroTimer: React.FC = () => {
   const {
     timeRemaining,
     isActive,
-    pomodorosCompleted,
     handleStartPause,
     handleReset,
     handleSkip,
@@ -20,6 +17,7 @@ const PomodoroTimer: React.FC = () => {
     timerColor,
     currentTaskName,
     currentTaskDescription,
+    modeText,
   } = useTimer();
 
   const { setNodeRef, isOver } = useDroppable({
@@ -66,30 +64,18 @@ const PomodoroTimer: React.FC = () => {
                         </p>
                       ) : (
                         <>
-                          {/* Task name - always show if available */}
-                          {currentTaskName && (
-                            <div className="mb-4">
-                              <p className="text-lg md:text-xl font-semibold text-text-DEFAULT mb-1">
-                                {currentTaskName}
-                              </p>
-                              {currentTaskDescription && (
-                                <p
-                                  className="text-sm text-text-secondary max-w-48 mx-auto overflow-hidden"
-                                  style={{
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                  }}
-                                >
-                                  {currentTaskDescription}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
                           <div className="text-5xl md:text-6xl font-bold font-mono text-text-DEFAULT">
                             {formatTime(timeRemaining)}
                           </div>
+
+                          {/* Mode indicator - less visible, under timer counter */}
+                          {(isActive || currentTaskName) && modeText && (
+                            <div className="mt-2">
+                              <p className="text-xs text-text-secondary/60 font-normal">
+                                {modeText}
+                              </p>
+                            </div>
+                          )}
 
                           {/* Show task status when no task is selected */}
                           {!currentTaskName && (
@@ -99,20 +85,47 @@ const PomodoroTimer: React.FC = () => {
                           )}
                         </>
                       )}
-                      <div className="flex gap-2 justify-center mt-4">
+
+                      {/* Button row: Reset - Start/Stop - Skip */}
+                      <div className="flex items-center justify-between w-full max-w-xs mt-4 px-4">
                         <Button
                           onClick={handleReset}
                           variant="secondary"
                           size="icon"
                           aria-label="Reset timer"
+                          className="flex-shrink-0"
                         >
                           <RotateCcw className="h-4 w-4" />
                         </Button>
+
+                        <Button
+                          onClick={handleStartPause}
+                          variant={isActive ? "destructive" : "default"}
+                          size="default"
+                          className={cn(
+                            "rounded-full transition-all duration-200 w-12 h-12 flex-shrink-0",
+                            isActive
+                              ? "bg-red-300 hover:bg-red-600 text-white"
+                              : "bg-green-300 hover:bg-green-600 text-white"
+                          )}
+                          aria-label={isActive ? "Pause timer" : "Start timer"}
+                          disabled={
+                            !currentTaskName && !isActive // Only disable if no task selected and not active
+                          }
+                        >
+                          {isActive ? (
+                            <Pause className="h-6 w-6" />
+                          ) : (
+                            <Play className="h-6 w-6" />
+                          )}
+                        </Button>
+
                         <Button
                           onClick={handleSkip}
                           variant="secondary"
                           size="icon"
                           aria-label="Skip break"
+                          className="flex-shrink-0"
                         >
                           <SkipForward className="h-4 w-4" />
                         </Button>
@@ -122,87 +135,22 @@ const PomodoroTimer: React.FC = () => {
                 </div>
               </figure>
             </div>
-            <div className="flex justify-center" tabIndex={0}>
-              <Button
-                onClick={handleStartPause}
-                variant={isActive ? "destructive" : "default"}
-                size="fat"
-                className={cn(
-                  "rounded-full transition-all duration-200 min-w-[120px]",
-                  isActive
-                    ? "bg-red-500 hover:bg-red-600 text-white"
-                    : "bg-green-500 hover:bg-green-600 text-white"
-                )}
-                aria-label={isActive ? "Pause timer" : "Start timer"}
-                disabled={
-                  isBreak || (!currentTaskName && !isActive) // Disable during breaks or if no task selected
-                }
-              >
-                <div className="flex items-center gap-2 justify-center">
-                  {isActive ? (
-                    <>
-                      <Pause className="h-5 w-5" />
-                      <span>Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-5 w-5" />
-                      <span>Start</span>
-                    </>
-                  )}
-                </div>
-              </Button>
-            </div>
-            <div className="text-center space-y-2">
-              <p className="text-text-light text-xs md:text-sm font-medium">
-                Completed: {pomodorosCompleted}
-              </p>
-              {/* Task status indicator */}
-              {currentTaskName && (
-                <div className="text-xs text-text-secondary">
-                  {isActive ? (
-                    <span className="text-green-500 font-medium">
-                      ● In Progress
-                    </span>
-                  ) : (
-                    <span className="text-yellow-500 font-medium">
-                      ● Paused
+
+            {/* Current task display */}
+            {currentTaskName && (
+              <div className="text-center">
+                <p className="text-sm text-text-secondary">
+                  <span className="font-bold">Task:</span>{" "}
+                  <span className="text-text-DEFAULT">{currentTaskName}</span>
+                  {currentTaskDescription && (
+                    <span className="text-text-secondary">
+                      {" "}
+                      ({currentTaskDescription})
                     </span>
                   )}
-                </div>
-              )}
-              {/* Full task description for longer descriptions */}
-              {currentTaskDescription && currentTaskDescription.length > 50 && (
-                <div className="text-sm text-text-secondary mt-4 max-h-20 overflow-y-auto px-4">
-                  <p className="font-semibold mb-1">Full Description:</p>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ node, children, ...props }) => (
-                        <a
-                          className="text-primary-DEFAULT underline hover:text-primary-dark"
-                          {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            window.open(
-                              (
-                                props as React.AnchorHTMLAttributes<HTMLAnchorElement>
-                              ).href,
-                              "_blank"
-                            );
-                          }}
-                        >
-                          {children}
-                        </a>
-                      ),
-                    }}
-                  >
-                    {currentTaskDescription}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

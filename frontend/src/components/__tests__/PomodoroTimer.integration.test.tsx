@@ -56,7 +56,7 @@ describe("PomodoroTimer - Task Display Integration", () => {
 
     render(<PomodoroTimer />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(
       screen.getByText("Complete project documentation")
     ).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("PomodoroTimer - Task Display Integration", () => {
 
     const button = screen.getByRole("button", { name: /pause timer/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("bg-red-500");
+    expect(button).toHaveClass("bg-red-300");
     // Button now only shows icon, no text
     expect(screen.queryByText("Pause")).not.toBeInTheDocument();
   });
@@ -102,7 +102,7 @@ describe("PomodoroTimer - Task Display Integration", () => {
 
     const button = screen.getByRole("button", { name: /start timer/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("bg-green-500");
+    expect(button).toHaveClass("bg-green-300");
     // Button now only shows icon, no text
     expect(screen.queryByText("Start")).not.toBeInTheDocument();
   });
@@ -126,7 +126,7 @@ describe("PomodoroTimer - Task Display Integration", () => {
 
     render(<PomodoroTimer />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(screen.getByText("Test Task")).toBeInTheDocument();
     expect(screen.getByText("(Task description)")).toBeInTheDocument();
   });

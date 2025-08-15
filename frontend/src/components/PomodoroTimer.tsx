@@ -4,9 +4,10 @@ import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
 import { Button } from "@/components/ui/button";
-
+import { CircularProgress } from "@/components/ui";
 const PomodoroTimer: React.FC = () => {
   const {
+    mode,
     timeRemaining,
     isActive,
     handleStartPause,
@@ -19,6 +20,41 @@ const PomodoroTimer: React.FC = () => {
     currentTaskDescription,
     modeText,
   } = useTimer();
+
+  // Helper function to get session duration based on mode
+  const getSessionDuration = (currentMode: string): number => {
+    switch (currentMode) {
+      case "work":
+        return 25 * 60; // 25 minutes in seconds
+      case "shortBreak":
+        return 5 * 60; // 5 minutes in seconds
+      case "longBreak":
+        return 15 * 60; // 15 minutes in seconds
+      default:
+        return 25 * 60; // Default to work session
+    }
+  };
+
+  // Calculate progress for circular progress counter (0-1 range)
+  // Progress shows elapsed time in current session
+  const currentSessionDuration = getSessionDuration(mode);
+  const progressValue = React.useMemo(() => {
+    if (
+      !mode ||
+      typeof timeRemaining !== "number" ||
+      isNaN(timeRemaining) ||
+      currentSessionDuration <= 0
+    ) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      Math.min(
+        1,
+        (currentSessionDuration - timeRemaining) / currentSessionDuration
+      )
+    );
+  }, [mode, timeRemaining, currentSessionDuration]);
 
   const { setNodeRef, isOver } = useDroppable({
     id: "pomodoro-drop-zone",
@@ -44,11 +80,20 @@ const PomodoroTimer: React.FC = () => {
                 role="timer"
                 aria-label="Pomodoro Timer"
               >
-                <div className="relative">
+                <div className="relative flex items-center justify-center">
+                  {/* Circular progress counter positioned behind the timer */}
+                  <CircularProgress
+                    progress={progressValue}
+                    size={304} // Slightly larger than timer (288px + padding)
+                    strokeWidth={6}
+                    className="absolute"
+                  />
+
+                  {/* Timer circle */}
                   <div
                     ref={setNodeRef}
                     className={cn(
-                      "relative w-60 h-60 md:w-72 md:h-72 rounded-full bg-background-card border-2 shadow-lg transition-all duration-300 flex items-center justify-center",
+                      "relative w-60 h-60 md:w-72 md:h-72 rounded-full bg-background-card border-2 shadow-lg transition-all duration-300 flex items-center justify-center z-10",
                       timerColor,
                       isOver &&
                         "border-primary-light ring-4 ring-primary-light/20"

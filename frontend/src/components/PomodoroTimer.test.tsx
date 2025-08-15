@@ -108,7 +108,7 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(screen.getByText(taskName)).toBeInTheDocument();
     expect(screen.getByText(`(${taskDescription})`)).toBeInTheDocument();
   });
@@ -122,7 +122,7 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(screen.getByText("A task without description")).toBeInTheDocument();
     // No parentheses should be shown when there's no description
     expect(screen.queryByText(/\(/)).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(screen.getByText("Task with long description")).toBeInTheDocument();
     expect(screen.getByText(`(${longDescription})`)).toBeInTheDocument();
   });
@@ -155,7 +155,7 @@ describe("PomodoroTimer", () => {
 
     render(<PomodoroTimer />);
 
-    expect(screen.getByText("Current task:")).toBeInTheDocument();
+    expect(screen.getByText("Task:")).toBeInTheDocument();
     expect(screen.getByText("Task with markdown")).toBeInTheDocument();
     // Markdown is displayed as plain text in parentheses now
     expect(screen.getByText(`(${markdownDescription})`)).toBeInTheDocument();

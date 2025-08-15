@@ -37,3 +37,4 @@ export {
   DialogTitle,
   DialogDescription,
 } from "./dialog";
+export { default as CircularProgress } from "./circular-progress";

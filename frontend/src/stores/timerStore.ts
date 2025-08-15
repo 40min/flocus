@@ -192,8 +192,8 @@ export const useTimerStore = create<TimerState>()(
             mode,
             pomodorosCompleted,
             currentTaskName,
+            currentTaskId,
             userPreferences,
-            stopCurrentTask,
             getDurationMap,
           } = get();
 
@@ -204,7 +204,18 @@ export const useTimerStore = create<TimerState>()(
           const durationMap = getDurationMap();
 
           if (mode === "work") {
-            await stopCurrentTask();
+            // Update task status to pending but keep task assigned during break
+            if (currentTaskId) {
+              try {
+                await updateTask(currentTaskId, { status: "pending" });
+              } catch (error) {
+                console.error(
+                  "Failed to update task status to 'pending':",
+                  error
+                );
+              }
+            }
+
             const newPomodorosCount = pomodorosCompleted + 1;
             set({ pomodorosCompleted: newPomodorosCount });
 
@@ -264,7 +275,13 @@ export const useTimerStore = create<TimerState>()(
 
         // Start/pause timer
         startPause: async () => {
-          const { isActive, currentTaskId } = get();
+          const { isActive, currentTaskId, mode } = get();
+
+          // Prevent starting tasks during break modes
+          if (!isActive && mode !== "work") {
+            console.warn("Cannot start tasks during break mode");
+            return;
+          }
 
           if (currentTaskId) {
             try {

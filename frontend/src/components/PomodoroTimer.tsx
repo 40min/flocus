@@ -134,7 +134,9 @@ const PomodoroTimer: React.FC = () => {
                     : "bg-green-500 hover:bg-green-600 text-white"
                 )}
                 aria-label={isActive ? "Pause timer" : "Start timer"}
-                disabled={!currentTaskName && !isActive} // Disable start if no task selected
+                disabled={
+                  isBreak || (!currentTaskName && !isActive) // Disable during breaks or if no task selected
+                }
               >
                 <div className="flex items-center gap-2 justify-center">
                   {isActive ? (

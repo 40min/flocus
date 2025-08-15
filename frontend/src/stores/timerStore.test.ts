@@ -189,6 +189,44 @@ describe("timerStore", () => {
       expect(result.current.pomodorosCompleted).toBe(1);
     });
 
+    it("should set task to pending and keep task assigned when switching from work to break mode", async () => {
+      const { result } = renderHook(() => useTimerStore());
+
+      // Set up a work session with a task
+      act(() => {
+        result.current.setUserPreferences({
+          pomodoro_working_interval: 25,
+          pomodoro_timeout_minutes: 5,
+          pomodoro_long_timeout_minutes: 15,
+          system_notifications_enabled: false,
+          pomodoro_timer_sound: "default",
+        });
+        result.current.setMode("work");
+        result.current.setCurrentTask("task1", "Test Task", "Test Description");
+        result.current.setPomodorosCompleted(0);
+      });
+
+      // Switch to break mode (simulating timer expiration)
+      await act(async () => {
+        await result.current.switchToNextMode();
+      });
+
+      // Verify task status was updated to pending
+      expect(mockUpdateTask).toHaveBeenCalledWith("task1", {
+        status: "pending",
+      });
+
+      // Verify timer switched to break mode
+      expect(result.current.mode).toBe("shortBreak");
+      expect(result.current.timeRemaining).toBe(5 * 60);
+      expect(result.current.pomodorosCompleted).toBe(1);
+
+      // Verify task remains assigned during break (new behavior)
+      expect(result.current.currentTaskId).toBe("task1");
+      expect(result.current.currentTaskName).toBe("Test Task");
+      expect(result.current.currentTaskDescription).toBe("Test Description");
+    });
+
     it("should switch from work to long break after 4 pomodoros", async () => {
       const { result } = renderHook(() => useTimerStore());
 
@@ -331,6 +369,43 @@ describe("timerStore", () => {
       // The timer should remain active since it was active and still has time
       const shouldBeActive = mockState.isActive && newTime > 0;
       expect(shouldBeActive).toBe(true);
+    });
+
+    it("should prevent starting tasks during break mode", async () => {
+      const { result } = renderHook(() => useTimerStore());
+
+      act(() => {
+        result.current.setMode("shortBreak");
+        result.current.setIsActive(false);
+        result.current.setCurrentTask("task1", "Test Task", "Description");
+      });
+
+      // Try to start the timer during break mode
+      await act(async () => {
+        await result.current.startPause();
+      });
+
+      // Timer should remain inactive
+      expect(result.current.isActive).toBe(false);
+      // Task should still be assigned
+      expect(result.current.currentTaskId).toBe("task1");
+    });
+
+    it("should allow pausing during break mode", async () => {
+      const { result } = renderHook(() => useTimerStore());
+
+      act(() => {
+        result.current.setMode("shortBreak");
+        result.current.setIsActive(true); // Somehow active during break
+        result.current.setCurrentTask("task1", "Test Task", "Description");
+      });
+
+      // Should be able to pause during break mode
+      await act(async () => {
+        await result.current.startPause();
+      });
+
+      expect(result.current.isActive).toBe(false);
     });
   });
 });

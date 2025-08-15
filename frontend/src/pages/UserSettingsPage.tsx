@@ -292,6 +292,7 @@ const UserSettingsPage: React.FC = () => {
                 aria-label="Pomodoro working interval"
                 {...register("preferences.pomodoro_working_interval")}
               >
+                <option value={1}>1 minutes</option>
                 <option value={25}>25 minutes</option>
                 <option value={30}>30 minutes</option>
                 <option value={45}>45 minutes</option>
@@ -310,6 +311,7 @@ const UserSettingsPage: React.FC = () => {
                 aria-label="Pomodoro break duration"
                 {...register("preferences.pomodoro_timeout_minutes")}
               >
+                <option value={1}>1 minutes</option>
                 <option value={5}>5 minutes</option>
                 <option value={10}>10 minutes</option>
                 <option value={15}>15 minutes</option>

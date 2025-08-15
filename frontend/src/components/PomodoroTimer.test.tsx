@@ -171,4 +171,32 @@ describe("PomodoroTimer", () => {
     expect(boldElements.length).toBe(1);
     expect(boldElements[0].tagName).toBe("STRONG"); // Assuming ReactMarkdown renders bold as <strong>
   });
+
+  it("disables start button during break mode", () => {
+    mockUseTimer.mockReturnValue({
+      ...mockContextValue,
+      mode: "shortBreak",
+      isBreak: true,
+      currentTaskName: "Test Task", // Task is assigned but we're in break mode
+    });
+
+    render(<PomodoroTimer />);
+
+    const startButton = screen.getByRole("button", { name: /start/i });
+    expect(startButton).toBeDisabled();
+  });
+
+  it("enables start button when not in break mode and task is assigned", () => {
+    mockUseTimer.mockReturnValue({
+      ...mockContextValue,
+      mode: "work",
+      isBreak: false,
+      currentTaskName: "Test Task",
+    });
+
+    render(<PomodoroTimer />);
+
+    const startButton = screen.getByRole("button", { name: /start/i });
+    expect(startButton).not.toBeDisabled();
+  });
 });

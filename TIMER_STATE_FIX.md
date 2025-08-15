@@ -1,8 +1,12 @@
-# Timer State Persistence Fix - Frontend-Only Solution
+# Timer State Fixes
 
-## Issue
+## Issue 1: Timer State Persistence (RESOLVED)
 
 When a user starts a task, the timer starts ticking and the button updates to show "In progress". However, if the user reloads the browser page, all of this state is lost and the task appears as if it was never started.
+
+## Issue 2: Break Mode Task Unassignment (RESOLVED)
+
+When timer switches to "break" state it unassigns a task (this shouldn't happen), after this user is able to click "start" (wrong, in "break" mode user shouldn't be able to start any task, only controls on timer should be active).
 
 ## Root Cause
 
@@ -13,9 +17,13 @@ The timer state persistence had several issues:
 3. No proper handling of timer expiration during absence
 4. Redundant state restoration logic causing conflicts
 
-## Solution - Frontend-Only Approach
+## Solution 1 - Frontend-Only Persistence Approach (RESOLVED)
 
 Instead of relying on backend task status (which can be unreliable since multiple tasks can be "in_progress"), we implemented a robust frontend-only persistence solution using Zustand's persist middleware with custom restoration logic.
+
+## Solution 2 - Break Mode Task Retention (RESOLVED)
+
+Fixed the timer behavior during break modes to maintain task assignment and prevent inappropriate task starting during breaks.
 
 ### Key Principles:
 

@@ -389,36 +389,6 @@ export const useTimerStore = create<TimerState>()(
               return;
             }
 
-            // Handle timer continuation if it was active
-            if (state.isActive && timeSinceLastSave < EXPIRATION_THRESHOLD) {
-              const elapsedSeconds = Math.floor(timeSinceLastSave / 1000);
-              const newTime = state.timeRemaining - elapsedSeconds;
-
-              if (newTime > 0) {
-                // Timer still has time remaining - keep it running
-                state.timeRemaining = newTime;
-                state.isActive = true; // Continue running if it was active
-                console.log(
-                  `Timer restored and continuing: ${Math.floor(
-                    newTime / 60
-                  )}:${(newTime % 60)
-                    .toString()
-                    .padStart(2, "0")} remaining for task "${
-                    state.currentTaskName
-                  }"`
-                );
-              } else {
-                // Timer would have expired, reset but keep task
-                state.isActive = false;
-                state.mode = "work";
-                state.timeRemaining =
-                  (state.userPreferences?.pomodoro_working_interval || 25) * 60;
-                console.log(
-                  "Timer expired during absence, reset timer but kept task"
-                );
-              }
-            }
-
             // Update timestamp
             state.timestamp = Date.now();
           }
@@ -431,6 +401,37 @@ export const useTimerStore = create<TimerState>()(
 
 // Timer interval management
 let timerInterval: NodeJS.Timeout | null = null;
+let lastTickTime: number = Date.now();
+let isTabVisible: boolean = true;
+
+// Handle page visibility changes
+const handleVisibilityChange = () => {
+  const wasVisible = isTabVisible;
+  isTabVisible = !document.hidden;
+
+  if (!wasVisible && isTabVisible) {
+    // Tab became visible - sync timer with actual elapsed time
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - lastTickTime) / 1000);
+    const { isActive, timeRemaining } = useTimerStore.getState();
+
+    if (isActive && elapsedSeconds > 0) {
+      // Apply the elapsed time to the timer
+      const newTimeRemaining = Math.max(0, timeRemaining - elapsedSeconds);
+      useTimerStore.getState().setTimeRemaining(newTimeRemaining);
+
+      // If timer expired while tab was hidden, trigger mode switch
+      if (newTimeRemaining <= 0) {
+        useTimerStore.getState().switchToNextMode();
+      }
+    }
+
+    lastTickTime = now;
+  } else if (wasVisible && !isTabVisible) {
+    // Tab became hidden - record the time
+    lastTickTime = Date.now();
+  }
+};
 
 // Start the global timer interval
 export const startTimerInterval = () => {
@@ -438,10 +439,21 @@ export const startTimerInterval = () => {
   if (process.env.NODE_ENV === "test") return;
   if (timerInterval) return; // Already running
 
+  // Set up visibility change listener
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    isTabVisible = !document.hidden;
+  }
+
+  lastTickTime = Date.now();
+
   timerInterval = setInterval(() => {
     const { isActive, tick } = useTimerStore.getState();
-    if (isActive) {
+
+    // Only tick if the tab is visible and timer is active
+    if (isActive && isTabVisible) {
       tick();
+      lastTickTime = Date.now();
     }
   }, 1000);
 };
@@ -451,6 +463,11 @@ export const stopTimerInterval = () => {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
+  }
+
+  // Remove visibility change listener
+  if (typeof document !== "undefined") {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
   }
 };
 
@@ -509,17 +526,16 @@ export const useTimerModeText = () => {
 
 export const useTimerButtonStates = () => {
   const mode = useTimerStore((state) => state.mode);
-  const isActive = useTimerStore((state) => state.isActive);
   const currentTask = useTimerCurrentTask();
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const buttonStates = {
       resetDisabled: !currentTask?.id,
-      skipBreakVisible: mode !== "work",
-      skipBreakEnabled: mode !== "work" && isActive,
-    }),
-    [mode, isActive, currentTask]
-  );
+      skipBreakVisible: mode === "shortBreak" || mode === "longBreak",
+    };
+
+    return buttonStates;
+  }, [mode, currentTask]);
 };
 export const useTimerActions = () => {
   const startPause = useTimerStore((state) => state.startPause);

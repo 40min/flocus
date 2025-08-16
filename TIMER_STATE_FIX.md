@@ -101,6 +101,37 @@ npm test -- --testPathPattern=timerStore.test.ts --watchAll=false
 
 All tests should pass, confirming the robust frontend-only persistence works correctly.
 
+## Issue 3: Timer Continues When Tab is Hidden (RESOLVED)
+
+When switching away from the browser tab for long periods, the timer continues ticking in the background due to browser tab throttling inconsistencies. This causes the timer to show incorrect time when returning to the tab.
+
+### Root Cause
+
+JavaScript `setInterval` continues running in background tabs, but browsers throttle execution which can cause timing drift. The timer should only run when the user can actually see it.
+
+### Solution 3 - Page Visibility API Integration (RESOLVED)
+
+Implemented the Page Visibility API to:
+
+1. **Pause timer ticking** when tab becomes hidden
+2. **Sync elapsed time** when tab becomes visible again
+3. **Handle timer expiration** that occurred while tab was hidden
+4. **Maintain accuracy** by using actual elapsed time rather than interval ticks
+
+### Key Changes:
+
+- Added visibility change event listener in `startTimerInterval()`
+- Timer only ticks when tab is visible (`isTabVisible` check)
+- On tab visibility restore: calculate actual elapsed time and sync timer
+- Handle timer expiration that occurred during hidden state
+- Clean up event listeners in `stopTimerInterval()`
+
+### How It Works:
+
+1. **Tab becomes hidden**: Record timestamp, stop timer ticking
+2. **Tab becomes visible**: Calculate elapsed time, apply to timer, handle expiration if needed
+3. **Timer accuracy**: Based on actual elapsed time, not interval ticks
+
 ## Example Scenarios
 
 ### Scenario 1: Quick Reload (< 1 minute)
@@ -119,3 +150,10 @@ All tests should pass, confirming the robust frontend-only persistence works cor
 
 - Start timer, close browser for 2 hours
 - Result: Complete reset to default state for fresh start
+
+### Scenario 4: Tab Switching (NEW)
+
+- Start 25-minute timer, 15 minutes remaining
+- Switch to another tab for 5 minutes
+- Return to timer tab
+- Result: Timer shows 10 minutes remaining, accurately synced with elapsed time

@@ -48,7 +48,6 @@ describe("PomodoroTimer", () => {
     mockUseTimerButtonStates.mockReturnValue({
       resetDisabled: true, // Disabled when no task is assigned
       skipBreakVisible: false, // Hidden during work mode
-      skipBreakEnabled: false,
     });
     jest.clearAllMocks();
   });
@@ -79,7 +78,6 @@ describe("PomodoroTimer", () => {
     mockUseTimerButtonStates.mockReturnValue({
       resetDisabled: false,
       skipBreakVisible: false,
-      skipBreakEnabled: false,
     });
 
     render(<PomodoroTimer />);
@@ -99,7 +97,6 @@ describe("PomodoroTimer", () => {
     mockUseTimerButtonStates.mockReturnValue({
       resetDisabled: false,
       skipBreakVisible: true, // Visible during break mode
-      skipBreakEnabled: true, // Enabled when timer is active
     });
 
     render(<PomodoroTimer />);

@@ -143,40 +143,6 @@ describe("Timer Store Selectors", () => {
       expect(result.current.skipBreakVisible).toBe(true);
     });
 
-    it("should enable skip break button only when in break mode and timer is active", () => {
-      const { result } = renderHook(() => useTimerButtonStates());
-
-      // Test short break mode with active timer
-      act(() => {
-        useTimerStore.setState({ mode: "shortBreak", isActive: true });
-      });
-      expect(result.current.skipBreakEnabled).toBe(true);
-
-      // Test short break mode with inactive timer
-      act(() => {
-        useTimerStore.setState({ mode: "shortBreak", isActive: false });
-      });
-      expect(result.current.skipBreakEnabled).toBe(false);
-
-      // Test long break mode with active timer
-      act(() => {
-        useTimerStore.setState({ mode: "longBreak", isActive: true });
-      });
-      expect(result.current.skipBreakEnabled).toBe(true);
-
-      // Test long break mode with inactive timer
-      act(() => {
-        useTimerStore.setState({ mode: "longBreak", isActive: false });
-      });
-      expect(result.current.skipBreakEnabled).toBe(false);
-
-      // Test work mode with active timer (should be disabled)
-      act(() => {
-        useTimerStore.setState({ mode: "work", isActive: true });
-      });
-      expect(result.current.skipBreakEnabled).toBe(false);
-    });
-
     it("should update button states when dependencies change", () => {
       const { result } = renderHook(() => useTimerButtonStates());
 
@@ -192,7 +158,6 @@ describe("Timer Store Selectors", () => {
       expect(result.current).toEqual({
         resetDisabled: true,
         skipBreakVisible: false,
-        skipBreakEnabled: false,
       });
 
       // Add task
@@ -206,7 +171,6 @@ describe("Timer Store Selectors", () => {
       expect(result.current).toEqual({
         resetDisabled: false,
         skipBreakVisible: false,
-        skipBreakEnabled: false,
       });
 
       // Switch to break mode and activate
@@ -220,7 +184,6 @@ describe("Timer Store Selectors", () => {
       expect(result.current).toEqual({
         resetDisabled: false,
         skipBreakVisible: true,
-        skipBreakEnabled: true,
       });
 
       // Remove task
@@ -234,7 +197,6 @@ describe("Timer Store Selectors", () => {
       expect(result.current).toEqual({
         resetDisabled: true,
         skipBreakVisible: true,
-        skipBreakEnabled: true,
       });
     });
 

@@ -33,7 +33,8 @@ jest.mock("../hooks/useDailyPlan");
 jest.mock("../hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
 
-// Mock TimerStore first
+// Mock the useTimerButtonStates hook
+const mockUseTimerButtonStates = jest.fn();
 jest.mock("../stores/timerStore", () => ({
   useTimerStore: jest.fn().mockImplementation((selector) => {
     const state = {
@@ -78,6 +79,33 @@ jest.mock("../stores/timerStore", () => ({
     };
     return selector ? selector(state) : state;
   }),
+  useTimerButtonStates: () => mockUseTimerButtonStates(),
+  useTimerMode: jest.fn(() => "work"),
+  useTimerRemaining: jest.fn(() => 1500),
+  useTimerActive: jest.fn(() => false),
+  useTimerPomodoros: jest.fn(() => 0),
+  useTimerCurrentTask: jest.fn(() => ({
+    id: undefined,
+    name: undefined,
+    description: undefined,
+  })),
+  useTimerColors: jest.fn(() => ({
+    timerColor: "border-primary-DEFAULT",
+    buttonBgColor: "bg-primary-DEFAULT hover:bg-primary-dark",
+    buttonTextColor: "text-white",
+  })),
+  useTimerModeText: jest.fn(() => "Focus"),
+  useTimerActions: jest.fn(() => ({
+    startPause: jest.fn(),
+    reset: jest.fn(),
+    skip: jest.fn(),
+    stopCurrentTask: jest.fn(),
+    resetForNewTask: jest.fn(),
+    markTaskAsDone: jest.fn(),
+    setCurrentTask: jest.fn(),
+    setUserPreferences: jest.fn(),
+    formatTime: jest.fn(),
+  })),
   initializeTimer: jest.fn(),
   startTimerInterval: jest.fn(),
   stopTimerInterval: jest.fn(),
@@ -165,6 +193,12 @@ describe("DashboardPage - handleDragEnd", () => {
     mockHandleMarkAsDone.mockClear(); // Clear mock for handleMarkAsDone
     mockSetCurrentTask.mockClear();
     mockMutateAsync.mockClear();
+
+    // Set up the timer button states mock
+    mockUseTimerButtonStates.mockReturnValue({
+      resetDisabled: false,
+      skipBreakVisible: false,
+    });
 
     // Reset the useTimerStore mock
     mockUseTimerStore.mockImplementation((selector) => {

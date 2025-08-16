@@ -7,6 +7,12 @@ jest.mock("../hooks/useTimer", () => ({
   useTimer: jest.fn(),
 }));
 
+// Mock the useTimerButtonStates hook
+const mockUseTimerButtonStates = jest.fn();
+jest.mock("../stores/timerStore", () => ({
+  useTimerButtonStates: () => mockUseTimerButtonStates(),
+}));
+
 const mockUseTimer = useTimer as jest.Mock;
 
 describe("PomodoroTimer", () => {
@@ -38,6 +44,12 @@ describe("PomodoroTimer", () => {
 
   beforeEach(() => {
     mockUseTimer.mockReturnValue(mockContextValue);
+    // Default button states for work mode
+    mockUseTimerButtonStates.mockReturnValue({
+      resetDisabled: true, // Disabled when no task is assigned
+      skipBreakVisible: false, // Hidden during work mode
+      skipBreakEnabled: false,
+    });
     jest.clearAllMocks();
   });
 
@@ -63,12 +75,33 @@ describe("PomodoroTimer", () => {
   });
 
   it("calls handleReset when reset button is clicked", () => {
+    // Enable reset button by having a task assigned
+    mockUseTimerButtonStates.mockReturnValue({
+      resetDisabled: false,
+      skipBreakVisible: false,
+      skipBreakEnabled: false,
+    });
+
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByLabelText("Reset timer"));
     expect(mockContextValue.handleReset).toHaveBeenCalledTimes(1);
   });
 
   it("calls handleSkip when skip button is clicked", () => {
+    // Mock break mode to make skip button visible and enabled
+    mockUseTimer.mockReturnValue({
+      ...mockContextValue,
+      mode: "shortBreak",
+      isBreak: true,
+      isActive: true,
+    });
+
+    mockUseTimerButtonStates.mockReturnValue({
+      resetDisabled: false,
+      skipBreakVisible: true, // Visible during break mode
+      skipBreakEnabled: true, // Enabled when timer is active
+    });
+
     render(<PomodoroTimer />);
     fireEvent.click(screen.getByLabelText("Skip break"));
     expect(mockContextValue.handleSkip).toHaveBeenCalledTimes(1);

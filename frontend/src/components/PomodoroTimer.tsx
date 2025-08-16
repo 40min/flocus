@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
+import { useTimerButtonStates } from "../stores/timerStore";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui";
 const PomodoroTimer: React.FC = () => {
@@ -20,6 +21,9 @@ const PomodoroTimer: React.FC = () => {
     currentTaskDescription,
     modeText,
   } = useTimer();
+
+  // Get button states from the timer store
+  const { resetDisabled, skipBreakVisible } = useTimerButtonStates();
 
   // Helper function to get session duration based on mode
   const getSessionDuration = (currentMode: string): number => {
@@ -138,7 +142,12 @@ const PomodoroTimer: React.FC = () => {
                           variant="secondary"
                           size="icon"
                           aria-label="Reset timer"
-                          className="flex-shrink-0"
+                          className={cn(
+                            "flex-shrink-0",
+                            // Override default disabled opacity to make button more visible
+                            resetDisabled && "disabled:opacity-75"
+                          )}
+                          disabled={resetDisabled}
                         >
                           <RotateCcw className="h-4 w-4" />
                         </Button>
@@ -165,15 +174,21 @@ const PomodoroTimer: React.FC = () => {
                           )}
                         </Button>
 
-                        <Button
-                          onClick={handleSkip}
-                          variant="secondary"
-                          size="icon"
-                          aria-label="Skip break"
-                          className="flex-shrink-0"
-                        >
-                          <SkipForward className="h-4 w-4" />
-                        </Button>
+                        {/* Conditionally render Skip Break button based on timer mode */}
+                        {skipBreakVisible ? (
+                          <Button
+                            onClick={handleSkip}
+                            variant="secondary"
+                            size="icon"
+                            aria-label="Skip break"
+                            className="flex-shrink-0"
+                          >
+                            <SkipForward className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          // Placeholder to maintain button layout spacing
+                          <div className="w-10 h-10 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
                   </div>

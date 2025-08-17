@@ -125,7 +125,11 @@ const DashboardPage: React.FC = () => {
           </div>
           <DragOverlay>
             {activeTask ? (
-              <TaskCard task={activeTask} onSelectTask={() => {}} />
+              <TaskCard
+                task={activeTask}
+                onSelectTask={() => {}}
+                onEditTask={() => {}}
+              />
             ) : null}
           </DragOverlay>
         </DndContext>

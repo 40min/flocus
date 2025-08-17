@@ -12,6 +12,7 @@ import { DndContext } from "@dnd-kit/core";
 import { Task } from "types/task";
 import { TimeWindow } from "types/timeWindow";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
+import { useCategories } from "hooks/useCategories";
 import { getTodayStats } from "../services/userDailyStatsService";
 
 jest.mock("../hooks/useCurrentTimeWindow");
@@ -19,12 +20,14 @@ jest.mock("../hooks/useTimer", () => ({
   useTimer: jest.fn(),
 }));
 jest.mock("hooks/useTasks");
+jest.mock("hooks/useCategories");
 jest.mock("../services/userDailyStatsService");
 
 const mockedUseCurrentTimeWindow = useCurrentTimeWindow as jest.Mock;
 const mockedUseTimer = useTimer as jest.Mock;
 const mockedUseDeleteTask = useDeleteTask as jest.Mock;
 const mockedUseUpdateTask = useUpdateTask as jest.Mock;
+const mockedUseCategories = useCategories as jest.Mock;
 
 const mockTimeWindow: TimeWindow = {
   id: "tw1",
@@ -121,6 +124,11 @@ describe("CurrentTasks", () => {
       mutate: mockUpdateTask,
       isPending: false,
     });
+    mockedUseCategories.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
     jest.clearAllMocks();
     jest.spyOn(window, "confirm").mockReturnValue(true);
   });
@@ -154,9 +162,6 @@ describe("CurrentTasks", () => {
     expect(screen.getByText("Today's Tasks")).toBeInTheDocument();
     expect(
       screen.getByText("No tasks for the current time window.")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Drag tasks to the timer to start focusing")
     ).toBeInTheDocument();
   });
 
@@ -197,7 +202,7 @@ describe("CurrentTasks", () => {
     const taskOneCard = screen.getByLabelText(
       "Drag task: Task One"
     ).parentElement;
-    expect(taskOneCard).toHaveClass("cursor-not-allowed", "opacity-70");
+    expect(taskOneCard).toHaveClass("cursor-not-allowed", "opacity-100");
   });
 
   it("renders a task with a long description and a markdown link", () => {
@@ -308,8 +313,31 @@ describe("CurrentTasks", () => {
       setCurrentTaskDescription: mockSetCurrentTaskDescription,
       handleMarkAsDone: mockHandleMarkAsDone,
     });
-    const { rerender } = renderWithDnd(
-      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+
+    const testAuthContextValue: AuthContextType = {
+      user: null,
+      token: "test-token",
+      login: jest.fn(),
+      logout: jest.fn(),
+      isAuthenticated: true,
+      isLoading: false,
+    };
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthContext.Provider value={testAuthContextValue}>
+            <TimerProvider>
+              <DndContext onDragEnd={() => {}}>
+                <CurrentTasks
+                  dailyPlan={{} as any}
+                  onSelectTask={mockOnSelectTask}
+                />
+              </DndContext>
+            </TimerProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     let pauseButton = screen.getAllByRole("button", { name: "Pause task" })[0];
     expect(pauseButton).toBeDisabled();
@@ -327,7 +355,20 @@ describe("CurrentTasks", () => {
       handleMarkAsDone: mockHandleMarkAsDone,
     });
     rerender(
-      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthContext.Provider value={testAuthContextValue}>
+            <TimerProvider>
+              <DndContext onDragEnd={() => {}}>
+                <CurrentTasks
+                  dailyPlan={{} as any}
+                  onSelectTask={mockOnSelectTask}
+                />
+              </DndContext>
+            </TimerProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     pauseButton = screen.getAllByRole("button", { name: "Pause task" })[0];
     expect(pauseButton).toBeDisabled();
@@ -627,5 +668,36 @@ describe("CurrentTasks", () => {
     expect(screen.queryByText("Task Three")).not.toBeInTheDocument(); // blocked
     expect(screen.queryByText("Task Four")).not.toBeInTheDocument(); // deleted
     expect(screen.getByText("Task Five")).toBeInTheDocument();
+  });
+
+  it("renders edit button for each task", () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    const editButtons = screen.getAllByRole("button", { name: "Edit task" });
+    expect(editButtons).toHaveLength(mockTasks.length);
+  });
+
+  it("opens edit modal when edit button is clicked", () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    const editButtons = screen.getAllByRole("button", { name: "Edit task" });
+    fireEvent.click(editButtons[0]);
+
+    // Check if the modal is opened with the correct title
+    expect(screen.getByText("Edit Task")).toBeInTheDocument();
+    // Check if the task title is pre-filled
+    expect(screen.getByDisplayValue("Task One")).toBeInTheDocument();
   });
 });

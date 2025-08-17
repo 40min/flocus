@@ -41,18 +41,6 @@ const mockCategories: Category[] = [
   },
 ];
 
-const mockStatusOptions = [
-  { value: "pending", label: "Pending" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
-];
-
-const mockPriorityOptions = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-];
-
 const defaultInitialFormData = {
   title: "",
   description: "",
@@ -89,8 +77,6 @@ describe("CreateTaskModal", () => {
         editingTask={null}
         categories={mockCategories}
         initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
         {...props}
       />
     );
@@ -105,8 +91,6 @@ describe("CreateTaskModal", () => {
         editingTask={null}
         categories={[]}
         initialFormData={defaultInitialFormData}
-        statusOptions={[]}
-        priorityOptions={[]}
       />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -471,8 +455,6 @@ describe("CreateTaskModal", () => {
         editingTask={null}
         categories={mockCategories}
         initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
       />
     );
 
@@ -484,8 +466,6 @@ describe("CreateTaskModal", () => {
         editingTask={null}
         categories={mockCategories}
         initialFormData={defaultInitialFormData}
-        statusOptions={mockStatusOptions}
-        priorityOptions={mockPriorityOptions}
       />
     );
 

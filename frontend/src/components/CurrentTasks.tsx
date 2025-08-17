@@ -6,25 +6,31 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   CheckCircle,
   Clock,
+  Edit,
   GripVertical,
   Pause,
   Play,
   Trash2,
 } from "lucide-react";
 import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
-import { Task } from "types/task";
+import { Task, TaskCreateRequest } from "types/task";
 import { DailyPlanResponse } from "../types/dailyPlan";
 import { cn, formatDurationFromSeconds } from "../utils/utils";
 import { useTimer } from "../hooks/useTimer";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
+import { useCategories } from "hooks/useCategories";
 import { Button } from "@/components/ui/button";
+import CreateTaskModal from "./modals/CreateTaskModal";
+import { useTaskModal } from "../hooks/useTaskModal";
 
 export const TaskCard = ({
   task,
   onSelectTask,
+  onEditTask,
 }: {
   task: Task;
   onSelectTask: (taskId: string) => void;
+  onEditTask: (task: Task) => void;
 }) => {
   const {
     currentTaskId,
@@ -76,7 +82,7 @@ export const TaskCard = ({
         className={cn(
           "transition-all duration-200",
           isDragging && "opacity-50 shadow-2xl z-50 relative",
-          isSelectedTask && "cursor-not-allowed opacity-70"
+          isSelectedTask ? "cursor-not-allowed opacity-100" : "opacity-75"
         )}
         tabIndex={0}
       >
@@ -168,6 +174,15 @@ export const TaskCard = ({
                     <CheckCircle className="h-4 w-4" />
                   </Button>
                   <Button
+                    onClick={() => onEditTask(task)}
+                    variant="ghost"
+                    size="icon"
+                    title="Edit task"
+                    className="text-slate-400 hover:text-blue-500"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
                     onClick={handleDelete}
                     variant="ghost"
                     size="icon"
@@ -203,17 +218,32 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
     easing: "ease-in-out",
   });
 
+  const { data: categories } = useCategories();
+  const {
+    isModalOpen: isEditModalOpen,
+    editingTask,
+    openEditModal,
+    closeModal,
+    handleSubmitSuccess,
+  } = useTaskModal({
+    additionalQueryKeys: [["daily-plan"]],
+  });
+
+  const initialFormData: TaskCreateRequest = {
+    title: "",
+    description: "",
+    status: "pending",
+    priority: "medium",
+    due_date: null,
+    category_id: "",
+  };
+
   return (
     <>
       <div className="mb-6">
         <h2 className="text-lg font-bold text-text-DEFAULT bg-background-card p-2 rounded-md mb-2">
           Today's Tasks
         </h2>
-        {currentTimeWindow !== null && (
-          <p className="text-sm text-green-100 text-center">
-            Drag tasks to the timer to start focusing
-          </p>
-        )}
       </div>
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
@@ -242,12 +272,22 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
                     key={task.id}
                     task={task}
                     onSelectTask={onSelectTask}
+                    onEditTask={openEditModal}
                   />
                 ))
             )}
           </ul>
         </div>
       </section>
+
+      <CreateTaskModal
+        isOpen={isEditModalOpen}
+        onClose={closeModal}
+        onSubmitSuccess={handleSubmitSuccess}
+        editingTask={editingTask}
+        categories={categories || []}
+        initialFormData={initialFormData}
+      />
     </>
   );
 };

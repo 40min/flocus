@@ -10,23 +10,10 @@ import { useTasks, useTasksByCategory } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
 import { useTimer } from "../hooks/useTimer";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
-
-const statusOptions = [
-  { value: "pending", label: "Pending" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
-  { value: "blocked", label: "Blocked" },
-];
-
-const priorityOptions = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-];
+import { statusOptions, priorityOptions } from "../constants/taskOptions";
+import { useTaskModal } from "../hooks/useTaskModal";
 
 const TasksPage: React.FC = () => {
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<Task | null>(
     null
   );
@@ -34,6 +21,14 @@ const TasksPage: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const { currentTaskId, stopCurrentTask } = useTimer();
+  const {
+    isModalOpen,
+    editingTask,
+    openCreateModal,
+    openEditModal,
+    closeModal,
+    handleSubmitSuccess,
+  } = useTaskModal();
 
   const queryClient = useQueryClient();
   const {
@@ -64,18 +59,6 @@ const TasksPage: React.FC = () => {
 
   // handleInputChange, handleDateChange, and handleSubmit are moved to CreateTaskModal
 
-  const handleFormSubmitSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    setEditingTask(null);
-    setIsModalOpen(false);
-  };
-
-  const handleEdit = (task: Task) => {
-    setEditingTask(task);
-    // Form data setting is now handled by CreateTaskModal's useEffect
-    setIsModalOpen(true);
-  };
-
   const openStatsModal = (task: Task) => {
     setSelectedTaskForStats(task);
     setIsStatsModalOpen(true);
@@ -96,18 +79,6 @@ const TasksPage: React.FC = () => {
     } catch (err) {
       console.error(`Failed to delete task with id ${id}:`, err);
     }
-  };
-
-  const openCreateModal = () => {
-    setEditingTask(null); // Ensure we are in "create" mode
-    // Initial form data is now set by CreateTaskModal's useEffect
-    setIsModalOpen(true);
-  };
-
-  const closeCreateModal = () => {
-    setIsModalOpen(false);
-    setEditingTask(null); // Clear editing task on close
-    // Form data reset is handled by CreateTaskModal's useEffect
   };
 
   return (
@@ -156,13 +127,11 @@ const TasksPage: React.FC = () => {
       </div>
       <CreateTaskModal
         isOpen={isModalOpen}
-        onClose={closeCreateModal}
-        onSubmitSuccess={handleFormSubmitSuccess}
+        onClose={closeModal}
+        onSubmitSuccess={handleSubmitSuccess}
         editingTask={editingTask}
         categories={categories || []}
         initialFormData={initialFormData}
-        statusOptions={statusOptions}
-        priorityOptions={priorityOptions}
       />
       {isStatsModalOpen && selectedTaskForStats && (
         <TaskStatisticsModal
@@ -295,7 +264,7 @@ const TasksPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(task)}
+                        onClick={() => openEditModal(task)}
                         aria-label="edit task"
                       >
                         <Edit size={18} />

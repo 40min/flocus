@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import Modal from "./Modal";
 import { utcToLocal, localToUtc } from "../../utils/utils";
 import { Sparkles, Bot } from "lucide-react";
+import { statusOptions, priorityOptions } from "../../constants/taskOptions";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -32,8 +33,6 @@ interface CreateTaskModalProps {
   editingTask: Task | null;
   categories: Category[];
   initialFormData: TaskCreateRequest;
-  statusOptions: { value: string; label: string }[];
-  priorityOptions: { value: string; label: string }[];
 }
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
@@ -41,11 +40,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   onClose,
   onSubmitSuccess,
   editingTask,
-
   categories,
   initialFormData,
-  statusOptions,
-  priorityOptions,
 }) => {
   const {
     register,

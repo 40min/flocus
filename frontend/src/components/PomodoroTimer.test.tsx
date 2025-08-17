@@ -7,10 +7,12 @@ jest.mock("../hooks/useTimer", () => ({
   useTimer: jest.fn(),
 }));
 
-// Mock the useTimerButtonStates hook
+// Mock the timer store hooks
 const mockUseTimerButtonStates = jest.fn();
+const mockUseTimerModeText = jest.fn();
 jest.mock("../stores/timerStore", () => ({
   useTimerButtonStates: () => mockUseTimerButtonStates(),
+  useTimerModeText: () => mockUseTimerModeText(),
 }));
 
 const mockUseTimer = useTimer as jest.Mock;
@@ -35,7 +37,6 @@ describe("PomodoroTimer", () => {
     timerColor: "border-gray-700",
     buttonBgColor: "bg-white hover:bg-gray-200",
     buttonTextColor: "text-gray-900",
-    modeText: "Focus",
     currentTaskId: undefined,
     onTaskComplete: undefined,
     setCurrentTaskId: jest.fn(),
@@ -49,6 +50,8 @@ describe("PomodoroTimer", () => {
       resetDisabled: true, // Disabled when no task is assigned
       skipBreakVisible: false, // Hidden during work mode
     });
+    // Default mode text
+    mockUseTimerModeText.mockReturnValue("Focus");
     jest.clearAllMocks();
   });
 
@@ -224,8 +227,8 @@ describe("PomodoroTimer", () => {
       mockUseTimer.mockReturnValue({
         ...mockContextValue,
         isActive: true,
-        modeText: "Focus",
       });
+      mockUseTimerModeText.mockReturnValue("Focus");
 
       render(<PomodoroTimer />);
 
@@ -237,8 +240,8 @@ describe("PomodoroTimer", () => {
         ...mockContextValue,
         isActive: false,
         currentTaskName: "Test Task",
-        modeText: "Focus",
       });
+      mockUseTimerModeText.mockReturnValue("Focus");
 
       render(<PomodoroTimer />);
 
@@ -250,8 +253,8 @@ describe("PomodoroTimer", () => {
         ...mockContextValue,
         isActive: false,
         currentTaskName: undefined,
-        modeText: "Focus",
       });
+      mockUseTimerModeText.mockReturnValue("Focus");
 
       render(<PomodoroTimer />);
 
@@ -264,8 +267,8 @@ describe("PomodoroTimer", () => {
         mode: "shortBreak",
         isBreak: true,
         isActive: true,
-        modeText: "Short Break",
       });
+      mockUseTimerModeText.mockReturnValue("Short Break");
 
       render(<PomodoroTimer />);
 
@@ -278,8 +281,8 @@ describe("PomodoroTimer", () => {
         mode: "longBreak",
         isBreak: true,
         isActive: true,
-        modeText: "Long Break",
       });
+      mockUseTimerModeText.mockReturnValue("Long Break");
 
       render(<PomodoroTimer />);
 
@@ -291,8 +294,8 @@ describe("PomodoroTimer", () => {
         ...mockContextValue,
         isActive: true,
         isBreak: false,
-        modeText: "Focus",
       });
+      mockUseTimerModeText.mockReturnValue("Focus");
 
       render(<PomodoroTimer />);
 
@@ -308,8 +311,8 @@ describe("PomodoroTimer", () => {
         mode: "shortBreak",
         isActive: true,
         isBreak: true,
-        modeText: "Short Break",
       });
+      mockUseTimerModeText.mockReturnValue("Short Break");
 
       render(<PomodoroTimer />);
 

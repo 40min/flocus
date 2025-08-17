@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
-import { useTimerButtonStates } from "../stores/timerStore";
+import { useTimerButtonStates, useTimerModeText } from "../stores/timerStore";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui";
 const PomodoroTimer: React.FC = () => {
@@ -19,11 +19,11 @@ const PomodoroTimer: React.FC = () => {
     timerColor,
     currentTaskName,
     currentTaskDescription,
-    modeText,
   } = useTimer();
 
-  // Get button states from the timer store
+  // Get button states and mode text from the timer store selectors
   const { resetDisabled, skipBreakVisible } = useTimerButtonStates();
+  const modeText = useTimerModeText();
 
   // Helper function to get session duration based on mode
   const getSessionDuration = (currentMode: string): number => {

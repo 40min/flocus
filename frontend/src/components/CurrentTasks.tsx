@@ -231,7 +231,12 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
               </p>
             ) : (
               currentTasks
-                .filter((task) => task.status !== "done")
+                .filter(
+                  (task) =>
+                    task.status !== "done" &&
+                    task.status !== "blocked" &&
+                    !task.is_deleted
+                )
                 .map((task: Task) => (
                   <TaskCard
                     key={task.id}

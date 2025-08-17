@@ -492,4 +492,140 @@ describe("CurrentTasks", () => {
     expect(screen.queryByText("Task Two")).not.toBeInTheDocument(); // Task Two should be filtered out
     expect(screen.getByText("Task Three")).toBeInTheDocument();
   });
+
+  it('does not render tasks with status "blocked"', () => {
+    const tasksWithBlocked: Task[] = [
+      {
+        id: "task1",
+        title: "Task One",
+        status: "pending",
+        priority: "medium",
+        user_id: "user1",
+      },
+      {
+        id: "task2",
+        title: "Task Two",
+        status: "blocked",
+        priority: "high",
+        user_id: "user1",
+      },
+      {
+        id: "task3",
+        title: "Task Three",
+        status: "in_progress",
+        priority: "low",
+        user_id: "user1",
+      },
+    ];
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: tasksWithBlocked,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    expect(screen.getByText("Task One")).toBeInTheDocument();
+    expect(screen.queryByText("Task Two")).not.toBeInTheDocument(); // Task Two should be filtered out
+    expect(screen.getByText("Task Three")).toBeInTheDocument();
+  });
+
+  it("does not render tasks where is_deleted is true", () => {
+    const tasksWithDeleted: Task[] = [
+      {
+        id: "task1",
+        title: "Task One",
+        status: "pending",
+        priority: "medium",
+        user_id: "user1",
+        is_deleted: false,
+      },
+      {
+        id: "task2",
+        title: "Task Two",
+        status: "pending",
+        priority: "high",
+        user_id: "user1",
+        is_deleted: true,
+      },
+      {
+        id: "task3",
+        title: "Task Three",
+        status: "pending",
+        priority: "low",
+        user_id: "user1",
+        // is_deleted is undefined (should be treated as false)
+      },
+    ];
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: tasksWithDeleted,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    expect(screen.getByText("Task One")).toBeInTheDocument();
+    expect(screen.queryByText("Task Two")).not.toBeInTheDocument(); // Task Two should be filtered out
+    expect(screen.getByText("Task Three")).toBeInTheDocument();
+  });
+
+  it("filters out multiple types of excluded tasks (done, blocked, deleted)", () => {
+    const mixedTasks: Task[] = [
+      {
+        id: "task1",
+        title: "Task One",
+        status: "pending",
+        priority: "medium",
+        user_id: "user1",
+        is_deleted: false,
+      },
+      {
+        id: "task2",
+        title: "Task Two",
+        status: "done",
+        priority: "high",
+        user_id: "user1",
+        is_deleted: false,
+      },
+      {
+        id: "task3",
+        title: "Task Three",
+        status: "blocked",
+        priority: "low",
+        user_id: "user1",
+        is_deleted: false,
+      },
+      {
+        id: "task4",
+        title: "Task Four",
+        status: "pending",
+        priority: "medium",
+        user_id: "user1",
+        is_deleted: true,
+      },
+      {
+        id: "task5",
+        title: "Task Five",
+        status: "in_progress",
+        priority: "high",
+        user_id: "user1",
+        is_deleted: false,
+      },
+    ];
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mixedTasks,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    // Only Task One and Task Five should be visible
+    expect(screen.getByText("Task One")).toBeInTheDocument();
+    expect(screen.queryByText("Task Two")).not.toBeInTheDocument(); // done
+    expect(screen.queryByText("Task Three")).not.toBeInTheDocument(); // blocked
+    expect(screen.queryByText("Task Four")).not.toBeInTheDocument(); // deleted
+    expect(screen.getByText("Task Five")).toBeInTheDocument();
+  });
 });

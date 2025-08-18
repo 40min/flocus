@@ -292,6 +292,166 @@ describe("CreateTaskModal", () => {
     expect(mockedTaskService.createTask).not.toHaveBeenCalled();
   });
 
+  it("displays validation error for negative correction time", async () => {
+    const editingTask: Task = {
+      id: "1",
+      title: "Existing Task",
+      description: "Existing Description",
+      status: "pending",
+      priority: "medium",
+      user_id: "user1",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-01T00:00:00Z",
+      statistics: { lasts_minutes: 30 },
+    };
+
+    renderModal({ editingTask });
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText(/Title/i), {
+      target: { value: "Valid Title" },
+    });
+
+    // Enter negative correction time
+    fireEvent.change(screen.getByLabelText(/Add Correction Time/i), {
+      target: { value: "-5" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Update Task/i }));
+
+    await screen.findByText("Correction time must be non-negative");
+    expect(mockedTaskService.updateTask).not.toHaveBeenCalled();
+  });
+
+  it("displays validation error for correction time exceeding maximum", async () => {
+    const editingTask: Task = {
+      id: "1",
+      title: "Existing Task",
+      description: "Existing Description",
+      status: "pending",
+      priority: "medium",
+      user_id: "user1",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-01T00:00:00Z",
+      statistics: { lasts_minutes: 30 },
+    };
+
+    renderModal({ editingTask });
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText(/Title/i), {
+      target: { value: "Valid Title" },
+    });
+
+    // Enter correction time exceeding maximum (1440 minutes = 24 hours)
+    fireEvent.change(screen.getByLabelText(/Add Correction Time/i), {
+      target: { value: "1500" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Update Task/i }));
+
+    await screen.findByText(
+      "Cannot add more than 24 hours (1440 minutes) at once"
+    );
+    expect(mockedTaskService.updateTask).not.toHaveBeenCalled();
+  });
+
+  it("successfully submits with valid correction time", async () => {
+    const editingTask: Task = {
+      id: "1",
+      title: "Existing Task",
+      description: "Existing Description",
+      status: "pending",
+      priority: "medium",
+      user_id: "user1",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-01T00:00:00Z",
+      statistics: { lasts_minutes: 30 },
+    };
+
+    mockedTaskService.updateTask.mockResolvedValueOnce({} as Task);
+    renderModal({ editingTask });
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText(/Title/i), {
+      target: { value: "Valid Title" },
+    });
+
+    // Set status and priority (required fields)
+    fireEvent.change(screen.getByLabelText(/Status/i), {
+      target: { value: "pending" },
+    });
+    fireEvent.change(screen.getByLabelText(/Priority/i), {
+      target: { value: "medium" },
+    });
+
+    // Enter valid correction time
+    fireEvent.change(screen.getByLabelText(/Add Correction Time/i), {
+      target: { value: "15" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Update Task/i }));
+
+    await waitFor(() =>
+      expect(mockedTaskService.updateTask).toHaveBeenCalledTimes(1)
+    );
+    expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
+      "1",
+      expect.objectContaining({
+        title: "Valid Title",
+        status: "pending",
+        priority: "medium",
+        add_lasts_minutes: 15,
+      })
+    );
+  });
+
+  it("handles empty correction time as undefined", async () => {
+    const editingTask: Task = {
+      id: "1",
+      title: "Existing Task",
+      description: "Existing Description",
+      status: "pending",
+      priority: "medium",
+      user_id: "user1",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-01T00:00:00Z",
+      statistics: { lasts_minutes: 30 },
+    };
+
+    mockedTaskService.updateTask.mockResolvedValueOnce({} as Task);
+    renderModal({ editingTask });
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText(/Title/i), {
+      target: { value: "Valid Title" },
+    });
+
+    // Set status and priority (required fields)
+    fireEvent.change(screen.getByLabelText(/Status/i), {
+      target: { value: "pending" },
+    });
+    fireEvent.change(screen.getByLabelText(/Priority/i), {
+      target: { value: "medium" },
+    });
+
+    // Leave correction time empty (should be treated as undefined)
+    fireEvent.click(screen.getByRole("button", { name: /Update Task/i }));
+
+    await waitFor(() =>
+      expect(mockedTaskService.updateTask).toHaveBeenCalledTimes(1)
+    );
+    expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
+      "1",
+      expect.objectContaining({
+        title: "Valid Title",
+        status: "pending",
+        priority: "medium",
+        add_lasts_minutes: undefined,
+      })
+    );
+  });
+
   it("calls handleImproveTitle and displays suggestion", async () => {
     const mockResponse: LLMImprovementResponse = {
       improved_title: "Suggested Title",

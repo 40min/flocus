@@ -11,7 +11,7 @@ import * as taskService from "services/taskService";
 import { useLlmSuggestions } from "hooks/useLlmSuggestions";
 import { Button } from "@/components/ui/button";
 import Modal from "./Modal";
-import { utcToLocal, localToUtc } from "../../utils/utils";
+import { utcToLocal, localToUtc, formatWorkingTime } from "../../utils/utils";
 import { Sparkles, Bot } from "lucide-react";
 import { statusOptions, priorityOptions } from "../../constants/taskOptions";
 
@@ -22,6 +22,12 @@ const taskFormSchema = z.object({
   priority: z.string({ required_error: "Priority is required" }),
   due_date: z.date().nullable().optional(),
   category_id: z.string().optional(),
+  add_lasts_minutes: z
+    .number()
+    .min(0, "Correction time must be non-negative")
+    .max(1440, "Cannot add more than 24 hours (1440 minutes) at once")
+    .optional()
+    .or(z.literal(undefined)),
 });
 
 type CreateTaskFormInputs = z.infer<typeof taskFormSchema>;
@@ -61,6 +67,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       priority: initialFormData.priority,
       due_date: null,
       category_id: initialFormData.category_id || "",
+      add_lasts_minutes: undefined,
     },
   });
 
@@ -101,6 +108,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           ? utcToLocal(editingTask.due_date)
           : null,
         category_id: editingTask.category_id || "",
+        add_lasts_minutes: undefined,
       };
     }
     return {
@@ -110,6 +118,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       priority: initialPriority,
       due_date: null,
       category_id: initialCategoryId || "",
+      add_lasts_minutes: undefined,
     };
   }, [
     editingTask,
@@ -132,6 +141,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       ...data,
       due_date: data.due_date ? localToUtc(data.due_date) : undefined,
       category_id: data.category_id === "" ? undefined : data.category_id,
+      // Only include add_lasts_minutes if it's a valid number > 0
+      add_lasts_minutes:
+        data.add_lasts_minutes && data.add_lasts_minutes > 0
+          ? data.add_lasts_minutes
+          : undefined,
     };
 
     try {
@@ -306,6 +320,57 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Current Working Time Display and Manual Time Addition - Only for editing existing tasks */}
+        {editingTask && (
+          <div className="space-y-4 border-t pt-4">
+            {/* Current working time display */}
+            <div className="bg-gray-50 p-3 rounded-md">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Current Working Time
+              </label>
+              <span className="text-lg font-semibold text-slate-900">
+                {formatWorkingTime(editingTask?.statistics?.lasts_minutes || 0)}
+              </span>
+            </div>
+
+            {/* Manual time addition field */}
+            <div>
+              <label
+                htmlFor="add_lasts_minutes"
+                className="block text-sm font-medium text-slate-700"
+              >
+                Add Correction Time (min)
+                <span
+                  className="text-xs text-gray-500 ml-1 cursor-help"
+                  title="Add additional working time to this task in minutes"
+                >
+                  ℹ️
+                </span>
+              </label>
+              <input
+                type="number"
+                id="add_lasts_minutes"
+                min="0"
+                max="1440"
+                step="1"
+                placeholder="0"
+                {...register("add_lasts_minutes", { valueAsNumber: true })}
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+              {errors.add_lasts_minutes && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.add_lasts_minutes.message}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Enter the number of minutes to add to the current working time
+                (0-1440)
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label

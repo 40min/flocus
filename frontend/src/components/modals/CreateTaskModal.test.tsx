@@ -12,6 +12,7 @@ import {
 } from "types/task";
 import { Category } from "types/category";
 import { TimerProvider } from "../TimerProvider";
+import { MessageProvider } from "../../context/MessageContext";
 
 // Mock the taskService
 jest.mock("services/taskService");
@@ -22,7 +23,15 @@ jest.mock("../../hooks/useTimer", () => ({
   useTimer: jest.fn(),
 }));
 
+// Mock the useMessage hook
+jest.mock("../../context/MessageContext", () => ({
+  ...jest.requireActual("../../context/MessageContext"),
+  useMessage: jest.fn(),
+}));
+
 const mockedUseTimer = require("../../hooks/useTimer").useTimer as jest.Mock;
+const mockedUseMessage = require("../../context/MessageContext")
+  .useMessage as jest.Mock;
 
 const mockCategories: Category[] = [
   {
@@ -64,34 +73,44 @@ describe("CreateTaskModal", () => {
       stopCurrentTask: jest.fn(),
       resetForNewTask: jest.fn(),
     });
+    // Reset the mock for useMessage before each test
+    mockedUseMessage.mockReturnValue({
+      showMessage: jest.fn(),
+      clearMessage: jest.fn(),
+      message: null,
+    });
   });
 
   const renderModal = (
     props?: Partial<React.ComponentProps<typeof CreateTaskModal>>
   ) => {
     return render(
-      <CreateTaskModal
-        isOpen={true}
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-        {...props}
-      />
+      <MessageProvider>
+        <CreateTaskModal
+          isOpen={true}
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+          {...props}
+        />
+      </MessageProvider>
     );
   };
 
   it("does not render when isOpen is false", () => {
     render(
-      <CreateTaskModal
-        isOpen={false}
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={[]}
-        initialFormData={defaultInitialFormData}
-      />
+      <MessageProvider>
+        <CreateTaskModal
+          isOpen={false}
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={[]}
+          initialFormData={defaultInitialFormData}
+        />
+      </MessageProvider>
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -174,11 +193,22 @@ describe("CreateTaskModal", () => {
 
     renderModal({ editingTask });
 
+    // Wait for the form to be initialized with the editing task values
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Existing Task")).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText(/Title/i), {
       target: { value: "Updated Task Title" },
     });
     fireEvent.change(screen.getByLabelText(/Description/i), {
       target: { value: "Updated Task Description" },
+    });
+    fireEvent.change(screen.getByLabelText(/Status/i), {
+      target: { value: "done" },
+    });
+    fireEvent.change(screen.getByLabelText(/Priority/i), {
+      target: { value: "high" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Update Task/i }));
@@ -191,6 +221,8 @@ describe("CreateTaskModal", () => {
       expect.objectContaining({
         title: "Updated Task Title",
         description: "Updated Task Description",
+        status: "done",
+        priority: "high",
       })
     );
     await waitFor(() => expect(onSubmitSuccessMock).toHaveBeenCalledTimes(1));
@@ -608,25 +640,29 @@ describe("CreateTaskModal", () => {
 
     // Simulate modal closing and reopening, or editingTask changing
     rerender(
-      <CreateTaskModal
-        isOpen={false} // Close the modal
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-      />
+      <MessageProvider>
+        <CreateTaskModal
+          isOpen={false} // Close the modal
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+        />
+      </MessageProvider>
     );
 
     rerender(
-      <CreateTaskModal
-        isOpen={true} // Reopen the modal
-        onClose={onCloseMock}
-        onSubmitSuccess={onSubmitSuccessMock}
-        editingTask={null}
-        categories={mockCategories}
-        initialFormData={defaultInitialFormData}
-      />
+      <MessageProvider>
+        <CreateTaskModal
+          isOpen={true} // Reopen the modal
+          onClose={onCloseMock}
+          onSubmitSuccess={onSubmitSuccessMock}
+          editingTask={null}
+          categories={mockCategories}
+          initialFormData={defaultInitialFormData}
+        />
+      </MessageProvider>
     );
 
     expect(screen.queryByText("Suggested Title")).not.toBeInTheDocument();

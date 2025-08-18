@@ -14,6 +14,7 @@ import Modal from "./Modal";
 import { utcToLocal, localToUtc, formatWorkingTime } from "../../utils/utils";
 import { Sparkles, Bot } from "lucide-react";
 import { statusOptions, priorityOptions } from "../../constants/taskOptions";
+import { useMessage } from "../../context/MessageContext";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -72,6 +73,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   });
 
   const { currentTaskId, stopCurrentTask, resetForNewTask } = useTimer();
+  const { showMessage } = useMessage();
 
   const title = watch("title"); // Watch the title field for changes
 
@@ -174,14 +176,22 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           editingTask.id,
           payload as TaskUpdateRequest
         );
+        showMessage(`Task "${data.title}" updated successfully!`, "success");
       } else {
         await taskService.createTask(payload as TaskCreateRequest);
+        showMessage(`Task "${data.title}" created successfully!`, "success");
       }
       onSubmitSuccess();
       onClose();
     } catch (err) {
       console.error(err);
-      // Handle error display if needed, e.g., using a state or context for messages
+      // Show error notification without closing modal
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      showMessage(
+        `Failed to ${editingTask ? "update" : "create"} task: ${errorMessage}`,
+        "error"
+      );
     }
   };
 

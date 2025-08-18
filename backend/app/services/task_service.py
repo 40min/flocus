@@ -223,6 +223,12 @@ class TaskService:
         # Statistics logic needs the status before update
         old_status = task.status
 
+        # Handle manual time addition
+        if task_data.add_lasts_minutes is not None and task_data.add_lasts_minutes > 0:
+            if task.statistics is None:
+                task.statistics = TaskStatistics()
+            task.statistics.lasts_minutes += task_data.add_lasts_minutes
+
         # Update task using mapper
         task = TaskMapper.to_model_for_update(task, task_data)
 
@@ -255,7 +261,8 @@ class TaskService:
 
                     if was_taken_at_aware:  # Recalculate duration with aware times
                         duration = task.statistics.was_stopped_at - was_taken_at_aware
-                        task.statistics.lasts_seconds += int(duration.total_seconds())
+                        duration_minutes = int(duration.total_seconds() / 60)  # Convert to minutes
+                        task.statistics.lasts_minutes += duration_minutes
 
         task.updated_at = datetime.now(UTC)
 

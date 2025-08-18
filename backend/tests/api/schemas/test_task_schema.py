@@ -128,7 +128,7 @@ def test_task_statistics_schema_serialization_with_none():
     assert '"was_started_at":null' in json_output
     assert '"was_taken_at":null' in json_output
     assert '"was_stopped_at":null' in json_output
-    assert '"lasts_seconds":0' in json_output
+    assert '"lasts_minutes":0' in json_output
 
 
 def test_task_response_serialization_with_none_datetimes():

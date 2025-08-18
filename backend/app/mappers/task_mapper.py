@@ -65,6 +65,9 @@ class TaskMapper(BaseMapper):
         """
         update_data = schema.model_dump(exclude_unset=True)
 
+        # Exclude add_lasts_minutes as it's handled separately in the service
+        update_data.pop("add_lasts_minutes", None)
+
         for field, value in update_data.items():
             if field in cls._nullable_fields or (field in cls._non_nullable_fields and value is not None):
                 setattr(task, field, value)

@@ -54,7 +54,7 @@ class TaskStatisticsSchema(BaseModel):
     was_started_at: Optional[datetime] = None
     was_taken_at: Optional[datetime] = None
     was_stopped_at: Optional[datetime] = None
-    lasts_seconds: Optional[int] = Field(default=0)
+    lasts_minutes: Optional[int] = Field(default=0)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -72,6 +72,7 @@ class TaskUpdateRequest(BaseModel):
     priority: Optional[TaskPriority] = None
     due_date: Optional[datetime] = None  # This will also use the encoder
     category_id: Optional[ObjectId] = None
+    add_lasts_minutes: Optional[int] = Field(None, ge=0, description="Additional minutes to add to task working time")
 
 
 class TaskResponse(TaskBase):

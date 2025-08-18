@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import TaskStatisticsModal from "./TaskStatisticsModal";
 import { Task } from "types/task";
-import { formatDateTime, formatDurationFromSeconds } from "../../utils/utils";
+import { formatDateTime, formatWorkingTime } from "../../utils/utils";
 
 const mockTaskWithStats: Task = {
   id: "task1",
@@ -17,7 +17,7 @@ const mockTaskWithStats: Task = {
     was_taken_at: "2023-01-01T10:00:00Z",
     was_started_at: "2023-01-01T10:05:00Z",
     was_stopped_at: "2023-01-01T11:00:00Z",
-    lasts_seconds: 3300,
+    lasts_minutes: 55,
   },
 };
 
@@ -86,7 +86,7 @@ describe("TaskStatisticsModal", () => {
     expect(screen.getByText("Total Active Time:")).toBeInTheDocument();
     expect(
       screen.getByText(
-        formatDurationFromSeconds(mockTaskWithStats.statistics!.lasts_seconds)
+        formatWorkingTime(mockTaskWithStats.statistics!.lasts_minutes)
       )
     ).toBeInTheDocument();
   });
@@ -105,14 +105,14 @@ describe("TaskStatisticsModal", () => {
     ).toBeInTheDocument();
     // Check that N/A appears for each stat field
     const nTexts = screen.getAllByText("N/A");
-    expect(nTexts.length).toBe(4); // was_taken_at, was_started_at, was_stopped_at, lasts_seconds
+    expect(nTexts.length).toBe(4); // was_taken_at, was_started_at, was_stopped_at, lasts_minutes
   });
 
   test('renders "N/A" for specific missing statistic fields', () => {
     const taskWithPartialStats: Task = {
       ...mockTaskWithStats,
       statistics: {
-        lasts_seconds: 1800,
+        lasts_minutes: 30,
       },
     };
     render(
@@ -128,9 +128,7 @@ describe("TaskStatisticsModal", () => {
     expect(screen.getByText("Total Active Time:")).toBeInTheDocument();
     expect(
       screen.getByText(
-        formatDurationFromSeconds(
-          taskWithPartialStats.statistics!.lasts_seconds
-        )
+        formatWorkingTime(taskWithPartialStats.statistics!.lasts_minutes)
       )
     ).toBeInTheDocument();
   });

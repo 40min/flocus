@@ -99,7 +99,7 @@ const mockTasks: Task[] = [
     due_date: "2024-01-01",
     created_at: "2023-01-01T00:00:00Z",
     updated_at: "2023-01-01T00:00:00Z",
-    statistics: { was_taken_at: "2023-01-01T10:00:00Z", lasts_seconds: 3600 },
+    statistics: { was_taken_at: "2023-01-01T10:00:00Z", lasts_minutes: 60 },
   },
   {
     id: "task2",
@@ -110,7 +110,7 @@ const mockTasks: Task[] = [
     user_id: "user1",
     created_at: "2023-01-02T00:00:00Z",
     updated_at: "2023-01-02T00:00:00Z",
-    statistics: { lasts_seconds: 1800 },
+    statistics: { lasts_minutes: 30 },
   },
 ];
 

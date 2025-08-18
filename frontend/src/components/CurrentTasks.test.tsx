@@ -47,7 +47,7 @@ const mockTasks: Task[] = [
     status: "pending",
     priority: "medium",
     user_id: "user1",
-    statistics: { lasts_seconds: 1800 },
+    statistics: { lasts_minutes: 30 },
   },
   {
     id: "task2",
@@ -55,7 +55,7 @@ const mockTasks: Task[] = [
     status: "pending",
     priority: "high",
     user_id: "user1",
-    statistics: { lasts_seconds: 3600 },
+    statistics: { lasts_minutes: 60 },
   },
 ];
 

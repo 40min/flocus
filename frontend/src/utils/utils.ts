@@ -301,6 +301,131 @@ export {
   chunk,
 } from "lodash-es";
 
+// ===== WORKING TIME UTILITIES =====
+
+/**
+ * Format working time in minutes to readable display format
+ * @param minutes - Working time in minutes
+ * @returns Formatted time string (e.g., "2h 30m", "45m", "0 minutes")
+ */
+export function formatWorkingTime(minutes: number | undefined | null): string {
+  if (minutes == null || !isNumber(minutes) || isNaN(minutes)) {
+    return "N/A";
+  }
+
+  if (minutes < 0) {
+    return "N/A";
+  }
+
+  if (minutes === 0) {
+    return "0 minutes";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes}m`;
+  }
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+/**
+ * Add working time safely, ensuring non-negative results
+ * @param currentMinutes - Current working time in minutes
+ * @param additionalMinutes - Additional time to add in minutes
+ * @returns New total working time, or null if result would be negative
+ */
+export function addWorkingTime(
+  currentMinutes: number | undefined | null,
+  additionalMinutes: number | undefined | null
+): number | null {
+  const current = currentMinutes ?? 0;
+  const additional = additionalMinutes ?? 0;
+
+  if (!isNumber(current) || !isNumber(additional)) {
+    return null;
+  }
+
+  if (current < 0 || additional < 0) {
+    return null;
+  }
+
+  const result = current + additional;
+  return result >= 0 ? result : null;
+}
+
+/**
+ * Validate working time input for manual time adjustment
+ * @param minutes - Minutes to validate
+ * @returns Validation result with error message if invalid
+ */
+export function validateWorkingTimeInput(minutes: number | undefined | null): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (minutes == null) {
+    return { isValid: true }; // null/undefined is treated as 0
+  }
+
+  if (!isNumber(minutes) || isNaN(minutes)) {
+    return { isValid: false, error: "Working time must be a number" };
+  }
+
+  if (minutes < 0) {
+    return { isValid: false, error: "Working time cannot be negative" };
+  }
+
+  if (!Number.isInteger(minutes)) {
+    return {
+      isValid: false,
+      error: "Working time must be a whole number of minutes",
+    };
+  }
+
+  // Reasonable upper limit: 24 hours = 1440 minutes
+  if (minutes > 1440) {
+    return { isValid: false, error: "Cannot add more than 24 hours at once" };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Convert seconds to minutes for working time calculations
+ * @param seconds - Time in seconds
+ * @returns Time in minutes (rounded down)
+ */
+export function secondsToWorkingMinutes(
+  seconds: number | undefined | null
+): number {
+  if (seconds == null || !isNumber(seconds) || isNaN(seconds) || seconds < 0) {
+    return 0;
+  }
+
+  return Math.floor(seconds / 60);
+}
+
+/**
+ * Convert minutes to seconds for API compatibility
+ * @param minutes - Time in minutes
+ * @returns Time in seconds
+ */
+export function workingMinutesToSeconds(
+  minutes: number | undefined | null
+): number {
+  if (minutes == null || !isNumber(minutes) || isNaN(minutes) || minutes < 0) {
+    return 0;
+  }
+
+  return minutes * 60;
+}
+
 // ===== RE-EXPORT DATE/TIME UTILITIES =====
 
 /**

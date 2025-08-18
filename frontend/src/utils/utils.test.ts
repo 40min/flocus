@@ -2,6 +2,11 @@ import {
   checkTimeWindowOverlap,
   recalculateTimeWindowsWithGapFitting,
   recalculateTimeWindowsWithShifting,
+  formatWorkingTime,
+  addWorkingTime,
+  validateWorkingTimeInput,
+  secondsToWorkingMinutes,
+  workingMinutesToSeconds,
 } from "./utils";
 import { TimeWindowAllocation } from "../types/dailyPlan";
 import { TimeWindowCreateRequest } from "../types/timeWindow";
@@ -457,6 +462,185 @@ describe("utils", () => {
         expect(allocation.time_window.start_time).toBeLessThan(
           allocation.time_window.end_time
         );
+      });
+    });
+  });
+
+  describe("Working Time Utilities", () => {
+    describe("formatWorkingTime", () => {
+      it("should format zero minutes correctly", () => {
+        expect(formatWorkingTime(0)).toBe("0 minutes");
+        expect(formatWorkingTime(null)).toBe("N/A");
+        expect(formatWorkingTime(undefined)).toBe("N/A");
+      });
+
+      it("should format minutes only", () => {
+        expect(formatWorkingTime(1)).toBe("1m");
+        expect(formatWorkingTime(30)).toBe("30m");
+        expect(formatWorkingTime(59)).toBe("59m");
+      });
+
+      it("should format hours only", () => {
+        expect(formatWorkingTime(60)).toBe("1h");
+        expect(formatWorkingTime(120)).toBe("2h");
+        expect(formatWorkingTime(180)).toBe("3h");
+      });
+
+      it("should format hours and minutes", () => {
+        expect(formatWorkingTime(61)).toBe("1h 1m");
+        expect(formatWorkingTime(90)).toBe("1h 30m");
+        expect(formatWorkingTime(150)).toBe("2h 30m");
+        expect(formatWorkingTime(125)).toBe("2h 5m");
+      });
+
+      it("should handle negative values", () => {
+        expect(formatWorkingTime(-30)).toBe("N/A");
+        expect(formatWorkingTime(-1)).toBe("N/A");
+      });
+
+      it("should handle non-numeric values", () => {
+        expect(formatWorkingTime(NaN)).toBe("N/A");
+        expect(formatWorkingTime("30" as any)).toBe("N/A");
+      });
+    });
+
+    describe("addWorkingTime", () => {
+      it("should add working time correctly", () => {
+        expect(addWorkingTime(30, 15)).toBe(45);
+        expect(addWorkingTime(0, 30)).toBe(30);
+        expect(addWorkingTime(60, 0)).toBe(60);
+      });
+
+      it("should handle null and undefined values", () => {
+        expect(addWorkingTime(null, 30)).toBe(30);
+        expect(addWorkingTime(30, null)).toBe(30);
+        expect(addWorkingTime(null, null)).toBe(0);
+        expect(addWorkingTime(undefined, 30)).toBe(30);
+        expect(addWorkingTime(30, undefined)).toBe(30);
+      });
+
+      it("should return null for negative inputs", () => {
+        expect(addWorkingTime(-10, 30)).toBe(null);
+        expect(addWorkingTime(30, -10)).toBe(null);
+        expect(addWorkingTime(-10, -5)).toBe(null);
+      });
+
+      it("should return null for non-numeric inputs", () => {
+        expect(addWorkingTime("30" as any, 15)).toBe(null);
+        expect(addWorkingTime(30, "15" as any)).toBe(null);
+        expect(addWorkingTime(NaN, 15)).toBe(null);
+      });
+    });
+
+    describe("validateWorkingTimeInput", () => {
+      it("should validate positive integers", () => {
+        expect(validateWorkingTimeInput(30)).toEqual({ isValid: true });
+        expect(validateWorkingTimeInput(0)).toEqual({ isValid: true });
+        expect(validateWorkingTimeInput(1440)).toEqual({ isValid: true });
+      });
+
+      it("should allow null and undefined", () => {
+        expect(validateWorkingTimeInput(null)).toEqual({ isValid: true });
+        expect(validateWorkingTimeInput(undefined)).toEqual({ isValid: true });
+      });
+
+      it("should reject negative numbers", () => {
+        expect(validateWorkingTimeInput(-1)).toEqual({
+          isValid: false,
+          error: "Working time cannot be negative",
+        });
+        expect(validateWorkingTimeInput(-30)).toEqual({
+          isValid: false,
+          error: "Working time cannot be negative",
+        });
+      });
+
+      it("should reject non-integers", () => {
+        expect(validateWorkingTimeInput(30.5)).toEqual({
+          isValid: false,
+          error: "Working time must be a whole number of minutes",
+        });
+        expect(validateWorkingTimeInput(1.1)).toEqual({
+          isValid: false,
+          error: "Working time must be a whole number of minutes",
+        });
+      });
+
+      it("should reject non-numeric values", () => {
+        expect(validateWorkingTimeInput("30" as any)).toEqual({
+          isValid: false,
+          error: "Working time must be a number",
+        });
+        expect(validateWorkingTimeInput(NaN)).toEqual({
+          isValid: false,
+          error: "Working time must be a number",
+        });
+      });
+
+      it("should reject values exceeding 24 hours", () => {
+        expect(validateWorkingTimeInput(1441)).toEqual({
+          isValid: false,
+          error: "Cannot add more than 24 hours at once",
+        });
+        expect(validateWorkingTimeInput(2000)).toEqual({
+          isValid: false,
+          error: "Cannot add more than 24 hours at once",
+        });
+      });
+    });
+
+    describe("secondsToWorkingMinutes", () => {
+      it("should convert seconds to minutes correctly", () => {
+        expect(secondsToWorkingMinutes(60)).toBe(1);
+        expect(secondsToWorkingMinutes(1800)).toBe(30);
+        expect(secondsToWorkingMinutes(3600)).toBe(60);
+        expect(secondsToWorkingMinutes(3660)).toBe(61); // 61 minutes
+      });
+
+      it("should round down partial minutes", () => {
+        expect(secondsToWorkingMinutes(59)).toBe(0);
+        expect(secondsToWorkingMinutes(119)).toBe(1);
+        expect(secondsToWorkingMinutes(179)).toBe(2);
+      });
+
+      it("should handle zero and null values", () => {
+        expect(secondsToWorkingMinutes(0)).toBe(0);
+        expect(secondsToWorkingMinutes(null)).toBe(0);
+        expect(secondsToWorkingMinutes(undefined)).toBe(0);
+      });
+
+      it("should handle negative values", () => {
+        expect(secondsToWorkingMinutes(-60)).toBe(0);
+        expect(secondsToWorkingMinutes(-1)).toBe(0);
+      });
+
+      it("should handle non-numeric values", () => {
+        expect(secondsToWorkingMinutes("60" as any)).toBe(0);
+        expect(secondsToWorkingMinutes(NaN)).toBe(0);
+      });
+    });
+
+    describe("workingMinutesToSeconds", () => {
+      it("should convert minutes to seconds correctly", () => {
+        expect(workingMinutesToSeconds(1)).toBe(60);
+        expect(workingMinutesToSeconds(30)).toBe(1800);
+        expect(workingMinutesToSeconds(60)).toBe(3600);
+      });
+
+      it("should handle zero and null values", () => {
+        expect(workingMinutesToSeconds(0)).toBe(0);
+        expect(workingMinutesToSeconds(null)).toBe(0);
+        expect(workingMinutesToSeconds(undefined)).toBe(0);
+      });
+
+      it("should handle negative values", () => {
+        expect(workingMinutesToSeconds(-30)).toBe(0);
+        expect(workingMinutesToSeconds(-1)).toBe(0);
+      });
+
+      it("should handle non-numeric values", () => {
+        expect(workingMinutesToSeconds("30" as any)).toBe(0);
+        expect(workingMinutesToSeconds(NaN)).toBe(0);
       });
     });
   });

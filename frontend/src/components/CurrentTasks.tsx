@@ -15,7 +15,7 @@ import {
 import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
 import { Task, TaskCreateRequest } from "types/task";
 import { DailyPlanResponse } from "../types/dailyPlan";
-import { cn, formatDurationFromSeconds } from "../utils/utils";
+import { cn, formatWorkingTime } from "../utils/utils";
 import { useTimer } from "../hooks/useTimer";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
@@ -133,7 +133,7 @@ export const TaskCard = ({
                 <div className="flex items-center gap-1 text-xs text-text-secondary">
                   <Clock className="h-3 w-3" />
                   <span>
-                    {formatDurationFromSeconds(task.statistics?.lasts_seconds)}
+                    {formatWorkingTime(task.statistics?.lasts_minutes)}
                   </span>
                 </div>
                 <div className="mt-4 flex items-center gap-2">

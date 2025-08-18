@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatDueDate, formatDurationFromSeconds } from "../utils/utils";
+import { formatDueDate, formatWorkingTime } from "../utils/utils";
 import { Plus, Edit, Trash2, Info } from "lucide-react"; // Updated icons
 import { Button } from "@/components/ui/button";
 import { Task, TaskCreateRequest } from "types/task";
@@ -248,9 +248,7 @@ const TasksPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-slate-600 text-sm">
-                      {formatDurationFromSeconds(
-                        task.statistics?.lasts_seconds
-                      )}
+                      {formatWorkingTime(task.statistics?.lasts_minutes)}
                     </td>
                     <td className="px-6 py-4 text-right space-x-1">
                       <Button

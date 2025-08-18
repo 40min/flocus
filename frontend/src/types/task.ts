@@ -1,14 +1,14 @@
-import { Category } from './category';
+import { Category } from "./category";
 
 export interface TaskStatistics {
-  was_taken_at?: string;    // ISO datetime string
-  was_started_at?: string;  // ISO datetime string
-  was_stopped_at?: string;  // ISO datetime string
-  lasts_seconds?: number;
+  was_taken_at?: string; // ISO datetime string
+  was_started_at?: string; // ISO datetime string
+  was_stopped_at?: string; // ISO datetime string
+  lasts_minutes?: number;
 }
 
-export type TaskStatus = 'pending' | 'in_progress' | 'done' | 'blocked';
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = "pending" | "in_progress" | "done" | "blocked";
+export type TaskPriority = "low" | "medium" | "high";
 
 export interface Task {
   id: string;
@@ -24,7 +24,6 @@ export interface Task {
   updated_at?: string; // ISO datetime string
   is_deleted?: boolean;
   statistics?: TaskStatistics;
-
 }
 
 export interface TaskCreateRequest {
@@ -38,9 +37,13 @@ export interface TaskCreateRequest {
 
 export interface TaskUpdateRequest extends Partial<TaskCreateRequest> {
   // All fields are optional for updates
+  add_lasts_minutes?: number;
 }
 
-export type LlmAction = 'improve_title' | 'improve_description' | 'generate_description_from_title';
+export type LlmAction =
+  | "improve_title"
+  | "improve_description"
+  | "generate_description_from_title";
 
 export interface LLMImprovementRequest {
   action: LlmAction;

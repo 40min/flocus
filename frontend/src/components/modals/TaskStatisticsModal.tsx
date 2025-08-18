@@ -2,7 +2,7 @@ import React from "react";
 import Modal from "./Modal";
 import { Button } from "@/components/ui/button";
 import { Task } from "types/task";
-import { formatDateTime, formatDurationFromSeconds } from "../../utils/utils";
+import { formatDateTime, formatWorkingTime } from "../../utils/utils";
 import { CalendarDays, PlayCircle, StopCircle, Timer } from "lucide-react";
 
 interface TaskStatisticsModalProps {
@@ -67,7 +67,7 @@ const TaskStatisticsModal: React.FC<TaskStatisticsModalProps> = ({
             Total Active Time:
           </span>
           <span className={statValueClass}>
-            {formatDurationFromSeconds(statistics?.lasts_seconds)}
+            {formatWorkingTime(statistics?.lasts_minutes)}
           </span>
         </div>
         <div className="flex justify-end pt-4">

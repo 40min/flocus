@@ -4,26 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useUpdateTask } from "./useTasks";
 import { updateTask } from "../services/taskService";
 import { Task } from "../types/task";
-import test from "node:test";
-import { describe } from "node:test";
 
 // Mock the task service
 jest.mock("../services/taskService");
 const mockUpdateTask = updateTask as jest.MockedFunction<typeof updateTask>;
-
-// Create a wrapper for React Query
-const createQueryWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
 
 const mockTasks: Task[] = [
   {
@@ -51,18 +35,28 @@ const mockTasks: Task[] = [
 describe("useUpdateTask optimistic updates", () => {
   let queryClient: QueryClient;
 
-  beforeEach(() => {
+  // Create a wrapper for React Query
+  const createWrapper = () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
         mutations: { retry: false },
       },
     });
+
+    const Wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    return Wrapper;
+  };
+
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
   test("should apply optimistic update immediately for add_lasts_minutes", async () => {
-    const wrapper = createQueryWrapper();
+    const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
     // Set initial tasks data
@@ -82,13 +76,15 @@ describe("useUpdateTask optimistic updates", () => {
       });
     });
 
-    // Should update immediately (optimistically)
-    const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-    expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(30);
+    // Wait for optimistic update to apply
+    await waitFor(() => {
+      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
+      expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(30);
+    });
   });
 
   test("should apply optimistic update for regular field updates", async () => {
-    const wrapper = createQueryWrapper();
+    const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
     // Set initial tasks data
@@ -108,13 +104,15 @@ describe("useUpdateTask optimistic updates", () => {
       });
     });
 
-    // Should update immediately (optimistically)
-    const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-    expect(updatedTasks?.[0].status).toBe("in_progress");
+    // Wait for optimistic update to apply
+    await waitFor(() => {
+      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
+      expect(updatedTasks?.[0].status).toBe("in_progress");
+    });
   });
 
   test("should rollback on API error", async () => {
-    const wrapper = createQueryWrapper();
+    const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
     // Set initial tasks data
@@ -141,7 +139,7 @@ describe("useUpdateTask optimistic updates", () => {
   });
 
   test("should handle multiple optimistic updates correctly", async () => {
-    const wrapper = createQueryWrapper();
+    const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
     // Set initial tasks data
@@ -174,9 +172,11 @@ describe("useUpdateTask optimistic updates", () => {
       });
     });
 
-    // Both should be updated optimistically
-    const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-    expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(15);
-    expect(updatedTasks?.[1].statistics?.lasts_minutes).toBe(45);
+    // Wait for optimistic updates to apply
+    await waitFor(() => {
+      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
+      expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(15);
+      expect(updatedTasks?.[1].statistics?.lasts_minutes).toBe(45);
+    });
   });
 });

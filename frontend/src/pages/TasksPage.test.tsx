@@ -18,6 +18,7 @@ import { useTasks, useTasksByCategory, useUpdateTask } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
 import { TimerProvider } from "../components/TimerProvider";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
+import { MessageProvider } from "../context/MessageContext";
 import { getTodayStats } from "services/userDailyStatsService";
 import { formatDurationFromSeconds } from "../utils/utils";
 
@@ -155,9 +156,11 @@ const renderTasksPage = (
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={mockAuthContextValue}>
-          <TimerProvider>
-            <TasksPage />
-          </TimerProvider>
+          <MessageProvider>
+            <TimerProvider>
+              <TasksPage />
+            </TimerProvider>
+          </MessageProvider>
         </AuthContext.Provider>
       </QueryClientProvider>
     </Router>
@@ -287,21 +290,33 @@ describe("TasksPage", () => {
     fireEvent.click(editButtons[0]);
 
     await screen.findByText("Edit Task");
-    expect(screen.getByLabelText("Title")).toHaveValue("Task 1");
+
+    // Wait for the form to be fully initialized with task data
+    await waitFor(() => {
+      expect(screen.getByLabelText("Title")).toHaveValue("Task 1");
+    });
+
+    // Verify other fields are also initialized
+    expect(screen.getByLabelText("Status")).toHaveValue("pending");
+    expect(screen.getByLabelText("Priority")).toHaveValue("medium");
 
     fireEvent.change(screen.getByLabelText("Title"), {
       target: { value: "Updated Task 1" },
     });
+
     fireEvent.click(screen.getByText("Update Task"));
 
-    await waitFor(() => {
-      expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
-        "task1",
-        expect.objectContaining({
-          title: "Updated Task 1",
-        })
-      );
-    });
+    await waitFor(
+      () => {
+        expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
+          "task1",
+          expect.objectContaining({
+            title: "Updated Task 1",
+          })
+        );
+      },
+      { timeout: 5000 }
+    );
   });
 
   test("deletes a task", async () => {

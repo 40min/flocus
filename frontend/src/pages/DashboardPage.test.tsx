@@ -11,6 +11,7 @@ import { getTodayStats } from "../services/userDailyStatsService";
 import { useTimerStore } from "../stores/timerStore";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
+import { MessageProvider } from "../context/MessageContext";
 
 const mockUseTimerStore = useTimerStore as jest.MockedFunction<
   typeof useTimerStore
@@ -174,7 +175,9 @@ const renderWithProviders = (component: React.ReactElement) => {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <AuthProvider>
-          <TimerProvider>{component}</TimerProvider>
+          <MessageProvider>
+            <TimerProvider>{component}</TimerProvider>
+          </MessageProvider>
         </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>

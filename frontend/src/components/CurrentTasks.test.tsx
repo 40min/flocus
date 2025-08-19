@@ -8,6 +8,7 @@ import { useCurrentTimeWindow } from "../hooks/useCurrentTimeWindow";
 import { useTimer } from "../hooks/useTimer";
 import { TimerProvider } from "./TimerProvider";
 import { AuthContext, AuthContextType } from "../context/AuthContext";
+import { MessageProvider } from "../context/MessageContext";
 import { DndContext } from "@dnd-kit/core";
 import { Task } from "types/task";
 import { TimeWindow } from "types/timeWindow";
@@ -83,9 +84,11 @@ const renderWithDnd = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <AuthContext.Provider value={mergedAuthContextValue as AuthContextType}>
-          <TimerProvider>
-            <DndContext onDragEnd={() => {}}>{component}</DndContext>
-          </TimerProvider>
+          <MessageProvider>
+            <TimerProvider>
+              <DndContext onDragEnd={() => {}}>{component}</DndContext>
+            </TimerProvider>
+          </MessageProvider>
         </AuthContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>
@@ -323,21 +326,9 @@ describe("CurrentTasks", () => {
       isLoading: false,
     };
 
-    const { rerender } = render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <AuthContext.Provider value={testAuthContextValue}>
-            <TimerProvider>
-              <DndContext onDragEnd={() => {}}>
-                <CurrentTasks
-                  dailyPlan={{} as any}
-                  onSelectTask={mockOnSelectTask}
-                />
-              </DndContext>
-            </TimerProvider>
-          </AuthContext.Provider>
-        </MemoryRouter>
-      </QueryClientProvider>
+    const { rerender } = renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />,
+      testAuthContextValue
     );
     let pauseButton = screen.getAllByRole("button", { name: "Pause task" })[0];
     expect(pauseButton).toBeDisabled();
@@ -358,14 +349,16 @@ describe("CurrentTasks", () => {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <AuthContext.Provider value={testAuthContextValue}>
-            <TimerProvider>
-              <DndContext onDragEnd={() => {}}>
-                <CurrentTasks
-                  dailyPlan={{} as any}
-                  onSelectTask={mockOnSelectTask}
-                />
-              </DndContext>
-            </TimerProvider>
+            <MessageProvider>
+              <TimerProvider>
+                <DndContext onDragEnd={() => {}}>
+                  <CurrentTasks
+                    dailyPlan={{} as any}
+                    onSelectTask={mockOnSelectTask}
+                  />
+                </DndContext>
+              </TimerProvider>
+            </MessageProvider>
           </AuthContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>

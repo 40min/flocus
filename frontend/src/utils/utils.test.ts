@@ -10,7 +10,6 @@ import {
 } from "./utils";
 import { TimeWindowAllocation } from "../types/dailyPlan";
 import { TimeWindowCreateRequest } from "../types/timeWindow";
-import { dayjs } from "../utils/dateUtils";
 
 // Keep a reference to the original console.warn
 const originalConsoleWarn = console.warn;

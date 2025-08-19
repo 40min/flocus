@@ -2,18 +2,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateTask } from "../services/taskService";
 import { Task, TaskStatus } from "../types/task";
 
-// TypeScript interfaces for mutation variables
-interface UpdateWorkingTimeVariables {
+ // TypeScript interfaces for mutation variables
+export interface UpdateWorkingTimeVariables {
   taskId: string;
   additionalMinutes: number;
 }
 
-interface UpdateStatusVariables {
+export interface UpdateStatusVariables {
   taskId: string;
   status: TaskStatus;
 }
 
-interface UpdateTaskContext {
+export interface UpdateTaskContext {
   previousTasks: Task[] | undefined;
 }
 

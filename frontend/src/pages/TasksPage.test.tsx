@@ -1,4 +1,3 @@
-import React from "react";
 import {
   render,
   screen,
@@ -14,7 +13,12 @@ import * as taskService from "services/taskService";
 import { Task } from "types/task";
 import { Category } from "types/category";
 import { User } from "types/user";
-import { useTasks, useTasksByCategory, useUpdateTask } from "hooks/useTasks";
+import {
+  useTasks,
+  useTasksByCategory,
+  useUpdateTask,
+  useCreateTask,
+} from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
 import { TimerProvider } from "../components/TimerProvider";
 import TaskStatisticsModal from "../components/modals/TaskStatisticsModal";
@@ -126,6 +130,8 @@ const queryClient = new QueryClient({
 // Mock functions that need to be accessed in tests
 const mockMutate = jest.fn();
 const mockMutateAsync = jest.fn();
+const mockCreateMutate = jest.fn();
+const mockCreateMutateAsync = jest.fn();
 
 const renderTasksPage = (
   tasksData: Task[] = mockTasks,
@@ -160,6 +166,14 @@ const renderTasksPage = (
     error: null,
   });
 
+  (useCreateTask as jest.Mock).mockReturnValue({
+    mutate: mockCreateMutate,
+    mutateAsync: mockCreateMutateAsync,
+    isLoading: false,
+    isError: false,
+    error: null,
+  });
+
   return render(
     <Router>
       <QueryClientProvider client={queryClient}>
@@ -186,6 +200,13 @@ describe("TasksPage", () => {
 
     jest.clearAllMocks();
     queryClient.clear();
+
+    // Reset mock functions
+    mockMutate.mockClear();
+    mockMutateAsync.mockClear();
+    mockCreateMutate.mockClear();
+    mockCreateMutateAsync.mockClear();
+
     mockedTaskService.createTask.mockImplementation(async (taskData) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       return {
@@ -212,6 +233,15 @@ describe("TasksPage", () => {
     mockedTaskService.deleteTask.mockImplementation(async (id) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       return undefined;
+    });
+
+    // Set up mock implementations for the mutation functions
+    mockCreateMutateAsync.mockImplementation(async (taskData) => {
+      return await mockedTaskService.createTask(taskData);
+    });
+
+    mockMutateAsync.mockImplementation(async ({ taskId, taskData }) => {
+      return await mockedTaskService.updateTask(taskId, taskData);
     });
   });
 
@@ -308,10 +338,13 @@ describe("TasksPage", () => {
     });
 
     // Verify form is initialized with task data
-    await waitFor(() => {
-      const titleInput = screen.getByLabelText("Title");
-      expect(titleInput).toHaveValue("Task 1");
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        const titleInput = screen.getByLabelText("Title");
+        expect(titleInput).toHaveValue("Task 1");
+      },
+      { timeout: 2000 }
+    );
 
     // Update the task
     const titleInput = screen.getByLabelText("Title");
@@ -322,14 +355,17 @@ describe("TasksPage", () => {
     fireEvent.click(updateButton);
 
     // Verify the update service was called
-    await waitFor(() => {
-      expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
-        "task1",
-        expect.objectContaining({
-          title: "Updated Task 1",
-        })
-      );
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(mockedTaskService.updateTask).toHaveBeenCalledWith(
+          "task1",
+          expect.objectContaining({
+            title: "Updated Task 1",
+          })
+        );
+      },
+      { timeout: 3000 }
+    );
   });
 
   test("deletes a task", async () => {

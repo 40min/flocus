@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteTask, getAllTasks, updateTask } from "../services/taskService";
-import { Task, TaskUpdateRequest } from "../types/task";
+import {
+  deleteTask,
+  getAllTasks,
+  updateTask,
+  createTask,
+} from "../services/taskService";
+import { Task, TaskUpdateRequest, TaskCreateRequest } from "../types/task";
 
 export const useTasks = () => {
   return useQuery({
@@ -90,6 +95,20 @@ export const useUpdateTask = () => {
     // Always refetch after error or success to ensure consistency with server
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+};
+
+export const useCreateTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Task, Error, TaskCreateRequest>({
+    mutationFn: (taskData: TaskCreateRequest) => createTask(taskData),
+
+    // No optimistic updates for task creation - just invalidate cache on success
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
     },
   });
 };

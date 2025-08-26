@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import CreateTaskModal from "./CreateTaskModal";
 import * as taskService from "services/taskService";
@@ -62,8 +63,19 @@ const defaultInitialFormData = {
 describe("CreateTaskModal", () => {
   const onCloseMock = jest.fn();
   const onSubmitSuccessMock = jest.fn();
+  let queryClient: QueryClient;
 
   beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+        mutations: {
+          retry: false,
+        },
+      },
+    });
     onCloseMock.mockClear();
     onSubmitSuccessMock.mockClear();
     jest.clearAllMocks();
@@ -85,33 +97,27 @@ describe("CreateTaskModal", () => {
     props?: Partial<React.ComponentProps<typeof CreateTaskModal>>
   ) => {
     return render(
-      <MessageProvider>
-        <CreateTaskModal
-          isOpen={true}
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-          {...props}
-        />
-      </MessageProvider>
+      <QueryClientProvider client={queryClient}>
+        <MessageProvider>
+          <CreateTaskModal
+            isOpen={true}
+            onClose={onCloseMock}
+            onSubmitSuccess={onSubmitSuccessMock}
+            editingTask={null}
+            categories={mockCategories}
+            initialFormData={defaultInitialFormData}
+            {...props}
+          />
+        </MessageProvider>
+      </QueryClientProvider>
     );
   };
 
   it("does not render when isOpen is false", () => {
-    render(
-      <MessageProvider>
-        <CreateTaskModal
-          isOpen={false}
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={[]}
-          initialFormData={defaultInitialFormData}
-        />
-      </MessageProvider>
-    );
+    renderModal({
+      isOpen: false,
+      categories: [],
+    });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -485,29 +491,33 @@ describe("CreateTaskModal", () => {
 
     // Simulate modal closing and reopening, or editingTask changing
     rerender(
-      <MessageProvider>
-        <CreateTaskModal
-          isOpen={false} // Close the modal
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-        />
-      </MessageProvider>
+      <QueryClientProvider client={queryClient}>
+        <MessageProvider>
+          <CreateTaskModal
+            isOpen={false} // Close the modal
+            onClose={onCloseMock}
+            onSubmitSuccess={onSubmitSuccessMock}
+            editingTask={null}
+            categories={mockCategories}
+            initialFormData={defaultInitialFormData}
+          />
+        </MessageProvider>
+      </QueryClientProvider>
     );
 
     rerender(
-      <MessageProvider>
-        <CreateTaskModal
-          isOpen={true} // Reopen the modal
-          onClose={onCloseMock}
-          onSubmitSuccess={onSubmitSuccessMock}
-          editingTask={null}
-          categories={mockCategories}
-          initialFormData={defaultInitialFormData}
-        />
-      </MessageProvider>
+      <QueryClientProvider client={queryClient}>
+        <MessageProvider>
+          <CreateTaskModal
+            isOpen={true} // Reopen the modal
+            onClose={onCloseMock}
+            onSubmitSuccess={onSubmitSuccessMock}
+            editingTask={null}
+            categories={mockCategories}
+            initialFormData={defaultInitialFormData}
+          />
+        </MessageProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.queryByText("Suggested Title")).not.toBeInTheDocument();
@@ -688,7 +698,7 @@ describe("CreateTaskModal", () => {
         renderModal({ editingTask });
 
         const correctionInput = screen.getByLabelText(/Add Correction Time/i);
-        expect(correctionInput).toHaveValue(null);
+        expect(correctionInput).toHaveValue(0);
       });
 
       it("treats zero correction time as undefined in API call", async () => {
@@ -815,33 +825,37 @@ describe("CreateTaskModal", () => {
 
         // Close and reopen modal
         rerender(
-          <MessageProvider>
-            <CreateTaskModal
-              isOpen={false}
-              onClose={onCloseMock}
-              onSubmitSuccess={onSubmitSuccessMock}
-              editingTask={editingTask}
-              categories={mockCategories}
-              initialFormData={defaultInitialFormData}
-            />
-          </MessageProvider>
+          <QueryClientProvider client={queryClient}>
+            <MessageProvider>
+              <CreateTaskModal
+                isOpen={false}
+                onClose={onCloseMock}
+                onSubmitSuccess={onSubmitSuccessMock}
+                editingTask={editingTask}
+                categories={mockCategories}
+                initialFormData={defaultInitialFormData}
+              />
+            </MessageProvider>
+          </QueryClientProvider>
         );
 
         rerender(
-          <MessageProvider>
-            <CreateTaskModal
-              isOpen={true}
-              onClose={onCloseMock}
-              onSubmitSuccess={onSubmitSuccessMock}
-              editingTask={editingTask}
-              categories={mockCategories}
-              initialFormData={defaultInitialFormData}
-            />
-          </MessageProvider>
+          <QueryClientProvider client={queryClient}>
+            <MessageProvider>
+              <CreateTaskModal
+                isOpen={true}
+                onClose={onCloseMock}
+                onSubmitSuccess={onSubmitSuccessMock}
+                editingTask={editingTask}
+                categories={mockCategories}
+                initialFormData={defaultInitialFormData}
+              />
+            </MessageProvider>
+          </QueryClientProvider>
         );
 
         // Correction time field should be reset
-        expect(screen.getByLabelText(/Add Correction Time/i)).toHaveValue(null);
+        expect(screen.getByLabelText(/Add Correction Time/i)).toHaveValue(0);
       });
 
       it("shows different working times for different tasks", async () => {
@@ -856,16 +870,18 @@ describe("CreateTaskModal", () => {
 
         // Switch to second task
         rerender(
-          <MessageProvider>
-            <CreateTaskModal
-              isOpen={true}
-              onClose={onCloseMock}
-              onSubmitSuccess={onSubmitSuccessMock}
-              editingTask={editingTask2}
-              categories={mockCategories}
-              initialFormData={defaultInitialFormData}
-            />
-          </MessageProvider>
+          <QueryClientProvider client={queryClient}>
+            <MessageProvider>
+              <CreateTaskModal
+                isOpen={true}
+                onClose={onCloseMock}
+                onSubmitSuccess={onSubmitSuccessMock}
+                editingTask={editingTask2}
+                categories={mockCategories}
+                initialFormData={defaultInitialFormData}
+              />
+            </MessageProvider>
+          </QueryClientProvider>
         );
 
         // Wait for second task to load

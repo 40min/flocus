@@ -7,12 +7,12 @@ import { z } from "zod";
 import { Task, TaskCreateRequest, TaskUpdateRequest } from "types/task";
 import { Category } from "types/category";
 import { useTimer } from "../../hooks/useTimer";
-import * as taskService from "services/taskService";
+import { useCreateTask, useUpdateTask } from "../../hooks/useTasks";
 import { useLlmSuggestions } from "hooks/useLlmSuggestions";
 import { Button } from "@/components/ui/button";
 import Modal from "./Modal";
 import { utcToLocal, localToUtc, formatWorkingTime } from "../../utils/utils";
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles, Bot, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { statusOptions, priorityOptions } from "../../constants/taskOptions";
 import { useMessage } from "../../context/MessageContext";
 
@@ -74,6 +74,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
   const { currentTaskId, stopCurrentTask, resetForNewTask } = useTimer();
   const { showMessage } = useMessage();
+
+  // Optimistic mutations
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
 
   const title = watch("title"); // Watch the title field for changes
 
@@ -152,6 +156,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
     try {
       if (editingTask) {
+        // Handle timer state changes before updating
         if (
           editingTask.id === currentTaskId &&
           editingTask.status === "in_progress" &&
@@ -172,15 +177,20 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           // If a different task is being set to 'in_progress' while another task is current, stop the current task
           await stopCurrentTask();
         }
-        await taskService.updateTask(
-          editingTask.id,
-          payload as TaskUpdateRequest
-        );
+
+        // Use optimistic update mutation
+        await updateTaskMutation.mutateAsync({
+          taskId: editingTask.id,
+          taskData: payload as TaskUpdateRequest,
+        });
+
         showMessage(`Task "${data.title}" updated successfully!`, "success");
       } else {
-        await taskService.createTask(payload as TaskCreateRequest);
+        // Use optimistic create mutation
+        await createTaskMutation.mutateAsync(payload as TaskCreateRequest);
         showMessage(`Task "${data.title}" created successfully!`, "success");
       }
+
       onSubmitSuccess();
       onClose();
     } catch (err) {
@@ -192,6 +202,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         `Failed to ${editingTask ? "update" : "create"} task: ${errorMessage}`,
         "error"
       );
+      // Modal stays open on error for user to retry or make corrections
     }
   };
 
@@ -365,6 +376,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 max="1440"
                 step="1"
                 placeholder="0"
+                defaultValue={0}
                 {...register("add_lasts_minutes", { valueAsNumber: true })}
                 className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
@@ -474,28 +486,80 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             </select>
           </div>
         </div>
+        {/* Error states for mutations */}
+        {(createTaskMutation?.isError || updateTaskMutation?.isError) && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+            <div className="flex items-center gap-2 text-red-800">
+              <XCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                Failed to {editingTask ? "update" : "create"} task
+              </span>
+            </div>
+            <p className="text-sm text-red-700 mt-1">
+              {(createTaskMutation?.error || updateTaskMutation?.error)
+                ?.message || "An unexpected error occurred. Please try again."}
+            </p>
+            <div className="flex gap-2 mt-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  createTaskMutation?.reset();
+                  updateTaskMutation?.reset();
+                }}
+                variant="secondary"
+                size="small"
+              >
+                Dismiss
+              </Button>
+              <Button type="submit" variant="primary" size="small">
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Success feedback */}
+        {(createTaskMutation?.isSuccess || updateTaskMutation?.isSuccess) && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
+            <div className="flex items-center gap-2 text-green-800">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                Task {editingTask ? "updated" : "created"} successfully!
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-3 pt-2">
           <Button
             type="button"
             onClick={onClose}
             variant="secondary"
             size="medium"
+            disabled={
+              createTaskMutation?.isPending || updateTaskMutation?.isPending
+            }
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={
+              createTaskMutation?.isPending || updateTaskMutation?.isPending
+            }
             variant="slate"
             size="medium"
           >
-            {isSubmitting
-              ? editingTask
-                ? "Updating..."
-                : "Creating..."
-              : editingTask
-              ? "Update Task"
-              : "Create Task"}
+            {createTaskMutation?.isPending || updateTaskMutation?.isPending ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {editingTask ? "Updating..." : "Creating..."}
+              </div>
+            ) : editingTask ? (
+              "Update Task"
+            ) : (
+              "Create Task"
+            )}
           </Button>
         </div>
       </form>

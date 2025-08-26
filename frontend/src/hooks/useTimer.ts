@@ -46,6 +46,10 @@ export const useTimer = () => {
     [setCurrentTask, currentTask?.id, currentTask?.name]
   );
 
+  const setOptimisticUpdateFunctions = useTimerStore(
+    (state) => state.setOptimisticUpdateFunctions
+  );
+
   return useMemo(
     () => ({
       // Timer state
@@ -73,6 +77,7 @@ export const useTimer = () => {
       setCurrentTaskId,
       setCurrentTaskName,
       setCurrentTaskDescription,
+      setOptimisticUpdateFunctions,
 
       // UI properties
       isBreak: mode !== "work",
@@ -94,6 +99,7 @@ export const useTimer = () => {
       setCurrentTaskId,
       setCurrentTaskName,
       setCurrentTaskDescription,
+      setOptimisticUpdateFunctions,
     ]
   );
 };

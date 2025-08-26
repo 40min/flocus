@@ -9,18 +9,24 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { useTimer } from "../hooks/useTimer";
+import { useTimerWithOptimisticUpdates } from "../hooks/useTimerWithOptimisticUpdates";
 import { useTimerStore } from "../stores/timerStore";
-import { useUpdateTask } from "../hooks/useTasks";
 import { Task } from "types/task";
 import DailyStats from "components/DailyStats";
 
 const DashboardPage: React.FC = () => {
-  const { currentTaskId, setIsActive, isActive } = useTimer();
+  const {
+    currentTaskId,
+    setIsActive,
+    isActive,
+    isUpdatingStatus,
+    isUpdatingWorkingTime,
+    statusUpdateError,
+    workingTimeUpdateError,
+  } = useTimerWithOptimisticUpdates();
 
   // Get the setCurrentTask function directly from the store
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
-  const { mutateAsync: updateTask } = useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -54,26 +60,12 @@ const DashboardPage: React.FC = () => {
       }
 
       if (taskToStart) {
-        try {
-          // If there's a current task in progress, set it to pending first
-          if (currentTaskId) {
-            await updateTask({
-              taskId: currentTaskId,
-              taskData: { status: "pending" },
-            });
-          }
+        // Set the new task in the timer (this will handle optimistic updates internally)
+        setCurrentTask(taskId, taskToStart.title, taskToStart.description);
 
-          setCurrentTask(taskId, taskToStart.title, taskToStart.description);
-
-          await updateTask({
-            taskId: taskId,
-            taskData: { status: "in_progress" },
-          });
-          if (!isActive) {
-            setIsActive(true);
-          }
-        } catch (error) {
-          console.error("Failed to start task:", error);
+        // Start the timer if not already active (this will trigger optimistic status updates)
+        if (!isActive) {
+          setIsActive(true);
         }
       }
     }

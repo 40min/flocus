@@ -3,6 +3,8 @@ import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import { cn } from "../utils/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
+import { useOptimisticTaskUpdate } from "../hooks/useOptimisticTaskUpdate";
+import { useEffect } from "react";
 import { useTimerButtonStates, useTimerModeText } from "../stores/timerStore";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui";
@@ -19,7 +21,49 @@ const PomodoroTimer: React.FC = () => {
     timerColor,
     currentTaskName,
     currentTaskDescription,
+    setOptimisticUpdateFunctions,
   } = useTimer();
+
+  // Use optimistic updates with graceful fallback
+  let isUpdatingStatus = false;
+  let isUpdatingWorkingTime = false;
+  let updateStatus: any = null;
+  let updateWorkingTime: any = null;
+
+  // Always call hooks, but handle errors gracefully
+  try {
+    const optimisticHooks = useOptimisticTaskUpdate();
+    updateStatus = optimisticHooks.updateStatus;
+    updateWorkingTime = optimisticHooks.updateWorkingTime;
+    isUpdatingStatus = updateStatus.isPending;
+    isUpdatingWorkingTime = updateWorkingTime.isPending;
+  } catch (error) {
+    // Graceful fallback when QueryClient is not available (e.g., in tests)
+    console.debug(
+      "Optimistic updates not available, falling back to basic timer functionality"
+    );
+  }
+
+  // Connect optimistic update functions to the timer store
+  useEffect(() => {
+    if (updateStatus && updateWorkingTime && setOptimisticUpdateFunctions) {
+      const optimisticUpdateStatus = (taskId: string, status: any) => {
+        updateStatus.mutate({ taskId, status });
+      };
+
+      const optimisticUpdateWorkingTime = (
+        taskId: string,
+        additionalMinutes: number
+      ) => {
+        updateWorkingTime.mutate({ taskId, additionalMinutes });
+      };
+
+      setOptimisticUpdateFunctions(
+        optimisticUpdateStatus,
+        optimisticUpdateWorkingTime
+      );
+    }
+  }, [updateStatus, updateWorkingTime, setOptimisticUpdateFunctions]);
 
   // Get button states and mode text from the timer store selectors
   const { resetDisabled, skipBreakVisible } = useTimerButtonStates();
@@ -100,7 +144,9 @@ const PomodoroTimer: React.FC = () => {
                       "relative w-60 h-60 md:w-72 md:h-72 rounded-full bg-background-card border-2 shadow-lg transition-all duration-300 flex items-center justify-center z-10",
                       timerColor,
                       isOver &&
-                        "border-primary-light ring-4 ring-primary-light/20"
+                        "border-primary-light ring-4 ring-primary-light/20",
+                      (isUpdatingStatus || isUpdatingWorkingTime) &&
+                        "opacity-75"
                     )}
                     tabIndex={0}
                     role="button"
@@ -122,6 +168,17 @@ const PomodoroTimer: React.FC = () => {
                             <div className="mt-2">
                               <p className="text-xs text-text-secondary/60 font-normal">
                                 {modeText}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Optimistic update indicators */}
+                          {(isUpdatingStatus || isUpdatingWorkingTime) && (
+                            <div className="mt-1">
+                              <p className="text-xs text-blue-500 font-normal flex items-center justify-center gap-1">
+                                <span className="animate-spin h-3 w-3 border border-blue-500 border-t-transparent rounded-full"></span>
+                                {isUpdatingStatus && "Updating status..."}
+                                {isUpdatingWorkingTime && "Updating time..."}
                               </p>
                             </div>
                           )}

@@ -57,6 +57,7 @@ jest.mock("../stores/timerStore", () => ({
       setPomodorosCompleted: jest.fn(),
       setCurrentTask: mockSetCurrentTask,
       setUserPreferences: mockSetUserPreferences,
+      setOptimisticUpdateFunctions: jest.fn(),
 
       // Timer controls
       startPause: jest.fn(),
@@ -224,6 +225,7 @@ describe("DashboardPage - handleDragEnd", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: mockSetCurrentTask,
         setUserPreferences: mockSetUserPreferences,
+        setOptimisticUpdateFunctions: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),
@@ -452,10 +454,15 @@ describe("DashboardPage - handleDragEnd", () => {
       await capturedOnDragEnd(dragEndEvent);
     });
 
-    expect(mockMutateAsync).toHaveBeenCalledWith({
-      taskId: "task2",
-      taskData: { status: "in_progress" },
-    });
+    // Verify that the task is set in the timer
+    expect(mockSetCurrentTask).toHaveBeenCalledWith(
+      "task2",
+      "New Task To Drag",
+      "description for task 2"
+    );
+
+    // Note: The optimistic updates are now handled internally by the timer store
+    // when setIsActive is called, so we don't expect direct updateTask calls
   });
 
   it("should not do anything if not dragged to pomodoro zone", async () => {
@@ -618,15 +625,16 @@ describe("DashboardPage - handleDragEnd", () => {
       await capturedOnDragEnd(dragEndEvent);
     });
 
-    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
-    expect(mockMutateAsync).toHaveBeenCalledWith({
-      taskId: previousTaskId,
-      taskData: { status: "pending" },
-    });
-    expect(mockMutateAsync).toHaveBeenCalledWith({
-      taskId: newTaskId,
-      taskData: { status: "in_progress" },
-    });
+    // Verify that the new task is set in the timer
+    expect(mockSetCurrentTask).toHaveBeenCalledWith(
+      newTaskId,
+      "New Task To Drag",
+      "description for task 2"
+    );
+
+    // Note: The optimistic updates for both stopping the previous task and starting
+    // the new task are now handled internally by the timer store, so we don't
+    // expect direct updateTask calls
   });
 
   it("should verify timer store handles break mode transition correctly", () => {

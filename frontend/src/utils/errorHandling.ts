@@ -163,20 +163,20 @@ export const getTaskErrorMessage = (
 };
 
 /**
- * Determines if an error should trigger an automatic retry
+ * TanStack Query retry function - determines if mutation should retry based on error type
  */
-export const shouldAutoRetry = (
-  error: Error,
-  retryCount: number = 0
+export const shouldRetryMutation = (
+  failureCount: number,
+  error: Error
 ): boolean => {
-  const errorInfo = analyzeError(error);
-
-  // Don't auto-retry more than 2 times
-  if (retryCount >= 2) {
+  // Don't retry more than 2 times
+  if (failureCount >= 2) {
     return false;
   }
 
-  // Only auto-retry network and server errors
+  const errorInfo = analyzeError(error);
+
+  // Only retry network and server errors
   return (
     errorInfo.isRetryable &&
     (errorInfo.category === "network" || errorInfo.category === "server")
@@ -184,10 +184,10 @@ export const shouldAutoRetry = (
 };
 
 /**
- * Gets retry delay in milliseconds based on retry count (exponential backoff)
+ * TanStack Query retry delay function - exponential backoff
  */
-export const getRetryDelay = (retryCount: number): number => {
-  return Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 seconds
+export const getRetryDelay = (attemptIndex: number): number => {
+  return Math.min(1000 * Math.pow(2, attemptIndex), 10000); // Max 10 seconds
 };
 
 /**
@@ -216,9 +216,10 @@ export const logError = (
 };
 
 /**
- * Creates a standardized error handler for mutations
+ * Simplified error handler for TanStack Query mutations
  */
-export const createErrorHandler = (
+export const handleMutationError = (
+  error: Error,
   operation:
     | "create"
     | "update"
@@ -226,28 +227,19 @@ export const createErrorHandler = (
     | "updateWorkingTime"
     | "updateStatus",
   showMessage: (message: string, type: "success" | "error") => void,
-  additionalContext: Record<string, any> = {}
+  context: Record<string, any> = {}
 ) => {
-  return (error: Error, variables?: any, context?: any) => {
-    const errorMessage = getTaskErrorMessage(error, operation);
-    const errorInfo = analyzeError(error);
+  const errorMessage = getTaskErrorMessage(error, operation);
+  const errorInfo = analyzeError(error);
 
-    // Show user-friendly error message
-    showMessage(errorMessage, "error");
+  // Show user-friendly error message
+  showMessage(errorMessage, "error");
 
-    // Log detailed error information
-    logError(error, {
-      operation,
-      variables,
-      context,
-      errorInfo,
-      ...additionalContext,
-    });
+  // Log error for debugging
+  logError(error, { operation, ...context });
 
-    // Handle logout if needed
-    if (errorInfo.shouldLogout) {
-      // This would typically trigger a logout action
-      console.warn("Authentication error detected - user should be logged out");
-    }
-  };
+  // Handle logout if needed (this would typically integrate with auth context)
+  if (errorInfo.shouldLogout) {
+    console.warn("Authentication error detected - user should be logged out");
+  }
 };

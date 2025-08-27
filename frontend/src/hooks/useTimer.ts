@@ -9,6 +9,7 @@ import {
   useTimerColors,
   useTimerModeText,
   useTimerActions,
+  useTimerLoadingStates,
 } from "../stores/timerStore";
 
 /**
@@ -24,6 +25,14 @@ export const useTimer = () => {
   const colors = useTimerColors();
   const modeText = useTimerModeText();
   const actions = useTimerActions();
+
+  // Loading states for API calls
+  const isUpdatingTaskStatus = useTimerStore(
+    (state) => state.isUpdatingTaskStatus
+  );
+  const isUpdatingWorkingTime = useTimerStore(
+    (state) => state.isUpdatingWorkingTime
+  );
 
   // Get setters for backward compatibility
   const setIsActive = useTimerStore((state) => state.setIsActive);
@@ -68,7 +77,10 @@ export const useTimer = () => {
       handleMarkAsDone: actions?.markTaskAsDone,
       formatTime: actions?.formatTime,
 
-      // Removed optimistic update loading states as per simplification requirements
+      // Loading states for API calls
+      isUpdatingTaskStatus,
+      isUpdatingWorkingTime,
+      isUpdating: isUpdatingTaskStatus || isUpdatingWorkingTime,
 
       // Setters for backward compatibility
       setIsActive,
@@ -92,6 +104,8 @@ export const useTimer = () => {
       colors,
       modeText,
       actions,
+      isUpdatingTaskStatus,
+      isUpdatingWorkingTime,
       setIsActive,
       setCurrentTaskId,
       setCurrentTaskName,
@@ -137,6 +151,14 @@ export const useTimerControls = () => {
   const isActive = useTimerActive();
   const actions = useTimerActions();
 
+  // Loading states for API calls
+  const isUpdatingTaskStatus = useTimerStore(
+    (state) => state.isUpdatingTaskStatus
+  );
+  const isUpdatingWorkingTime = useTimerStore(
+    (state) => state.isUpdatingWorkingTime
+  );
+
   return useMemo(
     () => ({
       isActive,
@@ -145,9 +167,12 @@ export const useTimerControls = () => {
       skip: actions?.skip,
       stopCurrentTask: actions?.stopCurrentTask,
       resetForNewTask: actions?.resetForNewTask,
-      // Removed optimistic update loading states
+      // Loading states for API calls
+      isUpdatingTaskStatus,
+      isUpdatingWorkingTime,
+      isUpdating: isUpdatingTaskStatus || isUpdatingWorkingTime,
     }),
-    [isActive, actions]
+    [isActive, actions, isUpdatingTaskStatus, isUpdatingWorkingTime]
   );
 };
 

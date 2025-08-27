@@ -41,6 +41,10 @@ describe("PomodoroTimer", () => {
     onTaskComplete: undefined,
     setCurrentTaskId: jest.fn(),
     setOnTaskComplete: jest.fn(),
+    // Loading states for API calls
+    isUpdatingTaskStatus: false,
+    isUpdatingWorkingTime: false,
+    isUpdating: false,
   };
 
   beforeEach(() => {
@@ -320,6 +324,82 @@ describe("PomodoroTimer", () => {
       expect(modeIndicator).toHaveClass("text-xs");
       expect(modeIndicator).toHaveClass("text-text-secondary/60");
       expect(modeIndicator).toHaveClass("font-normal");
+    });
+  });
+
+  describe("Loading States", () => {
+    it("shows loading spinner on start/pause button when updating task status", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        currentTaskName: "Test Task",
+        isUpdatingTaskStatus: true,
+      });
+
+      render(<PomodoroTimer />);
+
+      const startButton = screen.getByRole("button", { name: /start/i });
+      expect(startButton).toBeDisabled();
+      // The loading spinner should be visible in the button
+      expect(startButton.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("shows loading indicator when updating working time", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        currentTaskName: "Test Task",
+        isUpdatingWorkingTime: true,
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Saving time...")).toBeInTheDocument();
+    });
+
+    it("shows loading indicator in mode text when any update is in progress", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        currentTaskName: "Test Task",
+        isActive: true,
+        isUpdating: true,
+      });
+      mockUseTimerModeText.mockReturnValue("Focus");
+
+      render(<PomodoroTimer />);
+
+      expect(screen.getByText("Focus")).toBeInTheDocument();
+      // Should show loading spinner next to mode text
+      const modeSection = screen.getByText("Focus").closest("div");
+      expect(modeSection?.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("disables start/pause button during task status updates", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        currentTaskName: "Test Task",
+        isUpdatingTaskStatus: true,
+      });
+
+      render(<PomodoroTimer />);
+
+      const startButton = screen.getByRole("button", { name: /start/i });
+      expect(startButton).toBeDisabled();
+    });
+
+    it("does not show loading indicators when no updates are in progress", () => {
+      mockUseTimer.mockReturnValue({
+        ...mockContextValue,
+        currentTaskName: "Test Task",
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
+        isUpdating: false,
+      });
+
+      render(<PomodoroTimer />);
+
+      expect(screen.queryByText("Saving time...")).not.toBeInTheDocument();
+
+      const startButton = screen.getByRole("button", { name: /start/i });
+      expect(startButton).not.toBeDisabled();
     });
   });
 });

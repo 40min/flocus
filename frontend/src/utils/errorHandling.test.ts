@@ -1,10 +1,10 @@
 import {
   analyzeError,
   getTaskErrorMessage,
-  shouldAutoRetry,
+  shouldRetryMutation,
   getRetryDelay,
   logError,
-  createErrorHandler,
+  handleMutationError,
 } from "./errorHandling";
 
 // Mock console.error to avoid noise in tests
@@ -120,27 +120,27 @@ describe("errorHandling utilities", () => {
     });
   });
 
-  describe("shouldAutoRetry", () => {
+  describe("shouldRetryMutation", () => {
     test("should allow retry for network errors", () => {
       const networkError = new Error("Network Error");
-      expect(shouldAutoRetry(networkError, 0)).toBe(true);
-      expect(shouldAutoRetry(networkError, 1)).toBe(true);
+      expect(shouldRetryMutation(0, networkError)).toBe(true);
+      expect(shouldRetryMutation(1, networkError)).toBe(true);
     });
 
     test("should not allow retry after max attempts", () => {
       const networkError = new Error("Network Error");
-      expect(shouldAutoRetry(networkError, 2)).toBe(false);
-      expect(shouldAutoRetry(networkError, 3)).toBe(false);
+      expect(shouldRetryMutation(2, networkError)).toBe(false);
+      expect(shouldRetryMutation(3, networkError)).toBe(false);
     });
 
     test("should not allow retry for auth errors", () => {
       const authError = new Error("401 Unauthorized");
-      expect(shouldAutoRetry(authError, 0)).toBe(false);
+      expect(shouldRetryMutation(0, authError)).toBe(false);
     });
 
     test("should allow retry for server errors", () => {
       const serverError = new Error("500 Internal Server Error");
-      expect(shouldAutoRetry(serverError, 0)).toBe(true);
+      expect(shouldRetryMutation(0, serverError)).toBe(true);
     });
   });
 
@@ -179,15 +179,14 @@ describe("errorHandling utilities", () => {
     });
   });
 
-  describe("createErrorHandler", () => {
-    test("should create error handler that shows message and logs error", () => {
+  describe("handleMutationError", () => {
+    test("should show message and log error", () => {
       const mockShowMessage = jest.fn();
-      const errorHandler = createErrorHandler("create", mockShowMessage, {
+      const error = new Error("Test error");
+
+      handleMutationError(error, "create", mockShowMessage, {
         taskId: "task-1",
       });
-
-      const error = new Error("Test error");
-      errorHandler(error, { title: "Test Task" });
 
       expect(mockShowMessage).toHaveBeenCalledWith(
         expect.stringContaining("Failed to create task"),
@@ -199,7 +198,6 @@ describe("errorHandling utilities", () => {
         expect.objectContaining({
           context: expect.objectContaining({
             operation: "create",
-            variables: { title: "Test Task" },
             taskId: "task-1",
           }),
         })
@@ -208,10 +206,9 @@ describe("errorHandling utilities", () => {
 
     test("should handle network errors with appropriate message", () => {
       const mockShowMessage = jest.fn();
-      const errorHandler = createErrorHandler("update", mockShowMessage);
-
       const networkError = new Error("Network Error");
-      errorHandler(networkError);
+
+      handleMutationError(networkError, "update", mockShowMessage);
 
       expect(mockShowMessage).toHaveBeenCalledWith(
         "Network error - please check your connection and try again",

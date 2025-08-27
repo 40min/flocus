@@ -78,6 +78,7 @@ describe("useTimer hooks", () => {
     // Set up all the mocks with default values
     useTimerMode.mockReturnValue("work");
     useTimerRemaining.mockReturnValue(1500);
+
     useTimerActive.mockReturnValue(false);
     useTimerPomodoros.mockReturnValue(2);
     useTimerCurrentTask.mockReturnValue(mockCurrentTask);
@@ -85,7 +86,7 @@ describe("useTimer hooks", () => {
     useTimerModeText.mockReturnValue(mockModeText);
     useTimerActions.mockReturnValue(mockActions);
 
-    // Mock useTimerStore for backward compatibility setters and formatTime
+    // Mock useTimerStore for backward compatibility setters, formatTime, and loading states
     useTimerStore.mockImplementation((selector: any) => {
       if (typeof selector === "function") {
         const mockState = {
@@ -95,6 +96,8 @@ describe("useTimer hooks", () => {
           setIsActive: jest.fn(),
           setCurrentTask: jest.fn(),
           formatTime: mockFormatTime,
+          isUpdatingTaskStatus: false,
+          isUpdatingWorkingTime: false,
         };
         const result = selector(mockState);
         // If the result is the formatTime function, make sure it has the right implementation
@@ -126,6 +129,9 @@ describe("useTimer hooks", () => {
         resetForNewTask: expect.any(Function),
         handleMarkAsDone: expect.any(Function),
         formatTime: expect.any(Function),
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
+        isUpdating: false,
         setIsActive: expect.any(Function),
         setCurrentTaskId: expect.any(Function),
         setCurrentTaskName: expect.any(Function),
@@ -192,6 +198,9 @@ describe("useTimer hooks", () => {
         skip: expect.any(Function),
         stopCurrentTask: expect.any(Function),
         resetForNewTask: expect.any(Function),
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
+        isUpdating: false,
       });
     });
   });

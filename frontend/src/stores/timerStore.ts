@@ -29,7 +29,9 @@ interface TimerState {
   currentTaskName?: string;
   currentTaskDescription?: string;
 
-  // Note: Removed optimistic update loading states as per simplification requirements
+  // Loading states for API calls
+  isUpdatingTaskStatus: boolean;
+  isUpdatingWorkingTime: boolean;
 
   // Persistence
   timestamp: number;
@@ -83,7 +85,8 @@ const DEFAULT_TIMER_STATE = {
   currentTaskId: undefined,
   currentTaskName: undefined,
   currentTaskDescription: undefined,
-  // Removed optimistic update loading states
+  isUpdatingTaskStatus: false,
+  isUpdatingWorkingTime: false,
   timestamp: Date.now(),
   userPreferences: undefined,
 };
@@ -184,12 +187,20 @@ export const useTimerStore = create<TimerState>()(
 
           if (currentTaskId) {
             try {
+              // Set loading state
+              set({ isUpdatingTaskStatus: true });
+
               await updateTask(currentTaskId, { status: "pending" });
+
+              // Clear loading state on success
+              set({ isUpdatingTaskStatus: false });
             } catch (error) {
               console.error(
                 "Failed to update task status to 'pending':",
                 error
               );
+              // Clear loading state on error
+              set({ isUpdatingTaskStatus: false });
             }
           }
         },
@@ -218,6 +229,12 @@ export const useTimerStore = create<TimerState>()(
             // Update task status to pending and add working time
             if (currentTaskId) {
               try {
+                // Set loading states
+                set({
+                  isUpdatingTaskStatus: true,
+                  isUpdatingWorkingTime: true,
+                });
+
                 // Make API calls in the background
                 await Promise.all([
                   updateTask(currentTaskId, { status: "pending" }),
@@ -225,8 +242,19 @@ export const useTimerStore = create<TimerState>()(
                     add_lasts_minutes: sessionDuration,
                   }),
                 ]);
+
+                // Clear loading states on success
+                set({
+                  isUpdatingTaskStatus: false,
+                  isUpdatingWorkingTime: false,
+                });
               } catch (error) {
                 console.error("Failed to update task:", error);
+                // Clear loading states on error
+                set({
+                  isUpdatingTaskStatus: false,
+                  isUpdatingWorkingTime: false,
+                });
               }
             }
 
@@ -304,12 +332,18 @@ export const useTimerStore = create<TimerState>()(
             const newStatus: TaskStatus = isActive ? "pending" : "in_progress";
 
             try {
-              // Make the API call in the background
+              // Set loading state
+              set({ isUpdatingTaskStatus: true });
+
+              // Make the API call
               await updateTask(currentTaskId, { status: newStatus });
+
+              // Clear loading state on success
+              set({ isUpdatingTaskStatus: false });
             } catch (error) {
               console.error("Failed to update task status:", error);
-              // Revert the timer state on API failure
-              set({ isActive: isActive });
+              // Revert the timer state and clear loading state on API failure
+              set({ isActive: isActive, isUpdatingTaskStatus: false });
             }
           }
         },
@@ -356,10 +390,18 @@ export const useTimerStore = create<TimerState>()(
           }
 
           try {
+            // Set loading state
+            set({ isUpdatingTaskStatus: true });
+
             await updateTask(taskId, { status: "done" });
+
+            // Clear loading state on success
+            set({ isUpdatingTaskStatus: false });
             // Note: Query invalidation should be handled by the calling component
           } catch (error) {
             console.error("Failed to mark task as done:", error);
+            // Clear loading state on error
+            set({ isUpdatingTaskStatus: false });
           }
         },
 
@@ -492,7 +534,25 @@ export const useTimerRemaining = () =>
 export const useTimerActive = () => useTimerStore((state) => state.isActive);
 export const useTimerPomodoros = () =>
   useTimerStore((state) => state.pomodorosCompleted);
-// Removed useTimerLoadingStates as optimistic update loading states are no longer used
+
+// Loading state selectors for API calls
+export const useTimerLoadingStates = () => {
+  const isUpdatingTaskStatus = useTimerStore(
+    (state) => state.isUpdatingTaskStatus
+  );
+  const isUpdatingWorkingTime = useTimerStore(
+    (state) => state.isUpdatingWorkingTime
+  );
+
+  return useMemo(
+    () => ({
+      isUpdatingTaskStatus,
+      isUpdatingWorkingTime,
+      isUpdating: isUpdatingTaskStatus || isUpdatingWorkingTime,
+    }),
+    [isUpdatingTaskStatus, isUpdatingWorkingTime]
+  );
+};
 export const useTimerCurrentTask = () => {
   const currentTaskId = useTimerStore((state) => state.currentTaskId);
   const currentTaskName = useTimerStore((state) => state.currentTaskName);

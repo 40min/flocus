@@ -38,3 +38,4 @@ export {
   DialogDescription,
 } from "./dialog";
 export { default as CircularProgress } from "./circular-progress";
+export { LoadingSpinner, LoadingOverlay } from "./loading-spinner";

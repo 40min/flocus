@@ -10,6 +10,13 @@ import { MessageProvider } from "../context/MessageContext";
 jest.mock("../services/taskService");
 const mockUpdateTask = updateTask as jest.MockedFunction<typeof updateTask>;
 
+// Mock the error handling utilities to disable retry in tests
+jest.mock("../utils/errorHandling", () => ({
+  ...jest.requireActual("../utils/errorHandling"),
+  shouldRetryMutation: () => false, // Disable retry in tests
+  getRetryDelay: () => 0,
+}));
+
 const mockTasks: Task[] = [
   {
     id: "task-1",
@@ -136,8 +143,20 @@ describe("useUpdateTask standard patterns", () => {
       status: "in_progress",
     });
 
-    // Should log the error
-    expect(console.error).toHaveBeenCalledWith("Task update failed:", apiError);
+    // Should log the error using the new error handling format
+    expect(console.error).toHaveBeenCalledWith(
+      "Operation failed:",
+      expect.objectContaining({
+        error: expect.objectContaining({
+          message: "Network error",
+        }),
+        context: expect.objectContaining({
+          operation: "update",
+          taskId: "task-1",
+          taskData: { status: "in_progress" },
+        }),
+      })
+    );
   });
 
   test("should provide loading state during mutation", async () => {

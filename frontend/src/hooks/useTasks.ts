@@ -7,7 +7,11 @@ import {
 } from "../services/taskService";
 import { Task, TaskUpdateRequest, TaskCreateRequest } from "../types/task";
 import { useMessage } from "../context/MessageContext";
-import { createErrorHandler } from "../utils/errorHandling";
+import {
+  handleMutationError,
+  shouldRetryMutation,
+  getRetryDelay,
+} from "../utils/errorHandling";
 
 export const useTasks = () => {
   return useQuery({
@@ -45,23 +49,20 @@ export const useUpdateTask = () => {
     mutationFn: ({ taskId, taskData }: UpdateTaskVariables) =>
       updateTask(taskId, taskData),
 
-    // Simple success handling - just invalidate queries to refetch fresh data
+    // Add retry configuration using TanStack Query patterns
+    retry: shouldRetryMutation,
+    retryDelay: getRetryDelay,
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     },
 
-    // Simple error handling - let the UI handle error display
     onError: (error: Error, variables: UpdateTaskVariables) => {
-      console.error("Task update failed:", error);
-
-      // Use standardized error handler for user feedback
-      const errorHandler = createErrorHandler("update", showMessage, {
+      handleMutationError(error, "update", showMessage, {
         taskId: variables.taskId,
         taskData: variables.taskData,
       });
-
-      errorHandler(error, variables);
     },
   });
 };
@@ -73,20 +74,20 @@ export const useCreateTask = () => {
   return useMutation<Task, Error, TaskCreateRequest>({
     mutationFn: (taskData: TaskCreateRequest) => createTask(taskData),
 
-    // No optimistic updates for task creation - just invalidate cache on success
+    // Add retry configuration
+    retry: shouldRetryMutation,
+    retryDelay: getRetryDelay,
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
       showMessage("Task created successfully", "success");
     },
 
-    onError: (err: Error, variables: TaskCreateRequest) => {
-      // Use standardized error handler
-      const errorHandler = createErrorHandler("create", showMessage, {
+    onError: (error: Error, variables: TaskCreateRequest) => {
+      handleMutationError(error, "create", showMessage, {
         taskData: variables,
       });
-
-      errorHandler(err, variables);
     },
   });
 };
@@ -97,19 +98,21 @@ export const useDeleteTask = () => {
 
   return useMutation({
     mutationFn: deleteTask,
+
+    // Add retry configuration
+    retry: shouldRetryMutation,
+    retryDelay: getRetryDelay,
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
       showMessage("Task deleted successfully", "success");
     },
 
-    onError: (err: Error, taskId: string) => {
-      // Use standardized error handler
-      const errorHandler = createErrorHandler("delete", showMessage, {
+    onError: (error: Error, taskId: string) => {
+      handleMutationError(error, "delete", showMessage, {
         taskId,
       });
-
-      errorHandler(err, taskId);
     },
   });
 };

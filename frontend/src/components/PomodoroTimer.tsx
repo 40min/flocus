@@ -5,7 +5,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
 import { useTimerButtonStates, useTimerModeText } from "../stores/timerStore";
 import { Button } from "@/components/ui/button";
-import { CircularProgress } from "@/components/ui";
+import { CircularProgress, LoadingSpinner } from "@/components/ui";
 const PomodoroTimer: React.FC = () => {
   const {
     mode,
@@ -19,6 +19,9 @@ const PomodoroTimer: React.FC = () => {
     timerColor,
     currentTaskName,
     currentTaskDescription,
+    isUpdatingTaskStatus,
+    isUpdatingWorkingTime,
+    isUpdating,
   } = useTimer();
 
   // Get button states and mode text from the timer store selectors
@@ -119,10 +122,13 @@ const PomodoroTimer: React.FC = () => {
 
                           {/* Mode indicator - less visible, under timer counter */}
                           {(isActive || currentTaskName) && modeText && (
-                            <div className="mt-2">
+                            <div className="mt-2 flex items-center justify-center gap-2">
                               <p className="text-xs text-text-secondary/60 font-normal">
                                 {modeText}
                               </p>
+                              {isUpdating && (
+                                <LoadingSpinner className="h-3 w-3 text-text-secondary/60" />
+                              )}
                             </div>
                           )}
 
@@ -164,10 +170,13 @@ const PomodoroTimer: React.FC = () => {
                           )}
                           aria-label={isActive ? "Pause timer" : "Start timer"}
                           disabled={
-                            !currentTaskName && !isActive // Only disable if no task selected and not active
+                            (!currentTaskName && !isActive) ||
+                            isUpdatingTaskStatus // Disable during updates
                           }
                         >
-                          {isActive ? (
+                          {isUpdatingTaskStatus ? (
+                            <LoadingSpinner className="h-6 w-6" />
+                          ) : isActive ? (
                             <Pause className="h-6 w-6" />
                           ) : (
                             <Play className="h-6 w-6" />
@@ -199,16 +208,26 @@ const PomodoroTimer: React.FC = () => {
             {/* Current task display */}
             {currentTaskName && (
               <div className="text-center">
-                <p className="text-sm text-text-secondary">
-                  <span className="font-bold">Task:</span>{" "}
-                  <span className="text-text-DEFAULT">{currentTaskName}</span>
-                  {currentTaskDescription && (
-                    <span className="text-text-secondary">
-                      {" "}
-                      ({currentTaskDescription})
-                    </span>
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-sm text-text-secondary">
+                    <span className="font-bold">Task:</span>{" "}
+                    <span className="text-text-DEFAULT">{currentTaskName}</span>
+                    {currentTaskDescription && (
+                      <span className="text-text-secondary">
+                        {" "}
+                        ({currentTaskDescription})
+                      </span>
+                    )}
+                  </p>
+                  {isUpdatingWorkingTime && (
+                    <div className="flex items-center gap-1">
+                      <LoadingSpinner className="h-3 w-3 text-blue-500" />
+                      <span className="text-xs text-blue-500">
+                        Saving time...
+                      </span>
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
             )}
           </div>

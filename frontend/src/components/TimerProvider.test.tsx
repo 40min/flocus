@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TimerProvider } from "./TimerProvider";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -7,10 +8,19 @@ import {
   startTimerInterval,
   stopTimerInterval,
 } from "../stores/timerStore";
+import { MessageProvider } from "../context/MessageContext";
 
 // Mock dependencies
 jest.mock("../hooks/useAuth");
-jest.mock("../stores/timerStore");
+jest.mock("../hooks/useTasks", () => ({
+  useUpdateTask: jest.fn(),
+}));
+jest.mock("../stores/timerStore", () => ({
+  useTimerStore: jest.fn(),
+  initializeTimer: jest.fn(),
+  startTimerInterval: jest.fn(),
+  stopTimerInterval: jest.fn(),
+}));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseTimerStore = useTimerStore as jest.MockedFunction<
@@ -24,6 +34,12 @@ const mockStartTimerInterval = startTimerInterval as jest.MockedFunction<
 >;
 const mockStopTimerInterval = stopTimerInterval as jest.MockedFunction<
   typeof stopTimerInterval
+>;
+
+// Import and mock useUpdateTask
+const { useUpdateTask } = require("../hooks/useTasks");
+const mockUseUpdateTask = useUpdateTask as jest.MockedFunction<
+  typeof useUpdateTask
 >;
 
 // Mock document and window events
@@ -46,6 +62,7 @@ Object.defineProperty(window, "removeEventListener", {
 describe("TimerProvider", () => {
   const mockSetUserPreferences = jest.fn();
   const mockClearTimerState = jest.fn();
+  const mockUpdateTaskMutation = jest.fn();
   const mockUser = {
     id: "user1",
     preferences: {
@@ -56,6 +73,13 @@ describe("TimerProvider", () => {
       pomodoro_timer_sound: "ding.mp3",
     },
   };
+
+  beforeEach(() => {
+    // Setup useUpdateTask mock
+    mockUseUpdateTask.mockReturnValue({
+      mutateAsync: mockUpdateTaskMutation,
+    });
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -89,6 +113,7 @@ describe("TimerProvider", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: jest.fn(),
         setUserPreferences: mockSetUserPreferences,
+        setUpdateTaskMutation: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),
@@ -120,8 +145,23 @@ describe("TimerProvider", () => {
     jest.clearAllMocks();
   });
 
+  const renderWithProviders = (ui: React.ReactElement) => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MessageProvider>{ui}</MessageProvider>
+      </QueryClientProvider>
+    );
+  };
+
   it("should render children", () => {
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div data-testid="child">Test Child</div>
       </TimerProvider>
@@ -132,7 +172,7 @@ describe("TimerProvider", () => {
   });
 
   it("should initialize timer on mount", async () => {
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -144,7 +184,7 @@ describe("TimerProvider", () => {
   });
 
   it("should set user preferences when user is available", async () => {
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -162,7 +202,7 @@ describe("TimerProvider", () => {
       isLoading: false,
     } as any);
 
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -204,6 +244,7 @@ describe("TimerProvider", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: jest.fn(),
         setUserPreferences: mockSetUserPreferences,
+        setUpdateTaskMutation: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),
@@ -228,7 +269,7 @@ describe("TimerProvider", () => {
       return selector(state);
     });
 
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -241,7 +282,7 @@ describe("TimerProvider", () => {
   });
 
   it("should update user preferences when user changes", async () => {
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -268,9 +309,13 @@ describe("TimerProvider", () => {
     } as any);
 
     rerender(
-      <TimerProvider>
-        <div>Test</div>
-      </TimerProvider>
+      <QueryClientProvider client={new QueryClient()}>
+        <MessageProvider>
+          <TimerProvider>
+            <div>Test</div>
+          </TimerProvider>
+        </MessageProvider>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -281,7 +326,7 @@ describe("TimerProvider", () => {
   });
 
   it("should set up visibility change event listener", () => {
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -294,7 +339,7 @@ describe("TimerProvider", () => {
   });
 
   it("should set up beforeunload event listener", () => {
-    render(
+    renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -332,7 +377,7 @@ describe("TimerProvider", () => {
   });
 
   it("should clean up on unmount", () => {
-    const { unmount } = render(
+    const { unmount } = renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>
@@ -359,7 +404,7 @@ describe("TimerProvider", () => {
 
     mockInitializeTimer.mockReturnValue(initPromise);
 
-    const { unmount } = render(
+    const { unmount } = renderWithProviders(
       <TimerProvider>
         <div>Test</div>
       </TimerProvider>

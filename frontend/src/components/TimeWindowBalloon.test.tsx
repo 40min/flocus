@@ -47,16 +47,19 @@ const mockTasks: Task[] = [
 
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
+import { MessageProvider } from "../context/MessageContext";
 
 describe("TimeWindowBalloon", () => {
   const renderWithClient = (ui: React.ReactElement) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <AuthProvider>
-            <TimerProvider>{ui}</TimerProvider>
-          </AuthProvider>
-        </MemoryRouter>
+        <MessageProvider>
+          <MemoryRouter>
+            <AuthProvider>
+              <TimerProvider>{ui}</TimerProvider>
+            </AuthProvider>
+          </MemoryRouter>
+        </MessageProvider>
       </QueryClientProvider>
     );
   };

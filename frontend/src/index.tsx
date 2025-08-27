@@ -18,11 +18,11 @@ root.render(
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthInitializer>
-          <TimerProvider>
-            <MessageProvider>
+          <MessageProvider>
+            <TimerProvider>
               <App />
-            </MessageProvider>
-          </TimerProvider>
+            </TimerProvider>
+          </MessageProvider>
         </AuthInitializer>
       </QueryClientProvider>
     </Router>

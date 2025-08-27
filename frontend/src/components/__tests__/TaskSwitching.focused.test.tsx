@@ -126,6 +126,10 @@ describe("Task Switching Focused Tests", () => {
     test("Requirement 4.1, 4.2, 4.3: Working time updates are sent correctly", async () => {
       const store = useTimerStore.getState();
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
+
       // Set up active task
       store.setCurrentTask("task-1", "Task 1", "First task");
       store.setIsActive(true);
@@ -134,11 +138,12 @@ describe("Task Switching Focused Tests", () => {
       await store.switchToNextMode();
 
       // Verify working time update API calls
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "pending",
-      });
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        add_lasts_minutes: expect.any(Number),
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: {
+          status: "pending",
+          add_lasts_minutes: expect.any(Number),
+        },
       });
 
       // Verify timer switched modes
@@ -146,20 +151,22 @@ describe("Task Switching Focused Tests", () => {
     });
 
     test("Requirement 1.1, 1.2: Error scenarios provide proper feedback", async () => {
-      // Mock API failure
-      mockTaskService.updateTask.mockRejectedValueOnce(
-        new Error("Network error")
-      );
-
       const store = useTimerStore.getState();
+
+      // Set up the mutation function that will fail
+      const mockMutation = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Network error"));
+      store.setUpdateTaskMutation(mockMutation);
 
       // Try to start task (this should fail)
       store.setCurrentTask("task-1", "Task 1", "First task");
       await store.startPause();
 
       // Verify error handling - timer should revert state on failure
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "in_progress",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: { status: "in_progress" },
       });
 
       // Timer should handle the error gracefully
@@ -169,6 +176,10 @@ describe("Task Switching Focused Tests", () => {
 
     test("Requirement 4.1, 4.2: Timer integration works correctly", async () => {
       const store = useTimerStore.getState();
+
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
 
       // Test: starting a task activates the timer
       store.setCurrentTask("task-1", "Task 1", "First task");
@@ -182,14 +193,19 @@ describe("Task Switching Focused Tests", () => {
       await store.startPause();
 
       // Verify timer is paused and API call made
-      expect(mockTaskService.updateTask).toHaveBeenLastCalledWith("task-1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenLastCalledWith({
+        taskId: "task-1",
+        taskData: { status: "pending" },
       });
       expect(useTimerStore.getState().isActive).toBe(false);
     });
 
     test("Requirement 1.3: Multiple task updates are handled independently", async () => {
       const store = useTimerStore.getState();
+
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
 
       // Start task1
       store.setCurrentTask("task-1", "Task 1", "First task");
@@ -206,11 +222,13 @@ describe("Task Switching Focused Tests", () => {
       await Promise.all([stopPromise, markDonePromise]);
 
       // Verify both API calls were made independently
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: { status: "pending" },
       });
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-2", {
-        status: "done",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-2",
+        taskData: { status: "done" },
       });
     });
   });
@@ -234,6 +252,10 @@ describe("Task Switching Focused Tests", () => {
     test("Should handle same task selection gracefully", async () => {
       const store = useTimerStore.getState();
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
+
       // Start task1
       store.setCurrentTask("task-1", "Task 1", "First task");
       await store.startPause();
@@ -246,17 +268,23 @@ describe("Task Switching Focused Tests", () => {
       await store.startPause(); // Resume
 
       // Should make pause and resume calls
-      expect(mockTaskService.updateTask).toHaveBeenCalledTimes(2);
-      expect(mockTaskService.updateTask).toHaveBeenNthCalledWith(1, "task-1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenCalledTimes(2);
+      expect(mockMutation).toHaveBeenNthCalledWith(1, {
+        taskId: "task-1",
+        taskData: { status: "pending" },
       });
-      expect(mockTaskService.updateTask).toHaveBeenNthCalledWith(2, "task-1", {
-        status: "in_progress",
+      expect(mockMutation).toHaveBeenNthCalledWith(2, {
+        taskId: "task-1",
+        taskData: { status: "in_progress" },
       });
     });
 
     test("Should handle task switching when timer is not active", async () => {
       const store = useTimerStore.getState();
+
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
 
       // Set task1 but don't start timer
       store.setCurrentTask("task-1", "Task 1", "First task");
@@ -267,9 +295,10 @@ describe("Task Switching Focused Tests", () => {
       await store.startPause();
 
       // Should start task2 without stopping task1 (since it wasn't active)
-      expect(mockTaskService.updateTask).toHaveBeenCalledTimes(1);
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-2", {
-        status: "in_progress",
+      expect(mockMutation).toHaveBeenCalledTimes(1);
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-2",
+        taskData: { status: "in_progress" },
       });
 
       expect(useTimerStore.getState().currentTaskId).toBe("task-2");
@@ -281,33 +310,44 @@ describe("Task Switching Focused Tests", () => {
     test("Should make correct API calls for task status changes", async () => {
       const store = useTimerStore.getState();
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
+
       // Test all status transitions
 
       // 1. Start task (pending -> in_progress)
       store.setCurrentTask("task-1", "Task 1", "First task");
       await store.startPause();
 
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "in_progress",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: { status: "in_progress" },
       });
 
       // 2. Pause task (in_progress -> pending)
       await store.startPause();
 
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: { status: "pending" },
       });
 
       // 3. Mark as done (any status -> done)
       await store.markTaskAsDone("task-1");
 
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "done",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: { status: "done" },
       });
     });
 
     test("Should handle working time updates correctly", async () => {
       const store = useTimerStore.getState();
+
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
 
       // Set up active task with specific time
       store.setCurrentTask("task-1", "Task 1", "First task");
@@ -318,24 +358,31 @@ describe("Task Switching Focused Tests", () => {
       await store.switchToNextMode();
 
       // Should update both status and working time
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        status: "pending",
-      });
-      expect(mockTaskService.updateTask).toHaveBeenCalledWith("task-1", {
-        add_lasts_minutes: expect.any(Number),
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task-1",
+        taskData: {
+          status: "pending",
+          add_lasts_minutes: expect.any(Number),
+        },
       });
 
       // Verify the working time is reasonable (should be the full session duration)
-      const workingTimeCall = mockTaskService.updateTask.mock.calls.find(
-        (call) => call[1].add_lasts_minutes !== undefined
+      const workingTimeCall = mockMutation.mock.calls.find(
+        (call) => call[0].taskData.add_lasts_minutes !== undefined
       );
-      expect(workingTimeCall?.[1].add_lasts_minutes).toBeGreaterThan(0);
+      expect(workingTimeCall?.[0].taskData.add_lasts_minutes).toBeGreaterThan(
+        0
+      );
     });
   });
 
   describe("State Management Verification", () => {
     test("Should maintain consistent state during operations", async () => {
       const store = useTimerStore.getState();
+
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+      store.setUpdateTaskMutation(mockMutation);
 
       // Initial state
       expect(useTimerStore.getState().currentTaskId).toBeUndefined();
@@ -363,15 +410,17 @@ describe("Task Switching Focused Tests", () => {
     });
 
     test("Should handle loading states correctly", async () => {
+      const store = useTimerStore.getState();
+
       // Create a promise we can control
       let resolvePromise: (value: any) => void;
       const controlledPromise = new Promise((resolve) => {
         resolvePromise = resolve;
       });
 
-      mockTaskService.updateTask.mockReturnValueOnce(controlledPromise);
-
-      const store = useTimerStore.getState();
+      // Set up the mutation function with controlled promise
+      const mockMutation = jest.fn().mockReturnValueOnce(controlledPromise);
+      store.setUpdateTaskMutation(mockMutation);
 
       // Start an operation
       store.setCurrentTask("task-1", "Task 1", "First task");

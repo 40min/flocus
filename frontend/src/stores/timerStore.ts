@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { devtools } from "zustand/middleware";
 import { useMemo } from "react";
-import { updateTask } from "../services/taskService";
 import {
   getTodayStats,
   incrementPomodoro,
@@ -16,6 +15,12 @@ const LOCAL_STORAGE_KEY = "pomodoroTimerState";
 const EXPIRATION_THRESHOLD = 60 * 60 * 1000; // 1 hour
 
 type Mode = "work" | "shortBreak" | "longBreak";
+
+// Type for the update task mutation function
+type UpdateTaskMutation = (variables: {
+  taskId: string;
+  taskData: { status?: TaskStatus; add_lasts_minutes?: number };
+}) => Promise<any>;
 
 interface TimerState {
   // Core timer state
@@ -39,6 +44,9 @@ interface TimerState {
   // User preferences (for duration calculations)
   userPreferences?: User["preferences"];
 
+  // Mutation function for task updates
+  updateTaskMutation?: UpdateTaskMutation;
+
   // Actions
   setMode: (mode: Mode) => void;
   setTimeRemaining: (time: number) => void;
@@ -50,6 +58,7 @@ interface TimerState {
     taskDescription?: string
   ) => void;
   setUserPreferences: (preferences: User["preferences"]) => void;
+  setUpdateTaskMutation: (mutation: UpdateTaskMutation) => void;
 
   // Timer controls
   startPause: () => Promise<void>;
@@ -89,6 +98,7 @@ const DEFAULT_TIMER_STATE = {
   isUpdatingWorkingTime: false,
   timestamp: Date.now(),
   userPreferences: undefined,
+  updateTaskMutation: undefined,
 };
 
 export const useTimerStore = create<TimerState>()(
@@ -111,6 +121,8 @@ export const useTimerStore = create<TimerState>()(
         ) => set({ currentTaskId, currentTaskName, currentTaskDescription }),
         setUserPreferences: (userPreferences: User["preferences"]) =>
           set({ userPreferences }),
+        setUpdateTaskMutation: (updateTaskMutation: UpdateTaskMutation) =>
+          set({ updateTaskMutation }),
 
         // Utility functions
         formatTime: (seconds: number) => {
@@ -176,7 +188,7 @@ export const useTimerStore = create<TimerState>()(
 
         // Stop current task
         stopCurrentTask: async () => {
-          const { currentTaskId } = get();
+          const { currentTaskId, updateTaskMutation } = get();
 
           // Clear task from timer state immediately
           set({
@@ -185,12 +197,15 @@ export const useTimerStore = create<TimerState>()(
             currentTaskDescription: undefined,
           });
 
-          if (currentTaskId) {
+          if (currentTaskId && updateTaskMutation) {
             try {
               // Set loading state
               set({ isUpdatingTaskStatus: true });
 
-              await updateTask(currentTaskId, { status: "pending" });
+              await updateTaskMutation({
+                taskId: currentTaskId,
+                taskData: { status: "pending" },
+              });
 
               // Clear loading state on success
               set({ isUpdatingTaskStatus: false });
@@ -227,7 +242,8 @@ export const useTimerStore = create<TimerState>()(
             const sessionDuration = durationMap.work / 60; // Convert to minutes
 
             // Update task status to pending and add working time
-            if (currentTaskId) {
+            const { updateTaskMutation } = get();
+            if (currentTaskId && updateTaskMutation) {
               try {
                 // Set loading states
                 set({
@@ -235,13 +251,14 @@ export const useTimerStore = create<TimerState>()(
                   isUpdatingWorkingTime: true,
                 });
 
-                // Make API calls in the background
-                await Promise.all([
-                  updateTask(currentTaskId, { status: "pending" }),
-                  updateTask(currentTaskId, {
+                // Make API calls in the background - combine both updates into one call
+                await updateTaskMutation({
+                  taskId: currentTaskId,
+                  taskData: {
+                    status: "pending",
                     add_lasts_minutes: sessionDuration,
-                  }),
-                ]);
+                  },
+                });
 
                 // Clear loading states on success
                 set({
@@ -317,7 +334,7 @@ export const useTimerStore = create<TimerState>()(
 
         // Start/pause timer
         startPause: async () => {
-          const { isActive, currentTaskId, mode } = get();
+          const { isActive, currentTaskId, mode, updateTaskMutation } = get();
 
           // Allow starting break timers, but prevent starting work tasks without a task assigned
           if (!isActive && mode === "work" && !currentTaskId) {
@@ -328,15 +345,18 @@ export const useTimerStore = create<TimerState>()(
           // Immediately update the timer state for instant UI feedback
           set({ isActive: !isActive });
 
-          if (currentTaskId) {
+          if (currentTaskId && updateTaskMutation) {
             const newStatus: TaskStatus = isActive ? "pending" : "in_progress";
 
             try {
               // Set loading state
               set({ isUpdatingTaskStatus: true });
 
-              // Make the API call
-              await updateTask(currentTaskId, { status: newStatus });
+              // Make the API call using TanStack Query mutation
+              await updateTaskMutation({
+                taskId: currentTaskId,
+                taskData: { status: newStatus },
+              });
 
               // Clear loading state on success
               set({ isUpdatingTaskStatus: false });
@@ -378,7 +398,7 @@ export const useTimerStore = create<TimerState>()(
 
         // Mark task as done
         markTaskAsDone: async (taskId: string) => {
-          const { currentTaskId } = get();
+          const { currentTaskId, updateTaskMutation } = get();
 
           if (currentTaskId === taskId) {
             set({
@@ -389,19 +409,24 @@ export const useTimerStore = create<TimerState>()(
             });
           }
 
-          try {
-            // Set loading state
-            set({ isUpdatingTaskStatus: true });
+          if (updateTaskMutation) {
+            try {
+              // Set loading state
+              set({ isUpdatingTaskStatus: true });
 
-            await updateTask(taskId, { status: "done" });
+              await updateTaskMutation({
+                taskId,
+                taskData: { status: "done" },
+              });
 
-            // Clear loading state on success
-            set({ isUpdatingTaskStatus: false });
-            // Note: Query invalidation should be handled by the calling component
-          } catch (error) {
-            console.error("Failed to mark task as done:", error);
-            // Clear loading state on error
-            set({ isUpdatingTaskStatus: false });
+              // Clear loading state on success
+              set({ isUpdatingTaskStatus: false });
+              // Note: Query invalidation should be handled by the mutation
+            } catch (error) {
+              console.error("Failed to mark task as done:", error);
+              // Clear loading state on error
+              set({ isUpdatingTaskStatus: false });
+            }
           }
         },
 
@@ -621,6 +646,9 @@ export const useTimerActions = () => {
   const markTaskAsDone = useTimerStore((state) => state.markTaskAsDone);
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
   const setUserPreferences = useTimerStore((state) => state.setUserPreferences);
+  const setUpdateTaskMutation = useTimerStore(
+    (state) => state.setUpdateTaskMutation
+  );
   const formatTime = useTimerStore((state) => state.formatTime);
 
   return useMemo(
@@ -633,8 +661,8 @@ export const useTimerActions = () => {
       markTaskAsDone,
       setCurrentTask,
       setUserPreferences,
+      setUpdateTaskMutation,
       formatTime,
-      // Removed optimistic update loading states
     }),
     [
       startPause,
@@ -645,6 +673,7 @@ export const useTimerActions = () => {
       markTaskAsDone,
       setCurrentTask,
       setUserPreferences,
+      setUpdateTaskMutation,
       formatTime,
     ]
   );

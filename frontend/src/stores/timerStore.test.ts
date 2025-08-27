@@ -134,7 +134,10 @@ describe("timerStore", () => {
     it("should stop current task", async () => {
       const { result } = renderHook(() => useTimerStore());
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
       act(() => {
+        result.current.setUpdateTaskMutation(mockMutation);
         result.current.setCurrentTask("task1", "Test Task");
       });
 
@@ -142,8 +145,9 @@ describe("timerStore", () => {
         await result.current.stopCurrentTask();
       });
 
-      expect(mockUpdateTask).toHaveBeenCalledWith("task1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task1",
+        taskData: { status: "pending" },
       });
       expect(result.current.currentTaskId).toBeUndefined();
       expect(result.current.currentTaskName).toBeUndefined();
@@ -153,7 +157,10 @@ describe("timerStore", () => {
     it("should mark task as done", async () => {
       const { result } = renderHook(() => useTimerStore());
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
       act(() => {
+        result.current.setUpdateTaskMutation(mockMutation);
         result.current.setCurrentTask("task1", "Test Task");
         result.current.setIsActive(true);
       });
@@ -162,7 +169,10 @@ describe("timerStore", () => {
         await result.current.markTaskAsDone("task1");
       });
 
-      expect(mockUpdateTask).toHaveBeenCalledWith("task1", { status: "done" });
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task1",
+        taskData: { status: "done" },
+      });
       expect(result.current.isActive).toBe(false);
       expect(result.current.currentTaskId).toBeUndefined();
     });
@@ -196,8 +206,12 @@ describe("timerStore", () => {
     it("should set task to pending and keep task assigned when switching from work to break mode", async () => {
       const { result } = renderHook(() => useTimerStore());
 
+      // Set up the mutation function
+      const mockMutation = jest.fn().mockResolvedValue({});
+
       // Set up a work session with a task
       act(() => {
+        result.current.setUpdateTaskMutation(mockMutation);
         result.current.setUserPreferences({
           pomodoro_working_interval: 25,
           pomodoro_timeout_minutes: 5,
@@ -216,8 +230,12 @@ describe("timerStore", () => {
       });
 
       // Verify task status was updated to pending
-      expect(mockUpdateTask).toHaveBeenCalledWith("task1", {
-        status: "pending",
+      expect(mockMutation).toHaveBeenCalledWith({
+        taskId: "task1",
+        taskData: {
+          status: "pending",
+          add_lasts_minutes: 25,
+        },
       });
 
       // Verify timer switched to break mode

@@ -1,5 +1,6 @@
 import React, { useEffect, ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useUpdateTask } from "../hooks/useTasks";
 import {
   useTimerStore,
   initializeTimer,
@@ -17,7 +18,11 @@ interface TimerProviderProps {
  */
 export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
   const { user } = useAuth();
+  const { mutateAsync: updateTaskMutation } = useUpdateTask();
   const setUserPreferences = useTimerStore((state) => state.setUserPreferences);
+  const setUpdateTaskMutation = useTimerStore(
+    (state) => state.setUpdateTaskMutation
+  );
   const clearTimerState = useTimerStore((state) => state.clearTimerState);
 
   // Initialize timer when user is authenticated
@@ -26,6 +31,8 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
 
     const initialize = async () => {
       if (mounted && user) {
+        // Set the mutation function in the timer store
+        setUpdateTaskMutation(updateTaskMutation);
         await initializeTimer();
       }
     };
@@ -43,7 +50,7 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       mounted = false;
       stopTimerInterval();
     };
-  }, [user, clearTimerState]);
+  }, [user, clearTimerState, updateTaskMutation, setUpdateTaskMutation]);
 
   // Update user preferences when user changes
   useEffect(() => {

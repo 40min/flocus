@@ -212,9 +212,13 @@ describe("useUpdateTask standard patterns", () => {
       });
     });
 
-    // Wait for both mutations to complete
+    // Wait for first mutation to complete
     await waitFor(() => {
       expect(result1.current.isSuccess).toBe(true);
+    });
+
+    // Wait for second mutation to complete
+    await waitFor(() => {
       expect(result2.current.isSuccess).toBe(true);
     });
 

@@ -201,11 +201,10 @@ describe("CurrentTasks", () => {
     renderWithDnd(
       <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
     );
-    // eslint-disable-next-line testing-library/no-node-access
-    const taskOneCard = screen.getByLabelText(
-      "Drag task: Task One"
-    ).parentElement;
-    expect(taskOneCard).toHaveClass("cursor-not-allowed", "opacity-100");
+    const taskOneCard = screen.getByLabelText("Drag task: Task One");
+    const taskContainer = taskOneCard.parentElement;
+    expect(taskContainer).toHaveClass("cursor-not-allowed");
+    expect(taskContainer).toHaveClass("opacity-100");
   });
 
   it("renders a task with a long description and a markdown link", () => {
@@ -717,8 +716,10 @@ describe("CurrentTasks", () => {
     expect(updatingTexts[0]).toBeInTheDocument();
 
     // Task card should have reduced opacity and be non-interactive
-    const taskCard = screen.getByText("Task One").closest('[tabindex="0"]');
-    expect(taskCard).toHaveClass("opacity-75", "pointer-events-none");
+    const taskCard = screen.getByLabelText("Drag task: Task One");
+    const taskContainer = taskCard.parentElement;
+    expect(taskContainer).toHaveClass("opacity-75");
+    expect(taskContainer).toHaveClass("pointer-events-none");
   });
 
   it("shows error state when task update fails", () => {

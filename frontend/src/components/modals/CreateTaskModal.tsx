@@ -12,7 +12,9 @@ import { useLlmSuggestions } from "hooks/useLlmSuggestions";
 import { Button } from "@/components/ui/button";
 import Modal from "./Modal";
 import { utcToLocal, localToUtc, formatWorkingTime } from "../../utils/utils";
-import { Sparkles, Bot, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Sparkles, Bot, CheckCircle, XCircle } from "lucide-react";
+import { LoadingSpinner } from "../ui/loading-spinner";
+import { AnimatedContainer } from "../ui/animated-container";
 import { statusOptions, priorityOptions } from "../../constants/taskOptions";
 import { useMessage } from "../../context/MessageContext";
 
@@ -487,7 +489,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           </div>
         </div>
         {/* Error states for mutations */}
-        {(createTaskMutation?.isError || updateTaskMutation?.isError) && (
+        <AnimatedContainer
+          isVisible={createTaskMutation?.isError || updateTaskMutation?.isError}
+          animation="slide-down"
+          duration="normal"
+        >
           <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
             <div className="flex items-center gap-2 text-red-800">
               <XCircle className="h-4 w-4" />
@@ -516,19 +522,25 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               </Button>
             </div>
           </div>
-        )}
+        </AnimatedContainer>
 
         {/* Success feedback */}
-        {(createTaskMutation?.isSuccess || updateTaskMutation?.isSuccess) && (
+        <AnimatedContainer
+          isVisible={
+            createTaskMutation?.isSuccess || updateTaskMutation?.isSuccess
+          }
+          animation="slide-down"
+          duration="normal"
+        >
           <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
             <div className="flex items-center gap-2 text-green-800">
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4 animate-in zoom-in duration-200" />
               <span className="text-sm font-medium">
                 Task {editingTask ? "updated" : "created"} successfully!
               </span>
             </div>
           </div>
-        )}
+        </AnimatedContainer>
 
         <div className="flex justify-end gap-3 pt-2">
           <Button
@@ -552,7 +564,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           >
             {createTaskMutation?.isPending || updateTaskMutation?.isPending ? (
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LoadingSpinner size="sm" aria-label="Saving task" />
                 {editingTask ? "Updating..." : "Creating..."}
               </div>
             ) : editingTask ? (

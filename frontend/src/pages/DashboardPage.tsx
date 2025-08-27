@@ -9,21 +9,13 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { useTimerWithOptimisticUpdates } from "../hooks/useTimerWithOptimisticUpdates";
+import { useTimer } from "../hooks/useTimer";
 import { useTimerStore } from "../stores/timerStore";
 import { Task } from "types/task";
 import DailyStats from "components/DailyStats";
 
 const DashboardPage: React.FC = () => {
-  const {
-    currentTaskId,
-    setIsActive,
-    isActive,
-    isUpdatingStatus,
-    isUpdatingWorkingTime,
-    statusUpdateError,
-    workingTimeUpdateError,
-  } = useTimerWithOptimisticUpdates();
+  const { currentTaskId, setIsActive, isActive } = useTimer();
 
   // Get the setCurrentTask function directly from the store
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);

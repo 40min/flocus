@@ -6,6 +6,8 @@ import {
   createTask,
 } from "../services/taskService";
 import { Task, TaskUpdateRequest, TaskCreateRequest } from "../types/task";
+import { useMessage } from "../context/MessageContext";
+import { createErrorHandler } from "../utils/errorHandling";
 
 export const useTasks = () => {
   return useQuery({
@@ -41,6 +43,8 @@ interface UpdateTaskContext {
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
+  const { showMessage } = useMessage();
+
   return useMutation<Task, Error, UpdateTaskVariables, UpdateTaskContext>({
     mutationFn: ({ taskId, taskData }: UpdateTaskVariables) =>
       updateTask(taskId, taskData),
@@ -87,9 +91,18 @@ export const useUpdateTask = () => {
       variables: UpdateTaskVariables,
       context: UpdateTaskContext | undefined
     ) => {
+      // Rollback optimistic update
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks"], context.previousTasks);
       }
+
+      // Use standardized error handler
+      const errorHandler = createErrorHandler("update", showMessage, {
+        taskId: variables.taskId,
+        taskData: variables.taskData,
+      });
+
+      errorHandler(err, variables, context);
     },
 
     // Always refetch after error or success to ensure consistency with server
@@ -101,6 +114,7 @@ export const useUpdateTask = () => {
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
+  const { showMessage } = useMessage();
 
   return useMutation<Task, Error, TaskCreateRequest>({
     mutationFn: (taskData: TaskCreateRequest) => createTask(taskData),
@@ -109,17 +123,39 @@ export const useCreateTask = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+      showMessage("Task created successfully", "success");
+    },
+
+    onError: (err: Error, variables: TaskCreateRequest) => {
+      // Use standardized error handler
+      const errorHandler = createErrorHandler("create", showMessage, {
+        taskData: variables,
+      });
+
+      errorHandler(err, variables);
     },
   });
 };
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
+  const { showMessage } = useMessage();
+
   return useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+      showMessage("Task deleted successfully", "success");
+    },
+
+    onError: (err: Error, taskId: string) => {
+      // Use standardized error handler
+      const errorHandler = createErrorHandler("delete", showMessage, {
+        taskId,
+      });
+
+      errorHandler(err, taskId);
     },
   });
 };

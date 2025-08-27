@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Task as TaskType, TaskStatus } from "types/task";
 import { cn, formatWorkingTime } from "../utils/utils";
-import { useOptimisticTaskUpdate } from "../hooks/useOptimisticTaskUpdate";
-import { Loader2, AlertCircle, RotateCcw, X } from "lucide-react";
+import { useSuccessHighlight } from "../hooks/useSuccessHighlight";
+import { useReducedMotion } from "../hooks/useReducedMotion";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TaskItemProps {
@@ -32,98 +33,63 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onStatusChange,
   onWorkingTimeChange,
 }) => {
-  const { updateWorkingTime, updateStatus } = useOptimisticTaskUpdate();
+  const { isHighlighted, triggerHighlight } = useSuccessHighlight();
+  const prefersReducedMotion = useReducedMotion();
 
-  // Check if any mutations are pending for this task
-  const isStatusPending = updateStatus.isPending &&
-    updateStatus.variables?.taskId === task.id;
-  const isWorkingTimePending = updateWorkingTime.isPending &&
-    updateWorkingTime.variables?.taskId === task.id;
-  const isPending = isStatusPending || isWorkingTimePending;
+  // Simplified display values - no optimistic updates
+  const displayStatus = task.status;
+  const displayWorkingTime = task.statistics?.lasts_minutes || 0;
 
-  // Check for errors
-  const hasStatusError = updateStatus.isError &&
-    updateStatus.variables?.taskId === task.id;
-  const hasWorkingTimeError = updateWorkingTime.isError &&
-    updateWorkingTime.variables?.taskId === task.id;
-  const hasError = hasStatusError || hasWorkingTimeError;
-
-  // Get optimistic status if status update is pending
-  const displayStatus = isStatusPending && updateStatus.variables?.status
-    ? updateStatus.variables.status
-    : task.status;
-
-  // Get optimistic working time if working time update is pending
-  const displayWorkingTime = isWorkingTimePending && updateWorkingTime.variables?.additionalMinutes
-    ? (task.statistics?.lasts_minutes || 0) + updateWorkingTime.variables.additionalMinutes
-    : task.statistics?.lasts_minutes || 0;
-
+  // Simplified handlers - no optimistic update logic
   const handleRetry = () => {
-    if (hasStatusError && updateStatus.variables) {
-      updateStatus.mutate(updateStatus.variables);
-    } else if (hasWorkingTimeError && updateWorkingTime.variables) {
-      updateWorkingTime.mutate(updateWorkingTime.variables);
-    }
+    // Retry logic will be handled by parent components
   };
 
   const handleDismissError = () => {
-    if (hasStatusError) {
-      updateStatus.reset();
-    } else if (hasWorkingTimeError) {
-      updateWorkingTime.reset();
-    }
+    // Error dismissal will be handled by parent components
   };
 
   const handleStatusClick = (newStatus: TaskStatus) => {
     if (onStatusChange) {
       onStatusChange(task.id, newStatus);
-    } else {
-      updateStatus.mutate({ taskId: task.id, status: newStatus });
     }
   };
 
   const handleAddTime = (minutes: number) => {
     if (onWorkingTimeChange) {
       onWorkingTimeChange(task.id, minutes);
-    } else {
-      updateWorkingTime.mutate({ taskId: task.id, additionalMinutes: minutes });
     }
   };
 
   const taskItemClasses = cn(
     "inline-flex items-center px-3 py-2 rounded-full border text-sm font-medium",
     "cursor-default relative",
-    "transition-all duration-200 ease-out focus:outline-none",
+    "transition-all duration-300 ease-out focus:outline-none",
     "select-none shadow-sm hover:shadow-md",
-    // Apply opacity during pending states
-    isPending && "opacity-60",
-    // Apply different styling for error states
-    hasError && "border-red-300 bg-red-50",
-    // Normal styling when no error
-    !hasError && baseBgColor,
-    !hasError && baseBorderColor,
-    !hasError && baseTextColor,
-    !hasError && hoverBgColor,
-    !hasError && hoverBorderColor,
-    !hasError && hoverShadowColor
+    // Success highlight with green glow
+    isHighlighted && [
+      "ring-2 ring-green-400 ring-opacity-75 bg-green-50 border-green-300",
+      !prefersReducedMotion && "animate-pulse",
+    ],
+    // Normal styling when not highlighted
+    !isHighlighted && baseBgColor,
+    !isHighlighted && baseBorderColor,
+    !isHighlighted && baseTextColor,
+    !isHighlighted && hoverBgColor,
+    !isHighlighted && hoverBorderColor,
+    !isHighlighted && hoverShadowColor,
+    // Add subtle hover animation for interactive feedback (only if motion is allowed)
+    !prefersReducedMotion && "hover:scale-[1.02] active:scale-[0.98]"
   );
 
   return (
     <div className="inline-flex items-center gap-2">
       <span className={taskItemClasses} aria-label={`Task: ${task.title}`}>
-        {/* Loading spinner */}
-        {isPending && (
-          <Loader2
-            className="w-4 h-4 animate-spin mr-1"
-            aria-label="Updating task"
-          />
-        )}
-
-        {/* Error icon */}
-        {hasError && !isPending && (
-          <AlertCircle
-            className="w-4 h-4 text-red-500 mr-1"
-            aria-label="Update failed"
+        {/* Success checkmark */}
+        {isHighlighted && (
+          <CheckCircle2
+            className="w-4 h-4 text-green-600 mr-1 animate-in fade-in duration-200"
+            aria-label="Update successful"
           />
         )}
 
@@ -132,55 +98,33 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {task.title}
         </span>
 
-        {/* Status indicator */}
-        {displayStatus !== task.status && (
-          <span className="ml-1 text-xs opacity-60">
-            → {displayStatus}
-          </span>
-        )}
-
         {/* Working time display */}
         {showWorkingTime && (
-          <span className="ml-2 text-xs opacity-75">
+          <span
+            className={cn(
+              "ml-2 text-xs transition-all duration-300 ease-out opacity-75",
+              isHighlighted && "text-green-700 font-medium"
+            )}
+          >
             {formatWorkingTime(displayWorkingTime)}
           </span>
         )}
       </span>
 
-      {/* Error actions */}
-      {hasError && !isPending && (
-        <div className="inline-flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRetry}
-            className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-100"
-            aria-label="Retry failed update"
-          >
-            <RotateCcw className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDismissError}
-            className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-100"
-            aria-label="Dismiss error"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      )}
-
       {/* Optional action buttons */}
-      {showActions && !hasError && !isPending && (
+      {showActions && (
         <div className="inline-flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleStatusClick(task.status === 'pending' ? 'in_progress' : 'pending')}
+            onClick={() =>
+              handleStatusClick(
+                task.status === "pending" ? "in_progress" : "pending"
+              )
+            }
             className="h-6 px-2 text-xs"
           >
-            {task.status === 'pending' ? 'Start' : 'Stop'}
+            {task.status === "pending" ? "Start" : "Stop"}
           </Button>
           <Button
             variant="ghost"

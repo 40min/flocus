@@ -17,7 +17,6 @@ import { Task, TaskCreateRequest } from "types/task";
 import { DailyPlanResponse } from "../types/dailyPlan";
 import { cn, formatWorkingTime } from "../utils/utils";
 import { useTimer } from "../hooks/useTimer";
-import { useOptimisticTaskUpdate } from "../hooks/useOptimisticTaskUpdate";
 import { useDeleteTask, useUpdateTask } from "hooks/useTasks";
 import { useCategories } from "hooks/useCategories";
 import { Button } from "@/components/ui/button";
@@ -39,49 +38,7 @@ export const TaskCard = ({
     handleStartPause,
     stopCurrentTask,
     handleMarkAsDone,
-    setOptimisticUpdateFunctions,
   } = useTimer();
-
-  // Use optimistic updates with graceful fallback
-  let isUpdatingStatus = false;
-  let isUpdatingWorkingTime = false;
-  let updateStatus: any = null;
-  let updateWorkingTime: any = null;
-
-  // Always call hooks, but handle errors gracefully
-  try {
-    const optimisticHooks = useOptimisticTaskUpdate();
-    updateStatus = optimisticHooks.updateStatus;
-    updateWorkingTime = optimisticHooks.updateWorkingTime;
-    isUpdatingStatus = updateStatus.isPending;
-    isUpdatingWorkingTime = updateWorkingTime.isPending;
-  } catch (error) {
-    // Graceful fallback when QueryClient is not available (e.g., in tests)
-    console.debug(
-      "Optimistic updates not available, falling back to basic timer functionality"
-    );
-  }
-
-  // Connect optimistic update functions to the timer store
-  React.useEffect(() => {
-    if (updateStatus && updateWorkingTime && setOptimisticUpdateFunctions) {
-      const optimisticUpdateStatus = (taskId: string, status: any) => {
-        updateStatus.mutate({ taskId, status });
-      };
-
-      const optimisticUpdateWorkingTime = (
-        taskId: string,
-        additionalMinutes: number
-      ) => {
-        updateWorkingTime.mutate({ taskId, additionalMinutes });
-      };
-
-      setOptimisticUpdateFunctions(
-        optimisticUpdateStatus,
-        optimisticUpdateWorkingTime
-      );
-    }
-  }, [updateStatus, updateWorkingTime, setOptimisticUpdateFunctions]);
 
   const { mutate: deleteTask } = useDeleteTask();
   const { isPending: isUpdating } = useUpdateTask();
@@ -175,17 +132,9 @@ export const TaskCard = ({
                 </div>
                 <div className="flex items-center gap-1 text-xs text-text-secondary">
                   <Clock className="h-3 w-3" />
-                  <span
-                    className={cn(
-                      "transition-opacity duration-200",
-                      isSelectedTask && isUpdatingWorkingTime && "opacity-75"
-                    )}
-                  >
+                  <span>
                     {formatWorkingTime(task.statistics?.lasts_minutes)}
                   </span>
-                  {isSelectedTask && isUpdatingWorkingTime && (
-                    <span className="animate-spin h-3 w-3 border border-blue-500 border-t-transparent rounded-full ml-1"></span>
-                  )}
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Button
@@ -196,34 +145,21 @@ export const TaskCard = ({
                         onSelectTask(task.id);
                       }
                     }}
-                    disabled={
-                      (isSelectedTask && isActive) ||
-                      (isSelectedTask && isUpdatingStatus)
-                    }
+                    disabled={isSelectedTask && isActive}
                     variant="ghost"
                     size="icon"
                     title="Start task"
-                    className={cn(
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                      isSelectedTask && isUpdatingStatus && "animate-pulse"
-                    )}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Play className="h-4 w-4" />
                   </Button>
                   <Button
                     onClick={handleStartPause}
-                    disabled={
-                      !isSelectedTask ||
-                      !isActive ||
-                      (isSelectedTask && isUpdatingStatus)
-                    }
+                    disabled={!isSelectedTask || !isActive}
                     variant="ghost"
                     size="icon"
                     title="Pause task"
-                    className={cn(
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                      isSelectedTask && isUpdatingStatus && "animate-pulse"
-                    )}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Pause className="h-4 w-4" />
                   </Button>

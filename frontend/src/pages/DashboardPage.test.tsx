@@ -57,7 +57,6 @@ jest.mock("../stores/timerStore", () => ({
       setPomodorosCompleted: jest.fn(),
       setCurrentTask: mockSetCurrentTask,
       setUserPreferences: mockSetUserPreferences,
-      setOptimisticUpdateFunctions: jest.fn(),
 
       // Timer controls
       startPause: jest.fn(),
@@ -225,7 +224,6 @@ describe("DashboardPage - handleDragEnd", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: mockSetCurrentTask,
         setUserPreferences: mockSetUserPreferences,
-        setOptimisticUpdateFunctions: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),

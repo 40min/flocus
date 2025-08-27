@@ -88,7 +88,6 @@ describe("TimerProvider", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: jest.fn(),
         setUserPreferences: mockSetUserPreferences,
-        setOptimisticUpdateFunctions: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),
@@ -202,7 +201,6 @@ describe("TimerProvider", () => {
         setPomodorosCompleted: jest.fn(),
         setCurrentTask: jest.fn(),
         setUserPreferences: mockSetUserPreferences,
-        setOptimisticUpdateFunctions: jest.fn(),
 
         // Timer controls
         startPause: jest.fn(),

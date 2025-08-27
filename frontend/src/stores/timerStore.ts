@@ -35,13 +35,6 @@ interface TimerState {
   // User preferences (for duration calculations)
   userPreferences?: User["preferences"];
 
-  // Optimistic update functions (injected from outside)
-  optimisticUpdateStatus?: (taskId: string, status: TaskStatus) => void;
-  optimisticUpdateWorkingTime?: (
-    taskId: string,
-    additionalMinutes: number
-  ) => void;
-
   // Actions
   setMode: (mode: Mode) => void;
   setTimeRemaining: (time: number) => void;
@@ -53,10 +46,6 @@ interface TimerState {
     taskDescription?: string
   ) => void;
   setUserPreferences: (preferences: User["preferences"]) => void;
-  setOptimisticUpdateFunctions: (
-    updateStatus: (taskId: string, status: TaskStatus) => void,
-    updateWorkingTime: (taskId: string, additionalMinutes: number) => void
-  ) => void;
 
   // Timer controls
   startPause: () => Promise<void>;
@@ -116,13 +105,6 @@ export const useTimerStore = create<TimerState>()(
         ) => set({ currentTaskId, currentTaskName, currentTaskDescription }),
         setUserPreferences: (userPreferences: User["preferences"]) =>
           set({ userPreferences }),
-        setOptimisticUpdateFunctions: (
-          optimisticUpdateStatus: (taskId: string, status: TaskStatus) => void,
-          optimisticUpdateWorkingTime: (
-            taskId: string,
-            additionalMinutes: number
-          ) => void
-        ) => set({ optimisticUpdateStatus, optimisticUpdateWorkingTime }),
 
         // Utility functions
         formatTime: (seconds: number) => {
@@ -163,35 +145,12 @@ export const useTimerStore = create<TimerState>()(
           longBreak: "Long Break",
         }),
 
-        // Timer tick function with real-time working time updates
+        // Timer tick function
         tick: () => {
-          const {
-            timeRemaining,
-            isActive,
-            mode,
-            currentTaskId,
-            optimisticUpdateWorkingTime,
-            getDurationMap,
-          } = get();
+          const { timeRemaining, isActive } = get();
 
           if (isActive && timeRemaining > 0) {
             set({ timeRemaining: timeRemaining - 1 });
-
-            // Update working time every minute for work sessions
-            if (
-              mode === "work" &&
-              currentTaskId &&
-              optimisticUpdateWorkingTime
-            ) {
-              const durationMap = getDurationMap();
-              const totalSessionTime = durationMap.work;
-              const elapsedTime = totalSessionTime - timeRemaining;
-
-              // Update working time every 60 seconds (1 minute)
-              if (elapsedTime > 0 && elapsedTime % 60 === 0) {
-                optimisticUpdateWorkingTime(currentTaskId, 1); // Add 1 minute
-              }
-            }
           } else if (isActive && timeRemaining <= 0) {
             get().switchToNextMode();
           }
@@ -209,9 +168,9 @@ export const useTimerStore = create<TimerState>()(
           }
         },
 
-        // Stop current task with optimistic updates
+        // Stop current task
         stopCurrentTask: async () => {
-          const { currentTaskId, optimisticUpdateStatus } = get();
+          const { currentTaskId } = get();
 
           // Clear task from timer state immediately
           set({
@@ -221,11 +180,6 @@ export const useTimerStore = create<TimerState>()(
           });
 
           if (currentTaskId) {
-            // Apply optimistic update immediately if available
-            if (optimisticUpdateStatus) {
-              optimisticUpdateStatus(currentTaskId, "pending");
-            }
-
             try {
               await updateTask(currentTaskId, { status: "pending" });
             } catch (error) {
@@ -233,12 +187,11 @@ export const useTimerStore = create<TimerState>()(
                 "Failed to update task status to 'pending':",
                 error
               );
-              // Note: Optimistic update will be automatically reverted by TanStack Query's onError
             }
           }
         },
 
-        // Switch to next mode with optimistic updates
+        // Switch to next mode
         switchToNextMode: async () => {
           const {
             mode,
@@ -247,8 +200,6 @@ export const useTimerStore = create<TimerState>()(
             currentTaskId,
             userPreferences,
             getDurationMap,
-            optimisticUpdateStatus,
-            optimisticUpdateWorkingTime,
           } = get();
 
           set({ isActive: false });
@@ -261,16 +212,8 @@ export const useTimerStore = create<TimerState>()(
             // Calculate working time for this session (full session duration)
             const sessionDuration = durationMap.work / 60; // Convert to minutes
 
-            // Update task status to pending and add working time optimistically
+            // Update task status to pending and add working time
             if (currentTaskId) {
-              // Apply optimistic updates immediately if available
-              if (optimisticUpdateStatus) {
-                optimisticUpdateStatus(currentTaskId, "pending");
-              }
-              if (optimisticUpdateWorkingTime) {
-                optimisticUpdateWorkingTime(currentTaskId, sessionDuration);
-              }
-
               try {
                 // Make API calls in the background
                 await Promise.all([
@@ -281,7 +224,6 @@ export const useTimerStore = create<TimerState>()(
                 ]);
               } catch (error) {
                 console.error("Failed to update task:", error);
-                // Note: Optimistic updates will be automatically reverted by TanStack Query's onError
               }
             }
 
@@ -342,10 +284,9 @@ export const useTimerStore = create<TimerState>()(
           }
         },
 
-        // Start/pause timer with optimistic updates
+        // Start/pause timer
         startPause: async () => {
-          const { isActive, currentTaskId, mode, optimisticUpdateStatus } =
-            get();
+          const { isActive, currentTaskId, mode } = get();
 
           // Allow starting break timers, but prevent starting work tasks without a task assigned
           if (!isActive && mode === "work" && !currentTaskId) {
@@ -359,11 +300,6 @@ export const useTimerStore = create<TimerState>()(
           if (currentTaskId) {
             const newStatus: TaskStatus = isActive ? "pending" : "in_progress";
 
-            // Apply optimistic update immediately if available
-            if (optimisticUpdateStatus) {
-              optimisticUpdateStatus(currentTaskId, newStatus);
-            }
-
             try {
               // Make the API call in the background
               await updateTask(currentTaskId, { status: newStatus });
@@ -371,7 +307,6 @@ export const useTimerStore = create<TimerState>()(
               console.error("Failed to update task status:", error);
               // Revert the timer state on API failure
               set({ isActive: isActive });
-              // Note: The optimistic update will be automatically reverted by TanStack Query's onError
               return;
             }
           }
@@ -405,9 +340,9 @@ export const useTimerStore = create<TimerState>()(
           await get().switchToNextMode();
         },
 
-        // Mark task as done with optimistic updates
+        // Mark task as done
         markTaskAsDone: async (taskId: string) => {
-          const { currentTaskId, optimisticUpdateStatus } = get();
+          const { currentTaskId } = get();
 
           if (currentTaskId === taskId) {
             set({
@@ -418,17 +353,11 @@ export const useTimerStore = create<TimerState>()(
             });
           }
 
-          // Apply optimistic update immediately if available
-          if (optimisticUpdateStatus) {
-            optimisticUpdateStatus(taskId, "done");
-          }
-
           try {
             await updateTask(taskId, { status: "done" });
             // Note: Query invalidation should be handled by the calling component
           } catch (error) {
             console.error("Failed to mark task as done:", error);
-            // Note: Optimistic update will be automatically reverted by TanStack Query's onError
           }
         },
 
@@ -628,9 +557,7 @@ export const useTimerActions = () => {
   const markTaskAsDone = useTimerStore((state) => state.markTaskAsDone);
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
   const setUserPreferences = useTimerStore((state) => state.setUserPreferences);
-  const setOptimisticUpdateFunctions = useTimerStore(
-    (state) => state.setOptimisticUpdateFunctions
-  );
+
   const formatTime = useTimerStore((state) => state.formatTime);
 
   return useMemo(
@@ -643,7 +570,6 @@ export const useTimerActions = () => {
       markTaskAsDone,
       setCurrentTask,
       setUserPreferences,
-      setOptimisticUpdateFunctions,
       formatTime,
     }),
     [
@@ -655,7 +581,6 @@ export const useTimerActions = () => {
       markTaskAsDone,
       setCurrentTask,
       setUserPreferences,
-      setOptimisticUpdateFunctions,
       formatTime,
     ]
   );

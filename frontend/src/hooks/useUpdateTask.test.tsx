@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useUpdateTask } from "./useTasks";
 import { updateTask } from "../services/taskService";
 import { Task } from "../types/task";
+import { MessageProvider } from "../context/MessageContext";
 
 // Mock the task service
 jest.mock("../services/taskService");
@@ -35,7 +36,7 @@ const mockTasks: Task[] = [
 describe("useUpdateTask optimistic updates", () => {
   let queryClient: QueryClient;
 
-  // Create a wrapper for React Query
+  // Create a wrapper for React Query and MessageContext
   const createWrapper = () => {
     queryClient = new QueryClient({
       defaultOptions: {
@@ -45,7 +46,9 @@ describe("useUpdateTask optimistic updates", () => {
     });
 
     const Wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <MessageProvider>{children}</MessageProvider>
+      </QueryClientProvider>
     );
 
     return Wrapper;

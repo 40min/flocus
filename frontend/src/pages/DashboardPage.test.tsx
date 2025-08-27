@@ -461,7 +461,7 @@ describe("DashboardPage - handleDragEnd", () => {
       "description for task 2"
     );
 
-    // Note: The optimistic updates are now handled internally by the timer store
+    // Note: The API updates are now handled internally by the timer store
     // when setIsActive is called, so we don't expect direct updateTask calls
   });
 
@@ -632,7 +632,7 @@ describe("DashboardPage - handleDragEnd", () => {
       "description for task 2"
     );
 
-    // Note: The optimistic updates for both stopping the previous task and starting
+    // Note: The API updates for both stopping the previous task and starting
     // the new task are now handled internally by the timer store, so we don't
     // expect direct updateTask calls
   });

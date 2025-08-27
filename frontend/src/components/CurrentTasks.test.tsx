@@ -442,7 +442,7 @@ describe("CurrentTasks", () => {
     expect(mockStopCurrentTask).not.toHaveBeenCalled();
   });
 
-  it('calls handleMarkAsDone when "Mark as Done" is clicked', async () => {
+  it('calls updateTask when "Mark as Done" is clicked', async () => {
     mockedUseCurrentTimeWindow.mockReturnValue({
       currentTimeWindow: mockTimeWindow,
       currentTasks: mockTasks,
@@ -468,7 +468,10 @@ describe("CurrentTasks", () => {
     fireEvent.click(markAsDoneButton);
 
     await waitFor(() =>
-      expect(mockHandleMarkAsDone).toHaveBeenCalledWith("task1")
+      expect(mockUpdateTask).toHaveBeenCalledWith({
+        taskId: "task1",
+        taskData: { status: "done" },
+      })
     );
   });
 
@@ -692,5 +695,98 @@ describe("CurrentTasks", () => {
     expect(screen.getByText("Edit Task")).toBeInTheDocument();
     // Check if the task title is pre-filled
     expect(screen.getByDisplayValue("Task One")).toBeInTheDocument();
+  });
+
+  it("shows loading state when updating task", () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    mockedUseUpdateTask.mockReturnValue({
+      mutate: mockUpdateTask,
+      isPending: true,
+      isError: false,
+      error: null,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    // Should show loading spinner and text (there will be multiple, so get all)
+    const updatingTexts = screen.getAllByText("Updating...");
+    expect(updatingTexts[0]).toBeInTheDocument();
+
+    // Task card should have reduced opacity and be non-interactive
+    const taskCard = screen.getByText("Task One").closest('[tabindex="0"]');
+    expect(taskCard).toHaveClass("opacity-75", "pointer-events-none");
+  });
+
+  it("shows error state when task update fails", () => {
+    const mockError = new Error("Network error");
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    mockedUseUpdateTask.mockReturnValue({
+      mutate: mockUpdateTask,
+      isPending: false,
+      isError: true,
+      error: mockError,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    // Should show error message and retry button (there will be multiple, so get all)
+    const errorMessages = screen.getAllByText("Update failed: Network error");
+    expect(errorMessages[0]).toBeInTheDocument();
+    const retryButtons = screen.getAllByRole("button", { name: "Retry" });
+    expect(retryButtons[0]).toBeInTheDocument();
+  });
+
+  it("calls updateTask when retry button is clicked", async () => {
+    const mockError = new Error("Network error");
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    mockedUseUpdateTask.mockReturnValue({
+      mutate: mockUpdateTask,
+      isPending: false,
+      isError: true,
+      error: mockError,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    const retryButtons = screen.getAllByRole("button", { name: "Retry" });
+    fireEvent.click(retryButtons[0]);
+
+    await waitFor(() =>
+      expect(mockUpdateTask).toHaveBeenCalledWith({
+        taskId: "task1",
+        taskData: { status: "done" },
+      })
+    );
+  });
+
+  it("disables delete button when deleting task", () => {
+    mockedUseCurrentTimeWindow.mockReturnValue({
+      currentTimeWindow: mockTimeWindow,
+      currentTasks: mockTasks,
+    });
+    mockedUseDeleteTask.mockReturnValue({
+      mutate: mockDeleteTask,
+      isPending: true,
+    });
+    renderWithDnd(
+      <CurrentTasks dailyPlan={{} as any} onSelectTask={mockOnSelectTask} />
+    );
+
+    const deleteButtons = screen.getAllByRole("button", {
+      name: "Delete task",
+    });
+    expect(deleteButtons[0]).toBeDisabled();
   });
 });

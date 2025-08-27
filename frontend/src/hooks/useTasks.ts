@@ -37,77 +37,31 @@ interface UpdateTaskVariables {
   taskData: TaskUpdateRequest;
 }
 
-interface UpdateTaskContext {
-  previousTasks: Task[] | undefined;
-}
-
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   const { showMessage } = useMessage();
 
-  return useMutation<Task, Error, UpdateTaskVariables, UpdateTaskContext>({
+  return useMutation<Task, Error, UpdateTaskVariables>({
     mutationFn: ({ taskId, taskData }: UpdateTaskVariables) =>
       updateTask(taskId, taskData),
 
-    // Optimistic update using cache manipulation
-    onMutate: async ({ taskId, taskData }: UpdateTaskVariables) => {
-      // Cancel outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-
-      // Snapshot the previous value for rollback
-      const previousTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-
-      // Optimistically update the cache
-      queryClient.setQueryData<Task[]>(["tasks"], (old) => {
-        if (!old || !Array.isArray(old)) return old;
-
-        return old.map((task) => {
-          if (task.id === taskId) {
-            // Handle special case for add_lasts_minutes
-            if (taskData.add_lasts_minutes !== undefined) {
-              const currentMinutes = task.statistics?.lasts_minutes || 0;
-              return {
-                ...task,
-                statistics: {
-                  ...task.statistics,
-                  lasts_minutes: currentMinutes + taskData.add_lasts_minutes,
-                },
-              };
-            }
-            // Handle regular field updates
-            return { ...task, ...taskData };
-          }
-          return task;
-        });
-      });
-
-      // Return context object with the snapshotted value for rollback
-      return { previousTasks };
+    // Simple success handling - just invalidate queries to refetch fresh data
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     },
 
-    // If the mutation fails, use the context returned from onMutate to roll back
-    onError: (
-      err: Error,
-      variables: UpdateTaskVariables,
-      context: UpdateTaskContext | undefined
-    ) => {
-      // Rollback optimistic update
-      if (context?.previousTasks) {
-        queryClient.setQueryData(["tasks"], context.previousTasks);
-      }
+    // Simple error handling - let the UI handle error display
+    onError: (error: Error, variables: UpdateTaskVariables) => {
+      console.error("Task update failed:", error);
 
-      // Use standardized error handler
+      // Use standardized error handler for user feedback
       const errorHandler = createErrorHandler("update", showMessage, {
         taskId: variables.taskId,
         taskData: variables.taskData,
       });
 
-      errorHandler(err, variables, context);
-    },
-
-    // Always refetch after error or success to ensure consistency with server
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      errorHandler(error, variables);
     },
   });
 };

@@ -33,7 +33,7 @@ const mockTasks: Task[] = [
   },
 ];
 
-describe("useUpdateTask optimistic updates", () => {
+describe("useUpdateTask standard patterns", () => {
   let queryClient: QueryClient;
 
   // Create a wrapper for React Query and MessageContext
@@ -56,9 +56,15 @@ describe("useUpdateTask optimistic updates", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Spy on console.error to suppress expected error logs in tests
+    jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  test("should apply optimistic update immediately for add_lasts_minutes", async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test("should call updateTask API and invalidate queries on success", async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
@@ -72,6 +78,9 @@ describe("useUpdateTask optimistic updates", () => {
     };
     mockUpdateTask.mockResolvedValueOnce(updatedTask);
 
+    // Spy on query invalidation
+    const invalidateQueriesSpy = jest.spyOn(queryClient, "invalidateQueries");
+
     act(() => {
       result.current.mutate({
         taskId: "task-1",
@@ -79,26 +88,33 @@ describe("useUpdateTask optimistic updates", () => {
       });
     });
 
-    // Wait for optimistic update to apply
+    // Wait for mutation to complete
     await waitFor(() => {
-      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-      expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(30);
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Should call the API
+    expect(mockUpdateTask).toHaveBeenCalledWith("task-1", {
+      add_lasts_minutes: 30,
+    });
+
+    // Should invalidate queries to refetch fresh data
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: ["daily-plan"],
     });
   });
 
-  test("should apply optimistic update for regular field updates", async () => {
+  test("should handle API errors gracefully", async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
     // Set initial tasks data
     queryClient.setQueryData(["tasks"], mockTasks);
 
-    // Mock successful API response
-    const updatedTask = {
-      ...mockTasks[0],
-      status: "in_progress" as const,
-    };
-    mockUpdateTask.mockResolvedValueOnce(updatedTask);
+    // Mock API error
+    const apiError = new Error("Network error");
+    mockUpdateTask.mockRejectedValueOnce(apiError);
 
     act(() => {
       result.current.mutate({
@@ -107,79 +123,86 @@ describe("useUpdateTask optimistic updates", () => {
       });
     });
 
-    // Wait for optimistic update to apply
-    await waitFor(() => {
-      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-      expect(updatedTasks?.[0].status).toBe("in_progress");
-    });
-  });
-
-  test("should rollback on API error", async () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useUpdateTask(), { wrapper });
-
-    // Set initial tasks data
-    queryClient.setQueryData(["tasks"], mockTasks);
-
-    // Mock API error
-    mockUpdateTask.mockRejectedValueOnce(new Error("API Error"));
-
-    act(() => {
-      result.current.mutate({
-        taskId: "task-1",
-        taskData: { add_lasts_minutes: 30 },
-      });
-    });
-
-    // Wait for the mutation to complete and rollback
+    // Wait for the mutation to complete with error
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
 
-    // Should rollback to original state
-    const tasks = queryClient.getQueryData<Task[]>(["tasks"]);
-    expect(tasks?.[0].statistics?.lasts_minutes).toBe(0);
+    // Should have the error
+    expect(result.current.error).toBe(apiError);
+
+    // Should call the API
+    expect(mockUpdateTask).toHaveBeenCalledWith("task-1", {
+      status: "in_progress",
+    });
+
+    // Should log the error
+    expect(console.error).toHaveBeenCalledWith("Task update failed:", apiError);
   });
 
-  test("should handle multiple optimistic updates correctly", async () => {
+  test("should provide loading state during mutation", async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
-    // Set initial tasks data
-    queryClient.setQueryData(["tasks"], mockTasks);
+    // Mock API response with delay
+    mockUpdateTask.mockImplementation(
+      () =>
+        new Promise((resolve) => setTimeout(() => resolve(mockTasks[0]), 100))
+    );
 
-    // Mock successful API responses
-    mockUpdateTask
-      .mockResolvedValueOnce({
-        ...mockTasks[0],
-        statistics: { lasts_minutes: 15 },
-      })
-      .mockResolvedValueOnce({
-        ...mockTasks[1],
-        statistics: { lasts_minutes: 45 },
-      });
-
-    // First update
     act(() => {
       result.current.mutate({
         taskId: "task-1",
-        taskData: { add_lasts_minutes: 15 },
+        taskData: { status: "in_progress" },
       });
     });
 
-    // Second update
-    act(() => {
-      result.current.mutate({
-        taskId: "task-2",
-        taskData: { add_lasts_minutes: 15 },
-      });
-    });
-
-    // Wait for optimistic updates to apply
+    // Should be pending after mutation starts
     await waitFor(() => {
-      const updatedTasks = queryClient.getQueryData<Task[]>(["tasks"]);
-      expect(updatedTasks?.[0].statistics?.lasts_minutes).toBe(15);
-      expect(updatedTasks?.[1].statistics?.lasts_minutes).toBe(45);
+      expect(result.current.isPending).toBe(true);
     });
+
+    // Wait for mutation to complete
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Should no longer be pending
+    expect(result.current.isPending).toBe(false);
+  });
+
+  test("should handle multiple concurrent updates independently", async () => {
+    const wrapper = createWrapper();
+    const { result: result1 } = renderHook(() => useUpdateTask(), { wrapper });
+    const { result: result2 } = renderHook(() => useUpdateTask(), { wrapper });
+
+    // Mock successful API responses
+    mockUpdateTask
+      .mockResolvedValueOnce(mockTasks[0])
+      .mockResolvedValueOnce(mockTasks[1]);
+
+    // Start both mutations
+    act(() => {
+      result1.current.mutate({
+        taskId: "task-1",
+        taskData: { status: "in_progress" },
+      });
+      result2.current.mutate({
+        taskId: "task-2",
+        taskData: { status: "done" },
+      });
+    });
+
+    // Wait for both mutations to complete
+    await waitFor(() => {
+      expect(result1.current.isSuccess).toBe(true);
+      expect(result2.current.isSuccess).toBe(true);
+    });
+
+    // Both API calls should have been made
+    expect(mockUpdateTask).toHaveBeenCalledWith("task-1", {
+      status: "in_progress",
+    });
+    expect(mockUpdateTask).toHaveBeenCalledWith("task-2", { status: "done" });
   });
 });

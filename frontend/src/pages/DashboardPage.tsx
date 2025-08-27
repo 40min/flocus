@@ -52,10 +52,10 @@ const DashboardPage: React.FC = () => {
       }
 
       if (taskToStart) {
-        // Set the new task in the timer (this will handle optimistic updates internally)
+        // Set the new task in the timer (this will handle API calls internally)
         setCurrentTask(taskId, taskToStart.title, taskToStart.description);
 
-        // Start the timer if not already active (this will trigger optimistic status updates)
+        // Start the timer if not already active (this will trigger API status updates)
         if (!isActive) {
           setIsActive(true);
         }

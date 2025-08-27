@@ -40,8 +40,13 @@ export const TaskCard = ({
     handleMarkAsDone,
   } = useTimer();
 
-  const { mutate: deleteTask } = useDeleteTask();
-  const { isPending: isUpdating } = useUpdateTask();
+  const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
+  const {
+    mutate: updateTask,
+    isPending: isUpdating,
+    isError: isUpdateError,
+    error: updateError,
+  } = useUpdateTask();
   const isSelectedTask = currentTaskId === task.id;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -76,13 +81,23 @@ export const TaskCard = ({
     }
   };
 
+  const handleMarkTaskAsDone = () => {
+    updateTask({ taskId: task.id, taskData: { status: "done" } });
+  };
+
+  const handleRetryUpdate = () => {
+    // Retry the last failed update - in this case, mark as done
+    updateTask({ taskId: task.id, taskData: { status: "done" } });
+  };
+
   return (
     <li className="list-none" ref={setNodeRef} style={style}>
       <div
         className={cn(
           "transition-all duration-200",
           isDragging && "opacity-50 shadow-2xl z-50 relative",
-          isSelectedTask ? "cursor-not-allowed opacity-100" : "opacity-75"
+          isSelectedTask ? "cursor-not-allowed opacity-100" : "opacity-75",
+          (isUpdating || isDeleting) && "opacity-75 pointer-events-none"
         )}
         tabIndex={0}
       >
@@ -135,6 +150,12 @@ export const TaskCard = ({
                   <span>
                     {formatWorkingTime(task.statistics?.lasts_minutes)}
                   </span>
+                  {isUpdating && (
+                    <div className="ml-2 flex items-center gap-1">
+                      <div className="animate-spin h-3 w-3 border border-gray-300 border-t-blue-500 rounded-full"></div>
+                      <span className="text-xs text-blue-600">Updating...</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Button
@@ -164,7 +185,7 @@ export const TaskCard = ({
                     <Pause className="h-4 w-4" />
                   </Button>
                   <Button
-                    onClick={() => handleMarkAsDone(task.id)}
+                    onClick={handleMarkTaskAsDone}
                     disabled={task.status === "done" || isUpdating}
                     variant="ghost"
                     size="icon"
@@ -184,14 +205,34 @@ export const TaskCard = ({
                   </Button>
                   <Button
                     onClick={handleDelete}
+                    disabled={isDeleting}
                     variant="ghost"
                     size="icon"
                     title="Delete task"
-                    className="text-slate-400 hover:text-red-500"
+                    className="text-slate-400 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+
+                {/* Error state display */}
+                {isUpdateError && (
+                  <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-red-600">
+                        Update failed: {updateError?.message || "Unknown error"}
+                      </span>
+                      <Button
+                        onClick={handleRetryUpdate}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-red-600 hover:text-red-700 underline"
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -36,11 +36,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const { isHighlighted, triggerHighlight } = useSuccessHighlight();
   const prefersReducedMotion = useReducedMotion();
 
-  // Simplified display values - no optimistic updates
+  // Display values from server data
   const displayStatus = task.status;
   const displayWorkingTime = task.statistics?.lasts_minutes || 0;
 
-  // Simplified handlers - no optimistic update logic
+  // Simplified handlers using standard API calls
   const handleRetry = () => {
     // Retry logic will be handled by parent components
   };

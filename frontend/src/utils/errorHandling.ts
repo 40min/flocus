@@ -1,5 +1,5 @@
 /**
- * Comprehensive error handling utilities for optimistic updates
+ * Comprehensive error handling utilities for task operations
  * Provides standardized error messages and handling for different error types
  */
 

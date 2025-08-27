@@ -77,7 +77,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const { currentTaskId, stopCurrentTask, resetForNewTask } = useTimer();
   const { showMessage } = useMessage();
 
-  // Optimistic mutations
+  // Task mutations
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
 
@@ -180,7 +180,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           await stopCurrentTask();
         }
 
-        // Use optimistic update mutation
+        // Use update mutation
         await updateTaskMutation.mutateAsync({
           taskId: editingTask.id,
           taskData: payload as TaskUpdateRequest,
@@ -188,7 +188,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
         showMessage(`Task "${data.title}" updated successfully!`, "success");
       } else {
-        // Use optimistic create mutation
+        // Use create mutation
         await createTaskMutation.mutateAsync(payload as TaskCreateRequest);
         showMessage(`Task "${data.title}" created successfully!`, "success");
       }

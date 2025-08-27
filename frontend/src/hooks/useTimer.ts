@@ -68,6 +68,11 @@ export const useTimer = () => {
       handleMarkAsDone: actions?.markTaskAsDone,
       formatTime: actions?.formatTime,
 
+      // Loading states
+      isUpdatingTaskStatus: actions?.isUpdatingTaskStatus,
+      isUpdatingWorkingTime: actions?.isUpdatingWorkingTime,
+      isUpdating: actions?.isUpdating,
+
       // Setters for backward compatibility
       setIsActive,
       setCurrentTaskId,
@@ -143,6 +148,9 @@ export const useTimerControls = () => {
       skip: actions?.skip,
       stopCurrentTask: actions?.stopCurrentTask,
       resetForNewTask: actions?.resetForNewTask,
+      isUpdatingTaskStatus: actions?.isUpdatingTaskStatus,
+      isUpdatingWorkingTime: actions?.isUpdatingWorkingTime,
+      isUpdating: actions?.isUpdating,
     }),
     [isActive, actions]
   );

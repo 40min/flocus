@@ -78,6 +78,8 @@ describe("TimerProvider", () => {
         currentTaskId: undefined,
         currentTaskName: undefined,
         currentTaskDescription: undefined,
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
         timestamp: Date.now(),
         userPreferences: undefined,
 
@@ -191,6 +193,8 @@ describe("TimerProvider", () => {
         currentTaskId: undefined,
         currentTaskName: undefined,
         currentTaskDescription: undefined,
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
         timestamp: Date.now(),
         userPreferences: undefined,
 

@@ -214,6 +214,8 @@ describe("DashboardPage - handleDragEnd", () => {
         currentTaskId: undefined,
         currentTaskName: undefined,
         currentTaskDescription: undefined,
+        isUpdatingTaskStatus: false,
+        isUpdatingWorkingTime: false,
         timestamp: Date.now(),
         userPreferences: undefined,
 

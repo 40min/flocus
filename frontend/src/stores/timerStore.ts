@@ -29,9 +29,7 @@ interface TimerState {
   currentTaskName?: string;
   currentTaskDescription?: string;
 
-  // Loading states for API operations
-  isUpdatingTaskStatus: boolean;
-  isUpdatingWorkingTime: boolean;
+  // Note: Removed optimistic update loading states as per simplification requirements
 
   // Persistence
   timestamp: number;
@@ -85,8 +83,7 @@ const DEFAULT_TIMER_STATE = {
   currentTaskId: undefined,
   currentTaskName: undefined,
   currentTaskDescription: undefined,
-  isUpdatingTaskStatus: false,
-  isUpdatingWorkingTime: false,
+  // Removed optimistic update loading states
   timestamp: Date.now(),
   userPreferences: undefined,
 };
@@ -186,7 +183,6 @@ export const useTimerStore = create<TimerState>()(
           });
 
           if (currentTaskId) {
-            set({ isUpdatingTaskStatus: true });
             try {
               await updateTask(currentTaskId, { status: "pending" });
             } catch (error) {
@@ -194,8 +190,6 @@ export const useTimerStore = create<TimerState>()(
                 "Failed to update task status to 'pending':",
                 error
               );
-            } finally {
-              set({ isUpdatingTaskStatus: false });
             }
           }
         },
@@ -223,7 +217,6 @@ export const useTimerStore = create<TimerState>()(
 
             // Update task status to pending and add working time
             if (currentTaskId) {
-              set({ isUpdatingTaskStatus: true, isUpdatingWorkingTime: true });
               try {
                 // Make API calls in the background
                 await Promise.all([
@@ -234,11 +227,6 @@ export const useTimerStore = create<TimerState>()(
                 ]);
               } catch (error) {
                 console.error("Failed to update task:", error);
-              } finally {
-                set({
-                  isUpdatingTaskStatus: false,
-                  isUpdatingWorkingTime: false,
-                });
               }
             }
 
@@ -315,7 +303,6 @@ export const useTimerStore = create<TimerState>()(
           if (currentTaskId) {
             const newStatus: TaskStatus = isActive ? "pending" : "in_progress";
 
-            set({ isUpdatingTaskStatus: true });
             try {
               // Make the API call in the background
               await updateTask(currentTaskId, { status: newStatus });
@@ -323,8 +310,6 @@ export const useTimerStore = create<TimerState>()(
               console.error("Failed to update task status:", error);
               // Revert the timer state on API failure
               set({ isActive: isActive });
-            } finally {
-              set({ isUpdatingTaskStatus: false });
             }
           }
         },
@@ -370,14 +355,11 @@ export const useTimerStore = create<TimerState>()(
             });
           }
 
-          set({ isUpdatingTaskStatus: true });
           try {
             await updateTask(taskId, { status: "done" });
             // Note: Query invalidation should be handled by the calling component
           } catch (error) {
             console.error("Failed to mark task as done:", error);
-          } finally {
-            set({ isUpdatingTaskStatus: false });
           }
         },
 
@@ -510,23 +492,7 @@ export const useTimerRemaining = () =>
 export const useTimerActive = () => useTimerStore((state) => state.isActive);
 export const useTimerPomodoros = () =>
   useTimerStore((state) => state.pomodorosCompleted);
-export const useTimerLoadingStates = () => {
-  const isUpdatingTaskStatus = useTimerStore(
-    (state) => state.isUpdatingTaskStatus
-  );
-  const isUpdatingWorkingTime = useTimerStore(
-    (state) => state.isUpdatingWorkingTime
-  );
-
-  return useMemo(
-    () => ({
-      isUpdatingTaskStatus,
-      isUpdatingWorkingTime,
-      isUpdating: isUpdatingTaskStatus || isUpdatingWorkingTime,
-    }),
-    [isUpdatingTaskStatus, isUpdatingWorkingTime]
-  );
-};
+// Removed useTimerLoadingStates as optimistic update loading states are no longer used
 export const useTimerCurrentTask = () => {
   const currentTaskId = useTimerStore((state) => state.currentTaskId);
   const currentTaskName = useTimerStore((state) => state.currentTaskName);
@@ -596,7 +562,6 @@ export const useTimerActions = () => {
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
   const setUserPreferences = useTimerStore((state) => state.setUserPreferences);
   const formatTime = useTimerStore((state) => state.formatTime);
-  const loadingStates = useTimerLoadingStates();
 
   return useMemo(
     () => ({
@@ -609,7 +574,7 @@ export const useTimerActions = () => {
       setCurrentTask,
       setUserPreferences,
       formatTime,
-      ...loadingStates,
+      // Removed optimistic update loading states
     }),
     [
       startPause,
@@ -621,7 +586,6 @@ export const useTimerActions = () => {
       setCurrentTask,
       setUserPreferences,
       formatTime,
-      loadingStates,
     ]
   );
 };

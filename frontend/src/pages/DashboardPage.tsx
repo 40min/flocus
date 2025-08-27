@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { useTimer } from "../hooks/useTimer";
 import { useTimerStore } from "../stores/timerStore";
+import { useUpdateTask } from "../hooks/useTasks";
 import { Task } from "types/task";
 import DailyStats from "components/DailyStats";
 
@@ -19,6 +20,10 @@ const DashboardPage: React.FC = () => {
 
   // Get the setCurrentTask function directly from the store
   const setCurrentTask = useTimerStore((state) => state.setCurrentTask);
+
+  // Use standard API calls for task updates
+  const { mutate: updateTaskMutation, isPending: isUpdatingTask } =
+    useUpdateTask();
 
   const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -52,10 +57,24 @@ const DashboardPage: React.FC = () => {
       }
 
       if (taskToStart) {
-        // Set the new task in the timer (this will handle API calls internally)
+        // Stop current task if one is active
+        if (currentTaskId && currentTaskId !== taskId) {
+          updateTaskMutation({
+            taskId: currentTaskId,
+            taskData: { status: "pending" },
+          });
+        }
+
+        // Set the new task in the timer
         setCurrentTask(taskId, taskToStart.title, taskToStart.description);
 
-        // Start the timer if not already active (this will trigger API status updates)
+        // Start the new task via API call
+        updateTaskMutation({
+          taskId: taskId,
+          taskData: { status: "in_progress" },
+        });
+
+        // Start the timer if not already active
         if (!isActive) {
           setIsActive(true);
         }
@@ -101,6 +120,7 @@ const DashboardPage: React.FC = () => {
                     <CurrentTasks
                       dailyPlan={dailyPlan}
                       onSelectTask={activateAndStartTask}
+                      isUpdatingTask={isUpdatingTask}
                     />
                   )}
                 </div>

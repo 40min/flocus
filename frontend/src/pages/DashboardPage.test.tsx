@@ -291,7 +291,11 @@ describe("DashboardPage - handleDragEnd", () => {
       isError: false,
     });
     (useUpdateTask as jest.Mock).mockReturnValue({
+      mutate: jest.fn(),
       mutateAsync: mockMutateAsync.mockResolvedValue({}),
+      isPending: false,
+      isError: false,
+      error: null,
     });
 
     (useTimer as jest.Mock).mockImplementation(() => ({

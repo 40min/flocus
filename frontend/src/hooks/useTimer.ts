@@ -68,10 +68,7 @@ export const useTimer = () => {
       handleMarkAsDone: actions?.markTaskAsDone,
       formatTime: actions?.formatTime,
 
-      // Loading states
-      isUpdatingTaskStatus: actions?.isUpdatingTaskStatus,
-      isUpdatingWorkingTime: actions?.isUpdatingWorkingTime,
-      isUpdating: actions?.isUpdating,
+      // Removed optimistic update loading states as per simplification requirements
 
       // Setters for backward compatibility
       setIsActive,
@@ -148,9 +145,7 @@ export const useTimerControls = () => {
       skip: actions?.skip,
       stopCurrentTask: actions?.stopCurrentTask,
       resetForNewTask: actions?.resetForNewTask,
-      isUpdatingTaskStatus: actions?.isUpdatingTaskStatus,
-      isUpdatingWorkingTime: actions?.isUpdatingWorkingTime,
-      isUpdating: actions?.isUpdating,
+      // Removed optimistic update loading states
     }),
     [isActive, actions]
   );

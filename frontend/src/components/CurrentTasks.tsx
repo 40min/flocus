@@ -27,10 +27,12 @@ export const TaskCard = ({
   task,
   onSelectTask,
   onEditTask,
+  isUpdatingFromParent = false,
 }: {
   task: Task;
   onSelectTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
+  isUpdatingFromParent?: boolean;
 }) => {
   const {
     currentTaskId,
@@ -97,7 +99,8 @@ export const TaskCard = ({
           "transition-all duration-200",
           isDragging && "opacity-50 shadow-2xl z-50 relative",
           isSelectedTask ? "cursor-not-allowed opacity-100" : "opacity-75",
-          (isUpdating || isDeleting) && "opacity-75 pointer-events-none"
+          (isUpdating || isDeleting || isUpdatingFromParent) &&
+            "opacity-75 pointer-events-none"
         )}
         tabIndex={0}
       >
@@ -150,10 +153,12 @@ export const TaskCard = ({
                   <span>
                     {formatWorkingTime(task.statistics?.lasts_minutes)}
                   </span>
-                  {isUpdating && (
+                  {(isUpdating || isUpdatingFromParent) && (
                     <div className="ml-2 flex items-center gap-1">
                       <div className="animate-spin h-3 w-3 border border-gray-300 border-t-blue-500 rounded-full"></div>
-                      <span className="text-xs text-blue-600">Updating...</span>
+                      <span className="text-xs text-blue-600">
+                        {isUpdatingFromParent ? "Switching..." : "Updating..."}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -245,11 +250,13 @@ export const TaskCard = ({
 interface CurrentTasksProps {
   dailyPlan: DailyPlanResponse | null | undefined;
   onSelectTask: (taskId: string) => void;
+  isUpdatingTask?: boolean;
 }
 
 const CurrentTasks: React.FC<CurrentTasksProps> = ({
   dailyPlan,
   onSelectTask,
+  isUpdatingTask = false,
 }) => {
   const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(
     dailyPlan || null
@@ -314,6 +321,7 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
                     task={task}
                     onSelectTask={onSelectTask}
                     onEditTask={openEditModal}
+                    isUpdatingFromParent={isUpdatingTask}
                   />
                 ))
             )}

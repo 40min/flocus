@@ -4,12 +4,12 @@ import { DragEndEvent } from "@dnd-kit/core";
 import DashboardPage from "./DashboardPage";
 import { TimerProvider } from "../components/TimerProvider";
 import { useTimer } from "../hooks/useTimer";
-import { useTodayDailyPlan } from "../hooks/useDailyPlan";
+import { useTodayDailyPlan, useDailyPlanWithReview } from "../hooks/useDailyPlan";
 import { useUpdateTask } from "../hooks/useTasks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getTodayStats } from "../services/userDailyStatsService";
 import { useTimerStore } from "../stores/timerStore";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
 import { MessageProvider } from "../context/MessageContext";
 
@@ -28,11 +28,16 @@ const mockSetCurrentTask = jest.fn();
 const mockMutateAsync = jest.fn();
 const mockClearTimerState = jest.fn();
 const mockSetUserPreferences = jest.fn();
+const mockNavigate = jest.fn();
 
 // Mock hooks
 jest.mock("../hooks/useDailyPlan");
 jest.mock("../hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
 
 // Mock the useTimerButtonStates hook
 const mockUseTimerButtonStates = jest.fn();
@@ -198,6 +203,7 @@ describe("DashboardPage - handleDragEnd", () => {
     mockHandleMarkAsDone.mockClear(); // Clear mock for handleMarkAsDone
     mockSetCurrentTask.mockClear();
     mockMutateAsync.mockClear();
+    mockNavigate.mockClear();
 
     // Set up the timer button states mock
     mockUseTimerButtonStates.mockReturnValue({
@@ -292,6 +298,46 @@ describe("DashboardPage - handleDragEnd", () => {
       },
       isLoading: false,
       isError: false,
+    });
+
+    (useDailyPlanWithReview as jest.Mock).mockReturnValue({
+      dailyPlan: {
+        id: "plan1",
+        date: "2024-07-30",
+        reviewed: true,
+        time_windows: [
+          {
+            id: "tw1",
+            start_time: "09:00",
+            end_time: "10:00",
+            tasks: [
+              {
+                id: "task1",
+                title: "Existing Task",
+                status: "PENDING",
+                description: "description for task 1",
+              },
+            ],
+          },
+          {
+            id: "tw2",
+            start_time: "10:00",
+            end_time: "11:00",
+            tasks: [
+              {
+                id: "task2",
+                title: "New Task To Drag",
+                status: "PENDING",
+                description: "description for task 2",
+              },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+      needsReview: false,
+      reviewMode: "approved",
     });
     (useUpdateTask as jest.Mock).mockReturnValue({
       mutate: jest.fn(),

@@ -1,10 +1,19 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, PlusCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  PlusCircle,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import type { TimeWindowAllocation } from "../types/dailyPlan";
 import type { Task } from "../types/task";
 import TimeWindowBalloon from "./TimeWindowBalloon";
 import GapIndicator from "./GapIndicator";
+import ConflictResolutionPanel from "./ConflictResolutionPanel";
+import ConflictSummary from "./ConflictSummary";
+import ConflictIndicator from "./ConflictIndicator";
 import { cn } from "../utils/utils";
 
 interface ConflictInfo {
@@ -41,6 +50,7 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
   isApproving = false,
 }) => {
   const [showConflictDetails, setShowConflictDetails] = useState(true);
+  const [expandedConflicts, setExpandedConflicts] = useState(true);
 
   const hasConflicts = conflicts.length > 0;
   const sortedWindows = [...timeWindows].sort(
@@ -91,21 +101,26 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
       }
 
       const isInConflict = isTimeWindowInConflict(alloc.time_window.id);
+      const conflictType = conflicts.find((c) =>
+        c.timeWindowIds.includes(alloc.time_window.id)
+      )?.type;
 
-      // Add the time window with conflict highlighting
+      // Add the time window with enhanced conflict highlighting
       elements.push(
         <div
           key={alloc.time_window.id}
           className={cn(
             "relative",
-            isInConflict && "ring-2 ring-red-300 rounded-lg"
+            isInConflict && "ring-2 ring-red-300 rounded-lg shadow-lg"
           )}
         >
           {isInConflict && (
             <div className="absolute -top-2 -right-2 z-10">
-              <div className="bg-red-500 text-white rounded-full p-1">
-                <AlertTriangle size={16} />
-              </div>
+              <ConflictIndicator
+                type={conflictType || "overlap"}
+                severity="high"
+                size="md"
+              />
             </div>
           )}
           <TimeWindowBalloon
@@ -141,52 +156,45 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
               approval.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {hasConflicts ? (
-              <div className="flex items-center gap-1 text-red-600">
-                <AlertTriangle size={16} />
-                <span className="text-sm font-medium">
-                  {conflicts.length} conflict{conflicts.length > 1 ? "s" : ""}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-green-600">
-                <CheckCircle size={16} />
-                <span className="text-sm font-medium">Ready to approve</span>
-              </div>
-            )}
-          </div>
+          <ConflictSummary conflicts={conflicts} variant="compact" />
         </div>
       </div>
 
-      {/* Conflict Details */}
-      {hasConflicts && showConflictDetails && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-red-900">Scheduling Conflicts</h3>
+      {/* Enhanced Conflict Resolution Section */}
+      {hasConflicts && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">
+              Conflict Resolution
+            </h3>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowConflictDetails(false)}
-              className="text-red-600 hover:text-red-700"
+              onClick={() => setExpandedConflicts(!expandedConflicts)}
+              className="flex items-center gap-1 text-slate-600 hover:text-slate-900"
             >
-              Hide Details
+              {expandedConflicts ? (
+                <>
+                  <ChevronUp size={16} />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={16} />
+                  Expand
+                </>
+              )}
             </Button>
           </div>
-          <div className="space-y-2">
-            {conflicts.map((conflict, index) => (
-              <div key={index} className="flex items-start gap-2 text-sm">
-                <AlertTriangle
-                  size={14}
-                  className="text-red-500 mt-0.5 flex-shrink-0"
-                />
-                <p className="text-red-800">{conflict.message}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-red-600 mt-3">
-            Edit or delete conflicting time windows to resolve these issues.
-          </p>
+
+          {expandedConflicts && (
+            <ConflictResolutionPanel
+              conflicts={conflicts}
+              timeWindows={timeWindows}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          )}
         </div>
       )}
 

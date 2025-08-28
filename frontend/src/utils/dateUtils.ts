@@ -248,6 +248,26 @@ export function normalizeTimeMinutes(minutes: number): number {
   return Math.max(0, Math.min(minutes, maxMinutes));
 }
 
+// ===== TIME FORMATTING =====
+
+/**
+ * Format time from minutes since midnight to HH:MM format
+ * @param minutes - Minutes since midnight (0-1439)
+ * @returns Formatted time string (e.g., "09:30", "14:00")
+ */
+export function formatTimeFromMinutes(minutes: number): string {
+  if (minutes < 0 || minutes >= 1440) {
+    return "Invalid";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  return `${hours.toString().padStart(2, "0")}:${mins
+    .toString()
+    .padStart(2, "0")}`;
+}
+
 // ===== DURATION FORMATTING =====
 
 /**

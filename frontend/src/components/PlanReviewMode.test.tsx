@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MessageProvider } from "../context/MessageContext";
 import PlanReviewMode from "./PlanReviewMode";
 import type { TimeWindowAllocation } from "../types/dailyPlan";
-import type { Task } from "../types/task";
 
 const mockTimeWindow: TimeWindowAllocation = {
   time_window: {
@@ -66,7 +65,7 @@ describe("PlanReviewMode", () => {
   it("shows ready to approve when no conflicts", () => {
     renderWithProviders(<PlanReviewMode {...mockProps} />);
 
-    expect(screen.getByText("Ready to approve")).toBeInTheDocument();
+    expect(screen.getByText("No conflicts detected")).toBeInTheDocument();
   });
 
   it("shows conflicts when present", () => {
@@ -74,8 +73,8 @@ describe("PlanReviewMode", () => {
       <PlanReviewMode {...mockProps} conflicts={mockConflicts} />
     );
 
-    expect(screen.getByText("1 conflict")).toBeInTheDocument();
-    expect(screen.getByText("Scheduling Conflicts")).toBeInTheDocument();
+    expect(screen.getByText("1 conflict detected")).toBeInTheDocument();
+    expect(screen.getByText("Scheduling Conflicts (1)")).toBeInTheDocument();
     expect(screen.getByText("Time windows overlap")).toBeInTheDocument();
   });
 
@@ -130,5 +129,66 @@ describe("PlanReviewMode", () => {
     fireEvent.click(addButton);
 
     expect(mockProps.onAddTimeWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows conflict resolution panel when conflicts exist", () => {
+    renderWithProviders(
+      <PlanReviewMode {...mockProps} conflicts={mockConflicts} />
+    );
+
+    expect(screen.getByText("Conflict Resolution")).toBeInTheDocument();
+    expect(screen.getByText("Scheduling Conflicts (1)")).toBeInTheDocument();
+  });
+
+  it("can expand and collapse conflict resolution panel", () => {
+    renderWithProviders(
+      <PlanReviewMode {...mockProps} conflicts={mockConflicts} />
+    );
+
+    const collapseButton = screen.getByRole("button", { name: /collapse/i });
+    expect(collapseButton).toBeInTheDocument();
+
+    fireEvent.click(collapseButton);
+    expect(screen.getByRole("button", { name: /expand/i })).toBeInTheDocument();
+  });
+
+  it("highlights conflicting time windows with indicators", () => {
+    const conflictingTimeWindows = [
+      mockTimeWindow,
+      {
+        ...mockTimeWindow,
+        time_window: {
+          ...mockTimeWindow.time_window,
+          id: "tw2",
+          description: "Overlapping meeting",
+        },
+      },
+    ];
+
+    renderWithProviders(
+      <PlanReviewMode
+        {...mockProps}
+        timeWindows={conflictingTimeWindows}
+        conflicts={mockConflicts}
+      />
+    );
+
+    // Check that conflict indicators are present by looking for the ring styling
+    const conflictElements = document.querySelectorAll(".ring-2.ring-red-300");
+    expect(conflictElements.length).toBeGreaterThan(0);
+  });
+
+  it("shows compact conflict summary in header", () => {
+    renderWithProviders(
+      <PlanReviewMode {...mockProps} conflicts={mockConflicts} />
+    );
+
+    expect(screen.getByText("1 conflict detected")).toBeInTheDocument();
+  });
+
+  it("shows no conflicts message when no conflicts exist", () => {
+    renderWithProviders(<PlanReviewMode {...mockProps} />);
+
+    expect(screen.getByText("No conflicts detected")).toBeInTheDocument();
   });
 });

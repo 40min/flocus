@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from odmantic import ObjectId
@@ -89,10 +89,34 @@ class DailyPlanUpdateRequest(BaseModel):
         return self
 
 
+class CarryOverTimeWindowRequest(BaseModel):
+    source_plan_id: ObjectId = Field(..., description="ID of the daily plan containing the time window to carry over.")
+    time_window_id: str = Field(..., description="ID of the time window to carry over (can be ObjectId or temp ID).")
+    target_date: date = Field(..., description="Target date to carry the time window to.")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("target_date")
+    @classmethod
+    def validate_target_date(cls, value: date) -> date:
+        if value < date.today():
+            raise ValueError("Target date cannot be in the past.")
+        return value
+
+
 class DailyPlanResponse(DailyPlanBase):
     id: ObjectId
     user_id: ObjectId
     self_reflection: SelfReflection
     time_windows: List[PopulatedTimeWindowResponse] = []
+    reviewed: bool = Field(default=False, description="Whether the daily plan has been reviewed and approved.")
+
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+
+class PlanApprovalResponse(BaseModel):
+    plan: DailyPlanResponse = Field(..., description="The approved daily plan with updated data.")
+    merged: bool = Field(default=False, description="Whether automatic merging of time windows occurred.")
+    merge_details: Optional[List[str]] = Field(None, description="Details about automatic merges that were performed.")
 
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

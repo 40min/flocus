@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   createDailyPlan,
   updateDailyPlan as updateDailyPlanService,
+  carryOverTimeWindow,
 } from "../services/dailyPlanService";
 import type {
   DailyPlanResponse,
@@ -51,6 +52,7 @@ import { useCategories } from "../hooks/useCategories";
 import { useTimer } from "../hooks/useTimer";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
 import GapIndicator from "../components/GapIndicator";
+import PlanReviewMode from "../components/PlanReviewMode";
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -82,6 +84,8 @@ const MyDayPage: React.FC = () => {
   const [prevDayReflection, setPrevDayReflection] =
     useState<SelfReflection | null>(null);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [isApprovingPlan, setIsApprovingPlan] = useState(false);
+  const [planConflicts, setPlanConflicts] = useState<any[]>([]);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -370,6 +374,100 @@ const MyDayPage: React.FC = () => {
     }
   };
 
+  const handleCarryOverTimeWindow = async (
+    timeWindowId: string,
+    targetDate: string
+  ) => {
+    if (!dailyPlan) {
+      showMessage("No daily plan available for carry over", "error");
+      return;
+    }
+
+    try {
+      await carryOverTimeWindow({
+        source_plan_id: dailyPlan.id,
+        time_window_id: timeWindowId,
+        target_date: targetDate,
+      });
+
+      // Refresh the current plan to reflect changes
+      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+      showMessage("Time window carried over successfully!", "success");
+    } catch (error) {
+      console.error("Failed to carry over time window:", error);
+      showMessage("Failed to carry over time window", "error");
+    }
+  };
+
+  const handleApprovePlan = async () => {
+    if (!dailyPlan) {
+      showMessage("No daily plan available for approval", "error");
+      return;
+    }
+
+    setIsApprovingPlan(true);
+    setPlanConflicts([]);
+
+    try {
+      const payload = {
+        time_windows: localTimeWindows.map((alloc) => ({
+          id: alloc.time_window.id.startsWith("temp-")
+            ? undefined
+            : alloc.time_window.id,
+          description: alloc.time_window.description,
+          start_time: alloc.time_window.start_time,
+          end_time: alloc.time_window.end_time,
+          category_id: alloc.time_window.category.id,
+          task_ids: alloc.tasks.map((t) => t.id),
+        })),
+      };
+
+      const response = await updateDailyPlanService(dailyPlan.id, payload);
+
+      // Update local state with the approved plan
+      if (response.plan) {
+        const sortedTimeWindows = [...response.plan.time_windows].sort(
+          (a, b) => a.time_window.start_time - b.time_window.start_time
+        );
+        setDailyPlan({ ...response.plan, time_windows: sortedTimeWindows });
+        setLocalTimeWindows(sortedTimeWindows);
+      }
+
+      // Show merge information if any merges occurred
+      if (response.merged && response.merge_details) {
+        showMessage(
+          `Plan approved successfully! ${response.merge_details.join(", ")}`,
+          "success"
+        );
+      } else {
+        showMessage("Plan approved successfully!", "success");
+      }
+
+      // Refresh the query to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+    } catch (error: any) {
+      console.error("Failed to approve plan:", error);
+
+      // Handle conflict errors
+      if (error.status === 400 && error.message.includes("conflict")) {
+        // Parse conflict information from error message
+        // This is a simplified approach - in a real app you'd want structured error responses
+        setPlanConflicts([
+          {
+            timeWindowIds: [],
+            message: error.message,
+            type: "category_conflict" as const,
+          },
+        ]);
+        showMessage("Plan has conflicts that need to be resolved", "error");
+      } else {
+        showMessage("Failed to approve plan", "error");
+      }
+    } finally {
+      setIsApprovingPlan(false);
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -515,6 +613,8 @@ const MyDayPage: React.FC = () => {
           onEdit={onEdit}
           onAssignTask={onAssignTask}
           onUnassignTask={onUnassignTask}
+          onCarryOver={handleCarryOverTimeWindow}
+          dailyPlanId={dailyPlan?.id}
           dragListeners={listeners}
         />
       </div>
@@ -532,8 +632,15 @@ const MyDayPage: React.FC = () => {
                   {dayjs(dailyPlan.plan_date).format("dddd, MMMM D")}
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">
-                  Plan your perfect day
+                  {dailyPlan.reviewed
+                    ? "Plan your perfect day"
+                    : "Review and approve your plan"}
                 </p>
+                {!dailyPlan.reviewed && (
+                  <div className="mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium inline-block">
+                    Plan requires review
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <p className="text-slate-600 text-sm md:text-base">
@@ -548,83 +655,104 @@ const MyDayPage: React.FC = () => {
                 )}
               </div>
             </header>
-            <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
-              <Timeline
-                className="ml-6"
-                timeWindows={localTimeWindows
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      a.time_window.start_time - b.time_window.start_time
-                  )
-                  .map(({ time_window }) => {
-                    const planDate = new Date(dailyPlan.plan_date);
-                    const startDate = new Date(
-                      planDate.getFullYear(),
-                      planDate.getMonth(),
-                      planDate.getDate(),
-                      0,
-                      time_window.start_time
-                    );
-                    const endDate = new Date(
-                      planDate.getFullYear(),
-                      planDate.getMonth(),
-                      planDate.getDate(),
-                      0,
-                      time_window.end_time
-                    );
 
-                    return {
-                      id: time_window.id,
-                      start_time: startDate.toISOString(),
-                      end_time: endDate.toISOString(),
-                      category: {
-                        ...time_window.category,
-                        color: time_window.category.color || "#A0AEC0",
-                      },
-                    };
-                  })}
-              />
-              <section className="flex-1 space-y-4">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  data-testid="dnd-context"
-                >
-                  <SortableContext
-                    items={localTimeWindows.map(
-                      (alloc) => alloc.time_window.id
-                    )}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {renderTimeWindowsWithGaps()}
-                  </SortableContext>
-                  <DragOverlay>
-                    {activeAllocation ? (
-                      <TimeWindowBalloon
-                        timeWindow={activeAllocation.time_window}
-                        tasks={activeAllocation.tasks}
-                        isOverlay
-                      />
-                    ) : null}
-                  </DragOverlay>
-                </DndContext>
+            {!dailyPlan.reviewed ? (
+              // Plan Review Mode - shown when plan needs review
+              <main className="max-w-4xl mx-auto">
+                <PlanReviewMode
+                  timeWindows={localTimeWindows}
+                  conflicts={planConflicts}
+                  onApprove={handleApprovePlan}
+                  onEdit={handleOpenEditModal}
+                  onDelete={handleDeleteTimeWindow}
+                  onAssignTask={handleAssignTask}
+                  onUnassignTask={handleUnassignTask}
+                  onCarryOver={handleCarryOverTimeWindow}
+                  onAddTimeWindow={() => setIsTimeWindowModalOpen(true)}
+                  dailyPlanId={dailyPlan.id}
+                  isApproving={isApprovingPlan}
+                />
+              </main>
+            ) : (
+              // Standard Daily Plan View - shown when plan is approved
+              <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
+                <Timeline
+                  className="ml-6"
+                  timeWindows={localTimeWindows
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        a.time_window.start_time - b.time_window.start_time
+                    )
+                    .map(({ time_window }) => {
+                      const planDate = new Date(dailyPlan.plan_date);
+                      const startDate = new Date(
+                        planDate.getFullYear(),
+                        planDate.getMonth(),
+                        planDate.getDate(),
+                        0,
+                        time_window.start_time
+                      );
+                      const endDate = new Date(
+                        planDate.getFullYear(),
+                        planDate.getMonth(),
+                        planDate.getDate(),
+                        0,
+                        time_window.end_time
+                      );
 
-                <div className="flex justify-start gap-4 mt-8">
-                  <Button
-                    variant="slate"
-                    size="medium"
-                    onClick={() => setIsTimeWindowModalOpen(true)}
-                    className="flex items-center gap-2"
+                      return {
+                        id: time_window.id,
+                        start_time: startDate.toISOString(),
+                        end_time: endDate.toISOString(),
+                        category: {
+                          ...time_window.category,
+                          color: time_window.category.color || "#A0AEC0",
+                        },
+                      };
+                    })}
+                />
+                <section className="flex-1 space-y-4">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    data-testid="dnd-context"
                   >
-                    <PlusCircle size={18} />
-                    Add Time Window
-                  </Button>
-                </div>
-              </section>
-            </main>
+                    <SortableContext
+                      items={localTimeWindows.map(
+                        (alloc) => alloc.time_window.id
+                      )}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {renderTimeWindowsWithGaps()}
+                    </SortableContext>
+                    <DragOverlay>
+                      {activeAllocation ? (
+                        <TimeWindowBalloon
+                          timeWindow={activeAllocation.time_window}
+                          tasks={activeAllocation.tasks}
+                          isOverlay
+                        />
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
+
+                  <div className="flex justify-start gap-4 mt-8">
+                    <Button
+                      variant="slate"
+                      size="medium"
+                      onClick={() => setIsTimeWindowModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <PlusCircle size={18} />
+                      Add Time Window
+                    </Button>
+                  </div>
+                </section>
+              </main>
+            )}
           </>
         ) : (
           <>

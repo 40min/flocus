@@ -96,6 +96,7 @@ const mockDailyPlan: DailyPlanResponse = {
   id: "plan1",
   user_id: "user1",
   plan_date: new Date().toISOString(),
+  reviewed: true,
   time_windows: [
     {
       time_window: {
@@ -122,6 +123,7 @@ const mockDailyPlanWithMultipleTimeWindows: DailyPlanResponse = {
   id: "plan2",
   user_id: "user1",
   plan_date: new Date().toISOString(),
+  reviewed: true,
   time_windows: [
     {
       time_window: {
@@ -473,6 +475,7 @@ describe("MyDayPage", () => {
           negative: "Need to improve focus in the afternoon",
           follow_up_notes: "Consider taking breaks more often",
         },
+        reviewed: false,
       };
 
       beforeEach(() => {
@@ -599,6 +602,11 @@ describe("MyDayPage", () => {
       renderComponent();
       expect(screen.getByText("Morning work")).toBeInTheDocument();
 
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getAllByLabelText("Time window actions")[0];
+      fireEvent.click(actionsButton);
+
+      // Then click the delete button from the dropdown
       const deleteButton = screen.getByLabelText("Delete time window");
       fireEvent.click(deleteButton);
 
@@ -615,6 +623,11 @@ describe("MyDayPage", () => {
       mockedUpdateDailyPlan.mockResolvedValue({});
       renderComponent();
 
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getAllByLabelText("Time window actions")[0];
+      fireEvent.click(actionsButton);
+
+      // Then click the delete button from the dropdown
       const deleteButton = screen.getByLabelText("Delete time window");
       fireEvent.click(deleteButton);
 
@@ -638,6 +651,12 @@ describe("MyDayPage", () => {
 
       // Find and click the edit button for "Morning work"
       await screen.findByText("Morning work"); // Ensure the item is rendered
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getAllByLabelText("Time window actions")[0];
+      fireEvent.click(actionsButton);
+
+      // Then click the edit button from the dropdown
       const editButtons = screen.getAllByLabelText("Edit time window"); // Get all edit buttons
       // Assuming the first TimeWindowBalloon is "Morning work" based on mockDailyPlan
       fireEvent.click(editButtons[0]);
@@ -654,6 +673,11 @@ describe("MyDayPage", () => {
       mockedUpdateDailyPlan.mockResolvedValue({});
       renderComponent();
 
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getAllByLabelText("Time window actions")[0];
+      fireEvent.click(actionsButton);
+
+      // Then click the delete button from the dropdown
       const deleteButton = screen.getByLabelText("Delete time window");
       fireEvent.click(deleteButton);
 
@@ -957,6 +981,11 @@ describe("MyDayPage", () => {
       });
 
       // Delete the time window that contains the active task
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getAllByLabelText("Time window actions")[0];
+      fireEvent.click(actionsButton);
+
+      // Then click the delete button from the dropdown
       const deleteButton = screen.getAllByLabelText("Delete time window")[0];
       fireEvent.click(deleteButton);
 
@@ -1051,6 +1080,7 @@ describe("MyDayPage", () => {
         id: "plan_gaps",
         user_id: "user1",
         plan_date: new Date().toISOString(),
+        reviewed: true,
         time_windows: [
           {
             time_window: {
@@ -1129,6 +1159,7 @@ describe("MyDayPage", () => {
         id: "plan_no_gaps",
         user_id: "user1",
         plan_date: new Date().toISOString(),
+        reviewed: true,
         time_windows: [
           {
             time_window: {

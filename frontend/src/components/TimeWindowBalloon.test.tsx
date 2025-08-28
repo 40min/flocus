@@ -106,6 +106,11 @@ describe("TimeWindowBalloon", () => {
     renderWithClient(
       <TimeWindowBalloon timeWindow={mockTimeWindow} onDelete={onDeleteMock} />
     );
+    // First click the actions menu button to open the dropdown
+    const actionsButton = screen.getByLabelText("Time window actions");
+    fireEvent.click(actionsButton);
+
+    // Then click the delete button from the dropdown
     const deleteButton = screen.getByLabelText("Delete time window");
     fireEvent.click(deleteButton);
     expect(onDeleteMock).toHaveBeenCalledWith("tw1");
@@ -115,6 +120,11 @@ describe("TimeWindowBalloon", () => {
     renderWithClient(
       <TimeWindowBalloon timeWindow={mockTimeWindow} onEdit={onEditMock} />
     );
+    // First click the actions menu button to open the dropdown
+    const actionsButton = screen.getByLabelText("Time window actions");
+    fireEvent.click(actionsButton);
+
+    // Then click the edit button from the dropdown
     const editButton = screen.getByLabelText("Edit time window");
     fireEvent.click(editButton);
     expect(onEditMock).toHaveBeenCalledTimes(1);
@@ -167,6 +177,11 @@ describe("TimeWindowBalloon", () => {
       />
     );
 
+    // First click the actions menu button to open the dropdown
+    const actionsButton = screen.getByLabelText("Time window actions");
+    fireEvent.click(actionsButton);
+
+    // Then click the delete button from the dropdown
     const deleteButton = screen.getByLabelText("Delete time window");
     fireEvent.click(deleteButton);
 

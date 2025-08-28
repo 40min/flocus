@@ -1,51 +1,69 @@
-import { renderHook } from '@testing-library/react';
-import { useCurrentTimeWindow } from 'hooks/useCurrentTimeWindow';
-import { DailyPlanResponse } from 'types/dailyPlan';
-import { Task } from 'types/task';
-import { TimeWindow } from 'types/timeWindow';
+import { renderHook } from "@testing-library/react";
+import { useCurrentTimeWindow } from "hooks/useCurrentTimeWindow";
+import { DailyPlanResponse } from "types/dailyPlan";
+import { Task } from "types/task";
+import { TimeWindow } from "types/timeWindow";
 
-const mockCategory = { id: 'cat1', name: 'Work', user_id: 'user1', is_deleted: false };
-const mockTask1: Task = { id: 'task1', title: 'Task 1', status: 'pending', priority: 'medium', user_id: 'user1' };
-const mockTask2: Task = { id: 'task2', title: 'Task 2', status: 'pending', priority: 'medium', user_id: 'user1' };
+const mockCategory = {
+  id: "cat1",
+  name: "Work",
+  user_id: "user1",
+  is_deleted: false,
+};
+const mockTask1: Task = {
+  id: "task1",
+  title: "Task 1",
+  status: "pending",
+  priority: "medium",
+  user_id: "user1",
+};
+const mockTask2: Task = {
+  id: "task2",
+  title: "Task 2",
+  status: "pending",
+  priority: "medium",
+  user_id: "user1",
+};
 
 const mockWindow1: TimeWindow = {
-  id: 'w1',
-  description: 'Morning Focus',
+  id: "w1",
+  description: "Morning Focus",
   start_time: 540, // 09:00
-  end_time: 600,   // 10:00
+  end_time: 600, // 10:00
   category: mockCategory,
-  day_template_id: 'tpl1',
-  user_id: 'user1',
+  day_template_id: "tpl1",
+  user_id: "user1",
   is_deleted: false,
 };
 
 const mockWindow2: TimeWindow = {
-  id: 'w2',
-  description: 'Afternoon Prep',
+  id: "w2",
+  description: "Afternoon Prep",
   start_time: 780, // 13:00
-  end_time: 840,   // 14:00
+  end_time: 840, // 14:00
   category: mockCategory,
-  day_template_id: 'tpl1',
-  user_id: 'user1',
+  day_template_id: "tpl1",
+  user_id: "user1",
   is_deleted: false,
 };
 
 const mockDailyPlan: DailyPlanResponse = {
-  id: 'plan1',
-  user_id: 'user1',
+  id: "plan1",
+  user_id: "user1",
   plan_date: new Date().toISOString(),
+  reviewed: true,
   time_windows: [
     { time_window: mockWindow1, tasks: [mockTask1] },
     { time_window: mockWindow2, tasks: [mockTask2] },
   ],
   self_reflection: {
-    positive: 'Had a productive morning',
-    negative: 'Need to improve focus in the afternoon',
-    follow_up_notes: 'Consider taking breaks more often',
-  }
+    positive: "Had a productive morning",
+    negative: "Need to improve focus in the afternoon",
+    follow_up_notes: "Consider taking breaks more often",
+  },
 };
 
-describe('useCurrentTimeWindow', () => {
+describe("useCurrentTimeWindow", () => {
   beforeAll(() => {
     jest.useFakeTimers();
   });
@@ -61,51 +79,75 @@ describe('useCurrentTimeWindow', () => {
     return result.current;
   };
 
-  test('should return null when no daily plan is provided', () => {
-    const { currentTimeWindow, currentTasks } = runHook(null, '12:00:00');
+  test("should return null when no daily plan is provided", () => {
+    const { currentTimeWindow, currentTasks } = runHook(null, "12:00:00");
     expect(currentTimeWindow).toBeNull();
     expect(currentTasks).toEqual([]);
   });
 
-  test('should return null when daily plan has no time windows', () => {
-    const planWithNoWindows: DailyPlanResponse = { ...mockDailyPlan, time_windows: [] };
-    const { currentTimeWindow, currentTasks } = runHook(planWithNoWindows, '12:00:00');
+  test("should return null when daily plan has no time windows", () => {
+    const planWithNoWindows: DailyPlanResponse = {
+      ...mockDailyPlan,
+      time_windows: [],
+    };
+    const { currentTimeWindow, currentTasks } = runHook(
+      planWithNoWindows,
+      "12:00:00"
+    );
     expect(currentTimeWindow).toBeNull();
     expect(currentTasks).toEqual([]);
   });
 
-  test('should return null when current time is before any window', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '08:00:00');
+  test("should return null when current time is before any window", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "08:00:00"
+    );
     expect(currentTimeWindow).toBeNull();
     expect(currentTasks).toEqual([]);
   });
 
-  test('should return null when current time is between windows', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '11:30:00');
+  test("should return null when current time is between windows", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "11:30:00"
+    );
     expect(currentTimeWindow).toBeNull();
     expect(currentTasks).toEqual([]);
   });
 
-  test('should return null when current time is after all windows', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '15:00:00');
+  test("should return null when current time is after all windows", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "15:00:00"
+    );
     expect(currentTimeWindow).toBeNull();
     expect(currentTasks).toEqual([]);
   });
 
-  test('should return the correct window when current time is inside a window', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '09:30:00');
+  test("should return the correct window when current time is inside a window", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "09:30:00"
+    );
     expect(currentTimeWindow).toEqual(mockWindow1);
     expect(currentTasks).toEqual([mockTask1]);
   });
 
-  test('should return the correct window when current time is exactly at the start', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '09:00:00');
+  test("should return the correct window when current time is exactly at the start", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "09:00:00"
+    );
     expect(currentTimeWindow).toEqual(mockWindow1);
     expect(currentTasks).toEqual([mockTask1]);
   });
 
-  test('should return the correct window when current time is exactly at the end', () => {
-    const { currentTimeWindow, currentTasks } = runHook(mockDailyPlan, '10:00:00');
+  test("should return the correct window when current time is exactly at the end", () => {
+    const { currentTimeWindow, currentTasks } = runHook(
+      mockDailyPlan,
+      "10:00:00"
+    );
     expect(currentTimeWindow).toEqual(mockWindow1);
     expect(currentTasks).toEqual([mockTask1]);
   });

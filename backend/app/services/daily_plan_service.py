@@ -8,13 +8,13 @@ from app.api.schemas.daily_plan import DailyPlanCreateRequest  # Takes TimeWindo
 from app.api.schemas.daily_plan import DailyPlanUpdateRequest  # Takes TimeWindowCreateRequest
 from app.api.schemas.daily_plan import PopulatedTimeWindowResponse  # Wrapper response schema for a time window item
 from app.api.schemas.daily_plan import TimeWindowCreateRequest  # Flat input schema for a time window
-from app.api.schemas.daily_plan import DailyPlanResponse
-from app.api.schemas.task import TaskResponse
+from app.api.schemas.daily_plan import CarryOverTimeWindowRequest, DailyPlanResponse, PlanApprovalResponse
+from app.api.schemas.task import TaskResponse, TaskStatus
 from app.api.schemas.time_window import TimeWindowResponse as TimeWindowModelResponse
 from app.core.exceptions import DailyPlanNotFoundException, TaskCategoryMismatchException
 from app.db.connection import get_database
 from app.db.models.category import Category
-from app.db.models.daily_plan import DailyPlan, SelfReflection
+from app.db.models.daily_plan import DailyPlan, SelfReflection, TimeWindow
 from app.db.models.task import Task
 from app.mappers.category_mapper import CategoryMapper
 from app.mappers.daily_plan_mapper import DailyPlanMapper
@@ -176,12 +176,17 @@ class DailyPlanService:
 
         daily_plan_model = DailyPlanMapper.to_model_for_create(plan_data, current_user_id)
         daily_plan_model.plan_date = normalized_date_for_storage  # Ensure stored date is normalized UTC midnight
+        daily_plan_model.reviewed = False  # Always set reviewed to False for new plans
 
         await self.engine.save(daily_plan_model)
         return await self._map_plan_to_response(daily_plan_model, current_user_id)
 
     async def update_daily_plan(
-        self, plan_id: ObjectId, daily_plan_update_request: DailyPlanUpdateRequest, current_user_id: ObjectId
+        self,
+        plan_id: ObjectId,
+        daily_plan_update_request: DailyPlanUpdateRequest,
+        current_user_id: ObjectId,
+        approve: bool = False,
     ) -> DailyPlanResponse:
         daily_plan = await self.engine.find_one(
             DailyPlan, (DailyPlan.id == plan_id) & (DailyPlan.user_id == current_user_id)
@@ -214,6 +219,54 @@ class DailyPlanService:
         await self.engine.save(daily_plan)
 
         return await self._map_plan_to_response(daily_plan, current_user_id)
+
+    async def approve_daily_plan(self, plan_id: ObjectId, current_user_id: ObjectId) -> PlanApprovalResponse:
+        """
+        Approve a daily plan by processing merges and validating for conflicts.
+
+        Args:
+            plan_id: ID of the daily plan to approve
+            current_user_id: ID of the current user
+
+        Returns:
+            PlanApprovalResponse with plan data and merge information
+
+        Raises:
+            HTTPException: If plan not found, already reviewed, or conflicts exist
+        """
+        daily_plan = await self.engine.find_one(
+            DailyPlan, (DailyPlan.id == plan_id) & (DailyPlan.user_id == current_user_id)
+        )
+        if not daily_plan:
+            raise DailyPlanNotFoundException(plan_id=plan_id)
+
+        if daily_plan.reviewed:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Daily plan is already reviewed and approved."
+            )
+
+        # Process time windows: merge same-category overlaps and detect conflicts
+        processed_windows, merge_details, conflicts = self._process_and_validate_time_windows(daily_plan.time_windows)
+
+        # If conflicts exist, return error with details
+        if conflicts:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": "Cannot approve plan due to scheduling conflicts.", "conflicts": conflicts},
+            )
+
+        # Update plan with processed time windows and mark as reviewed
+        daily_plan.time_windows = processed_windows
+        daily_plan.reviewed = True
+
+        await self.engine.save(daily_plan)
+
+        # Create response
+        plan_response = await self._map_plan_to_response(daily_plan, current_user_id)
+
+        return PlanApprovalResponse(
+            plan=plan_response, merged=len(merge_details) > 0, merge_details=merge_details if merge_details else None
+        )
 
     async def get_daily_plan_by_date_internal(
         self, plan_date: datetime, current_user_id: ObjectId
@@ -257,3 +310,235 @@ class DailyPlanService:
 
         plan = await self.get_daily_plan_by_date_internal(today_datetime, current_user_id)
         return await self._map_plan_to_response(plan, current_user_id) if plan else None
+
+    async def carry_over_time_window(
+        self, carry_over_request: CarryOverTimeWindowRequest, current_user_id: ObjectId
+    ) -> DailyPlanResponse:
+        """
+        Carry over a time window with its unfinished tasks to a target date.
+
+        Args:
+            carry_over_request: Request containing source plan ID, time window ID, and target date
+            current_user_id: ID of the current user
+
+        Returns:
+            Updated source daily plan response
+
+        Raises:
+            HTTPException: If source plan not found, time window not found, or permission denied
+        """
+        # Get the source daily plan
+        source_plan = await self.engine.find_one(
+            DailyPlan, (DailyPlan.id == carry_over_request.source_plan_id) & (DailyPlan.user_id == current_user_id)
+        )
+        if not source_plan:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source daily plan not found.")
+
+        # Find the time window to carry over
+        time_window_to_carry = None
+        time_window_index = None
+
+        for i, tw in enumerate(source_plan.time_windows):
+            # Handle both ObjectId and string representations for time window identification
+            tw_id_str = str(tw.category_id) + "_" + str(tw.start_time) + "_" + str(tw.end_time)
+            if (
+                carry_over_request.time_window_id == tw_id_str
+                or str(tw.category_id) == carry_over_request.time_window_id
+            ):
+                time_window_to_carry = tw
+                time_window_index = i
+                break
+
+        if time_window_to_carry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Time window not found in the source daily plan."
+            )
+
+        # Get all tasks in the time window and filter out completed ones
+        unfinished_task_ids = []
+        if time_window_to_carry.task_ids:
+            tasks = await self.task_service.get_tasks_by_ids(
+                task_ids=time_window_to_carry.task_ids, current_user_id=current_user_id
+            )
+            unfinished_task_ids = [task.id for task in tasks if task.status != TaskStatus.DONE]
+
+        # Create target datetime from target date
+        target_datetime = datetime(
+            carry_over_request.target_date.year,
+            carry_over_request.target_date.month,
+            carry_over_request.target_date.day,
+            0,
+            0,
+            0,
+            tzinfo=timezone.utc,
+        )
+
+        # Get or create target daily plan
+        target_plan = await self.get_daily_plan_by_date_internal(target_datetime, current_user_id)
+
+        if target_plan is None:
+            # Create new daily plan for target date
+            target_plan = DailyPlan(
+                plan_date=target_datetime,
+                user_id=current_user_id,
+                time_windows=[],
+                self_reflection=SelfReflection(positive=None, negative=None, follow_up_notes=None),
+                reviewed=False,
+            )
+
+        # Create new time window for target plan with unfinished tasks only
+        new_time_window = TimeWindow(
+            description=time_window_to_carry.description,
+            category_id=time_window_to_carry.category_id,
+            start_time=time_window_to_carry.start_time,
+            end_time=time_window_to_carry.end_time,
+            task_ids=unfinished_task_ids,
+        )
+
+        # Add the new time window to target plan
+        target_plan.time_windows.append(new_time_window)
+        target_plan.reviewed = False  # Mark target plan as requiring review
+
+        # Save target plan
+        await self.engine.save(target_plan)
+
+        # Remove the time window from source plan
+        source_plan.time_windows.pop(time_window_index)
+        await self.engine.save(source_plan)
+
+        # Return updated source plan
+        return await self._map_plan_to_response(source_plan, current_user_id)
+
+    def _process_and_validate_time_windows(
+        self, time_windows: List[TimeWindow]
+    ) -> tuple[List[TimeWindow], List[str], List[str]]:
+        """
+        Process time windows by auto-merging same-category overlaps and detecting conflicts.
+
+        Args:
+            time_windows: List of time windows to process
+
+        Returns:
+            Tuple of (processed_time_windows, merge_details, conflicts)
+        """
+        if not time_windows:
+            return [], [], []
+
+        # Sort time windows by start time for processing
+        sorted_windows = sorted(time_windows, key=lambda tw: tw.start_time)
+
+        # Auto-merge overlapping same-category time windows
+        merged_windows, merge_details = self._merge_overlapping_same_category(sorted_windows)
+
+        # Detect conflicts between different categories
+        conflicts = self._detect_category_conflicts(merged_windows)
+
+        return merged_windows, merge_details, conflicts
+
+    def _merge_overlapping_same_category(self, time_windows: List[TimeWindow]) -> tuple[List[TimeWindow], List[str]]:
+        """
+        Merge overlapping or adjacent time windows that have the same category.
+
+        Args:
+            time_windows: Sorted list of time windows by start_time
+
+        Returns:
+            Tuple of (merged_time_windows, merge_details)
+        """
+        if len(time_windows) <= 1:
+            return time_windows, []
+
+        merged_windows = []
+        merge_details = []
+        current_window = time_windows[0]
+
+        for next_window in time_windows[1:]:
+            # Check if windows overlap or are adjacent and have same category
+            if (
+                current_window.category_id == next_window.category_id
+                and current_window.end_time >= next_window.start_time
+            ):
+
+                # Merge the windows
+                merged_start = min(current_window.start_time, next_window.start_time)
+                merged_end = max(current_window.end_time, next_window.end_time)
+
+                # Combine task IDs from both windows (remove duplicates)
+                combined_task_ids = list(set(current_window.task_ids + next_window.task_ids))
+
+                # Combine descriptions if both exist
+                merged_description = None
+                if current_window.description and next_window.description:
+                    merged_description = f"{current_window.description}; {next_window.description}"
+                elif current_window.description:
+                    merged_description = current_window.description
+                elif next_window.description:
+                    merged_description = next_window.description
+
+                # Create merged window
+                current_window = TimeWindow(
+                    description=merged_description,
+                    category_id=current_window.category_id,
+                    start_time=merged_start,
+                    end_time=merged_end,
+                    task_ids=combined_task_ids,
+                )
+
+                # Add merge detail
+                start_time_str = f"{merged_start // 60:02d}:{merged_start % 60:02d}"
+                end_time_str = f"{merged_end // 60:02d}:{merged_end % 60:02d}"
+                merge_details.append(f"Merged overlapping time windows into {start_time_str}-{end_time_str}")
+            else:
+                # No overlap or different category, add current window and move to next
+                merged_windows.append(current_window)
+                current_window = next_window
+
+        # Add the last window
+        merged_windows.append(current_window)
+
+        return merged_windows, merge_details
+
+    def _detect_category_conflicts(self, time_windows: List[TimeWindow]) -> List[str]:
+        """
+        Detect overlapping time windows with different categories.
+
+        Args:
+            time_windows: List of time windows to check for conflicts
+
+        Returns:
+            List of conflict descriptions
+        """
+        conflicts = []
+
+        for i in range(len(time_windows)):
+            for j in range(i + 1, len(time_windows)):
+                window_a = time_windows[i]
+                window_b = time_windows[j]
+
+                # Check if windows overlap and have different categories
+                if window_a.category_id != window_b.category_id and self._windows_overlap(window_a, window_b):
+
+                    # Format time strings for conflict description
+                    a_start = f"{window_a.start_time // 60:02d}:{window_a.start_time % 60:02d}"
+                    a_end = f"{window_a.end_time // 60:02d}:{window_a.end_time % 60:02d}"
+                    b_start = f"{window_b.start_time // 60:02d}:{window_b.start_time % 60:02d}"
+                    b_end = f"{window_b.end_time // 60:02d}:{window_b.end_time % 60:02d}"
+
+                    conflicts.append(
+                        f"Time windows overlap: {a_start}-{a_end} and {b_start}-{b_end} have different categories"
+                    )
+
+        return conflicts
+
+    def _windows_overlap(self, window_a: TimeWindow, window_b: TimeWindow) -> bool:
+        """
+        Check if two time windows overlap.
+
+        Args:
+            window_a: First time window
+            window_b: Second time window
+
+        Returns:
+            True if windows overlap, False otherwise
+        """
+        return window_a.start_time < window_b.end_time and window_b.start_time < window_a.end_time

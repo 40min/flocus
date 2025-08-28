@@ -8,7 +8,7 @@ from app.api.schemas.task import TaskResponse
 
 # Import the TimeWindowResponse from the other module and alias it to avoid name collision
 from app.api.schemas.time_window import TimeWindowResponse as ImportedTimeWindowResponse
-from app.api.schemas.utils import HasTimeWindow, ensure_time_windows_do_not_overlap
+from app.api.schemas.utils import HasTimeWindow
 
 
 class SelfReflection(BaseModel):
@@ -82,11 +82,7 @@ class DailyPlanUpdateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    @model_validator(mode="after")
-    def check_time_windows_overlap(self) -> "DailyPlanUpdateRequest":
-        if self.time_windows is not None:
-            ensure_time_windows_do_not_overlap(self.time_windows)
-        return self
+    # Note: Overlapping time windows are allowed and will be handled during plan approval
 
 
 class CarryOverTimeWindowRequest(BaseModel):

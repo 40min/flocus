@@ -872,17 +872,13 @@ async def test_update_daily_plan_with_overlapping_time_windows(
         json=update_data,
     )
 
-    # e. Assert that the response status code is 422
-    assert response.status_code == 422, f"Actual status code: {response.status_code}, Response: {response.text}"
+    # e. Assert that the response status code is 200 (overlapping time windows are now allowed)
+    assert response.status_code == 200, f"Actual status code: {response.status_code}, Response: {response.text}"
 
-    # f. Assert that the response JSON detail contains the expected error message
+    # f. Assert that the plan was updated successfully and reviewed flag is reset
     response_data = response.json()
-    assert "detail" in response_data
-    # Ensure the detail is a string or can be converted to string for robust checking
-    detail_str = str(response_data["detail"])
-    assert "Time windows overlap" in detail_str
-    assert "(30-90)" in detail_str
-    assert "(60-120)" in detail_str
+    assert not response_data["reviewed"]  # Should be reset to false after update
+    assert len(response_data["time_windows"]) == 2  # Both overlapping windows should be present
 
 
 async def test_create_daily_plan_success_task_no_category(
@@ -978,3 +974,519 @@ async def test_update_daily_plan_fail_task_category_mismatch(
     )
     assert response.status_code == 400
     assert "Task category does not match Time Window category" in response.json()["detail"]
+
+
+# Tests for carry-over time window endpoint
+async def test_carry_over_time_window_success(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_task_model: TaskModel,
+    user_one_task_alt: TaskModel,
+    test_db,
+):
+    """Test successful carry-over of a time window with unfinished tasks."""
+    # Create source daily plan with time window containing tasks
+    source_date = datetime.now(timezone.utc).date() + timedelta(days=1)
+    source_datetime = datetime.combine(source_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+    # Mark one task as done, one as pending
+    user_one_task_model.status = TaskStatus.DONE
+    await test_db.save(user_one_task_model)
+
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,  # 9:00 AM
+            end_time=720,  # 12:00 PM
+            task_ids=[user_one_task_model.id, user_one_task_alt.id],
+        )
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=source_datetime, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    source_plan_id = create_resp.json()["id"]
+
+    # Carry over to target date
+    target_date = source_date + timedelta(days=2)
+    time_window_id = f"{user_one_category.id}_{540}_{720}"  # category_id_start_end format
+
+    carry_over_payload = {
+        "source_plan_id": source_plan_id,
+        "time_window_id": time_window_id,
+        "target_date": target_date.isoformat(),
+    }
+
+    response = await async_client.post(
+        f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", headers=auth_headers_user_one, json=carry_over_payload
+    )
+
+    assert response.status_code == 200
+    updated_source_plan = DailyPlanResponse(**response.json())
+
+    # Source plan should have the time window removed
+    assert len(updated_source_plan.time_windows) == 0
+
+    # Check target plan was created with unfinished tasks only
+    target_datetime = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    target_resp = await async_client.get(
+        f"{DAILY_PLANS_ENDPOINT}/{target_datetime.isoformat()}", headers=auth_headers_user_one
+    )
+    assert target_resp.status_code == 200
+    target_plan = DailyPlanResponse(**target_resp.json())
+
+    # Target plan should have one time window with only the unfinished task
+    assert len(target_plan.time_windows) == 1
+    assert target_plan.time_windows[0].time_window.description == "Work Session"
+    assert target_plan.time_windows[0].time_window.start_time == 540
+    assert target_plan.time_windows[0].time_window.end_time == 720
+    assert len(target_plan.time_windows[0].tasks) == 1
+    assert target_plan.time_windows[0].tasks[0].id == user_one_task_alt.id  # Only unfinished task
+    assert not target_plan.reviewed  # Target plan should require review
+
+
+async def test_carry_over_time_window_source_plan_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+):
+    """Test carry-over fails when source plan doesn't exist."""
+    non_existent_plan_id = ObjectId()
+    target_date = date.today() + timedelta(days=1)
+
+    carry_over_payload = {
+        "source_plan_id": str(non_existent_plan_id),
+        "time_window_id": "some_id",
+        "target_date": target_date.isoformat(),
+    }
+
+    response = await async_client.post(
+        f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", headers=auth_headers_user_one, json=carry_over_payload
+    )
+
+    assert response.status_code == 404
+    assert "Source daily plan not found" in response.json()["detail"]
+
+
+async def test_carry_over_time_window_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    user_one_category: CategoryModel,
+    unique_date: datetime,
+):
+    """Test carry-over fails when time window doesn't exist in source plan."""
+    # Create source daily plan without time windows
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=[], self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    source_plan_id = create_resp.json()["id"]
+
+    target_date = unique_date.date() + timedelta(days=1)
+
+    carry_over_payload = {
+        "source_plan_id": source_plan_id,
+        "time_window_id": "non_existent_time_window",
+        "target_date": target_date.isoformat(),
+    }
+
+    response = await async_client.post(
+        f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", headers=auth_headers_user_one, json=carry_over_payload
+    )
+
+    assert response.status_code == 404
+    assert "Time window not found" in response.json()["detail"]
+
+
+async def test_carry_over_time_window_past_date_fails(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+):
+    """Test carry-over fails when target date is in the past."""
+    source_plan_id = ObjectId()
+    past_date = date.today() - timedelta(days=1)
+
+    carry_over_payload = {
+        "source_plan_id": str(source_plan_id),
+        "time_window_id": "some_id",
+        "target_date": past_date.isoformat(),
+    }
+
+    response = await async_client.post(
+        f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", headers=auth_headers_user_one, json=carry_over_payload
+    )
+
+    assert response.status_code == 422
+    assert "Target date cannot be in the past" in response.text
+
+
+async def test_carry_over_time_window_unauthorized(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    auth_headers_user_two: dict[str, str],
+    user_one_category: CategoryModel,
+    user_one_task_model: TaskModel,
+    unique_date: datetime,
+):
+    """Test carry-over fails when user doesn't own the source plan."""
+    # Create source daily plan as user one
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,
+            end_time=720,
+            task_ids=[user_one_task_model.id],
+        )
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    source_plan_id = create_resp.json()["id"]
+
+    # Try to carry over as user two
+    target_date = unique_date.date() + timedelta(days=1)
+    time_window_id = f"{user_one_category.id}_{540}_{720}"
+
+    carry_over_payload = {
+        "source_plan_id": source_plan_id,
+        "time_window_id": time_window_id,
+        "target_date": target_date.isoformat(),
+    }
+
+    response = await async_client.post(
+        f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", headers=auth_headers_user_two, json=carry_over_payload
+    )
+
+    assert response.status_code == 404
+    assert "Source daily plan not found" in response.json()["detail"]
+
+
+async def test_carry_over_time_window_unauthenticated_fails(
+    async_client: AsyncClient,
+):
+    """Test carry-over fails when user is not authenticated."""
+    carry_over_payload = {
+        "source_plan_id": str(ObjectId()),
+        "time_window_id": "some_id",
+        "target_date": date.today().isoformat(),
+    }
+
+    response = await async_client.post(f"{DAILY_PLANS_ENDPOINT}/carry-over-time-window", json=carry_over_payload)
+
+    assert response.status_code == 401
+
+
+# Tests for plan approval endpoint
+async def test_approve_daily_plan_success_no_conflicts(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_task_model: TaskModel,
+    unique_date: datetime,
+):
+    """Test successful approval of a daily plan with no conflicts."""
+    # Create daily plan with non-overlapping time windows
+    time_windows = [
+        create_time_window_payload(
+            description="Morning Work",
+            category_id=user_one_category.id,
+            start_time=540,  # 9:00 AM
+            end_time=660,  # 11:00 AM
+            task_ids=[user_one_task_model.id],
+        ),
+        create_time_window_payload(
+            description="Afternoon Work",
+            category_id=user_one_category.id,
+            start_time=780,  # 1:00 PM
+            end_time=900,  # 3:00 PM
+            task_ids=[],
+        ),
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # Verify plan is initially not reviewed
+    assert not create_resp.json()["reviewed"]
+
+    # Approve the plan
+    response = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+
+    assert response.status_code == 200
+    approval_response = response.json()
+
+    # Check approval response structure
+    assert "plan" in approval_response
+    assert "merged" in approval_response
+    assert "merge_details" in approval_response
+
+    # Plan should now be reviewed
+    assert approval_response["plan"]["reviewed"] is True
+    assert not approval_response["merged"] is True  # No merging needed
+    assert approval_response["merge_details"] is None
+
+
+async def test_approve_daily_plan_success_with_merging(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_task_model: TaskModel,
+    user_one_task_alt: TaskModel,
+    unique_date: datetime,
+):
+    """Test successful approval with automatic merging of overlapping same-category time windows."""
+    # Create daily plan with overlapping same-category time windows
+    time_windows = [
+        create_time_window_payload(
+            description="Morning Work",
+            category_id=user_one_category.id,
+            start_time=540,  # 9:00 AM
+            end_time=660,  # 11:00 AM
+            task_ids=[user_one_task_model.id],
+        ),
+        create_time_window_payload(
+            description="Extended Work",
+            category_id=user_one_category.id,
+            start_time=600,  # 10:00 AM (overlaps with previous)
+            end_time=720,  # 12:00 PM
+            task_ids=[user_one_task_alt.id],
+        ),
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # Approve the plan
+    response = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+
+    assert response.status_code == 200
+    approval_response = response.json()
+
+    # Should have merged the overlapping windows
+    assert approval_response["plan"]["reviewed"]
+    assert approval_response["merged"] is True
+    assert approval_response["merge_details"] is not None
+    assert len(approval_response["merge_details"]) > 0
+
+    # Should have only one merged time window
+    assert len(approval_response["plan"]["time_windows"]) == 1
+    merged_window = approval_response["plan"]["time_windows"][0]
+    assert merged_window["time_window"]["start_time"] == 540  # Earliest start
+    assert merged_window["time_window"]["end_time"] == 720  # Latest end
+    assert len(merged_window["tasks"]) == 2  # Both tasks preserved
+
+
+async def test_approve_daily_plan_conflicts_fail(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_category_alt: CategoryModel,
+    user_one_task_model: TaskModel,
+    user_one_task_alt: TaskModel,
+    unique_date: datetime,
+):
+    """Test approval fails when there are conflicts between different categories."""
+    # Create daily plan with overlapping different-category time windows
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,  # 9:00 AM
+            end_time=660,  # 11:00 AM
+            task_ids=[user_one_task_model.id],
+        ),
+        create_time_window_payload(
+            description="Meeting",
+            category_id=user_one_category_alt.id,  # Different category
+            start_time=600,  # 10:00 AM (overlaps)
+            end_time=720,  # 12:00 PM
+            task_ids=[],  # No tasks to avoid category mismatch
+        ),
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # Attempt to approve the plan
+    response = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+
+    assert response.status_code == 400
+    error_response = response.json()
+    assert "Cannot approve plan due to scheduling conflicts" in error_response["detail"]["message"]
+    assert "conflicts" in error_response["detail"]
+    assert len(error_response["detail"]["conflicts"]) > 0
+
+
+async def test_approve_daily_plan_already_reviewed(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    unique_date: datetime,
+):
+    """Test approval fails when plan is already reviewed."""
+    # Create and approve a daily plan
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,
+            end_time=660,
+            task_ids=[],
+        )
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # First approval should succeed
+    first_approval = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+    assert first_approval.status_code == 200
+
+    # Second approval should fail
+    second_approval = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+
+    assert second_approval.status_code == 409
+    assert "Daily plan is already reviewed and approved" in second_approval.json()["detail"]
+
+
+async def test_approve_daily_plan_not_found(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+):
+    """Test approval fails when plan doesn't exist."""
+    non_existent_plan_id = ObjectId()
+
+    response = await async_client.put(
+        f"{DAILY_PLANS_ENDPOINT}/{non_existent_plan_id}/approve", headers=auth_headers_user_one
+    )
+
+    assert response.status_code == 404
+    assert f"Daily plan with ID '{non_existent_plan_id}' not found" in response.json()["detail"]
+
+
+async def test_approve_daily_plan_unauthorized(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    auth_headers_user_two: dict[str, str],
+    user_one_category: CategoryModel,
+    unique_date: datetime,
+):
+    """Test approval fails when user doesn't own the plan."""
+    # Create plan as user one
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,
+            end_time=660,
+            task_ids=[],
+        )
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # Try to approve as user two
+    response = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_two)
+
+    assert response.status_code == 404
+    assert f"Daily plan with ID '{plan_id}' not found" in response.json()["detail"]
+
+
+async def test_approve_daily_plan_unauthenticated_fails(
+    async_client: AsyncClient,
+):
+    """Test approval fails when user is not authenticated."""
+    response = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{ObjectId()}/approve")
+
+    assert response.status_code == 401
+
+
+async def test_update_daily_plan_resets_reviewed_flag(
+    async_client: AsyncClient,
+    auth_headers_user_one: dict[str, str],
+    test_user_one: UserModel,
+    user_one_category: CategoryModel,
+    user_one_task_model: TaskModel,
+    unique_date: datetime,
+):
+    """Test that updating a daily plan resets the reviewed flag to false."""
+    # Create and approve a daily plan
+    time_windows = [
+        create_time_window_payload(
+            description="Work Session",
+            category_id=user_one_category.id,
+            start_time=540,
+            end_time=660,
+            task_ids=[user_one_task_model.id],
+        )
+    ]
+
+    create_payload = DailyPlanCreateRequest(plan_date=unique_date, time_windows=time_windows, self_reflection=None)
+    create_resp = await async_client.post(
+        DAILY_PLANS_ENDPOINT, headers=auth_headers_user_one, json=create_payload.model_dump(mode="json")
+    )
+    assert create_resp.status_code == 201
+    plan_id = create_resp.json()["id"]
+
+    # Approve the plan
+    approval_resp = await async_client.put(f"{DAILY_PLANS_ENDPOINT}/{plan_id}/approve", headers=auth_headers_user_one)
+    assert approval_resp.status_code == 200
+    assert approval_resp.json()["plan"]["reviewed"] is True
+
+    # Update the plan
+    updated_time_windows = [
+        create_time_window_payload(
+            description="Updated Work Session",
+            category_id=user_one_category.id,
+            start_time=600,  # Different time
+            end_time=720,
+            task_ids=[user_one_task_model.id],
+        )
+    ]
+
+    update_payload = DailyPlanUpdateRequest(time_windows=updated_time_windows, self_reflection=None)
+    update_resp = await async_client.put(
+        f"{DAILY_PLANS_ENDPOINT}/{plan_id}", headers=auth_headers_user_one, json=update_payload.model_dump(mode="json")
+    )
+
+    assert update_resp.status_code == 200
+    updated_plan = DailyPlanResponse(**update_resp.json())
+
+    # Reviewed flag should be reset to false
+    assert not updated_plan.reviewed
+    assert updated_plan.time_windows[0].time_window.description == "Updated Work Session"
+    assert updated_plan.time_windows[0].time_window.start_time == 600

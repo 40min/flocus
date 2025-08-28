@@ -216,6 +216,10 @@ class DailyPlanService:
             for key, value in reflection_update_data.items():
                 setattr(daily_plan.self_reflection, key, value)
 
+        # Reset reviewed flag to false when any updates are made (except during approval)
+        if not approve:
+            daily_plan.reviewed = False
+
         await self.engine.save(daily_plan)
 
         return await self._map_plan_to_response(daily_plan, current_user_id)

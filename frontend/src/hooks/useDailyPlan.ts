@@ -40,20 +40,21 @@ export const useDailyPlanWithReview = () => {
   // Determine if plan needs review
   const needsReview = useMemo(() => {
     return dailyPlan ? !dailyPlan.reviewed : false;
-  }, [dailyPlan]);
+  }, [dailyPlan?.reviewed]);
 
   // Determine review mode state
   const reviewMode = useMemo(() => {
     if (!dailyPlan) return "no-plan";
     if (needsReview) return "needs-review";
     return "approved";
-  }, [dailyPlan, needsReview]);
+  }, [dailyPlan?.id, needsReview]);
 
   // Carry over time window mutation
   const carryOverMutation = useMutation({
     mutationFn: carryOverTimeWindow,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
+    onSuccess: (response) => {
+      // Update the cache directly instead of invalidating to prevent loops
+      queryClient.setQueryData(["dailyPlan", "today"], response);
       showMessage("Time window carried over successfully!", "success");
     },
     onError: (error) => {
@@ -95,9 +96,6 @@ export const useDailyPlanWithReview = () => {
       } else {
         showMessage("Plan approved successfully!", "success");
       }
-
-      // Refresh to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
     },
     onError: (error: any) => {
       console.error("Failed to approve plan:", error);

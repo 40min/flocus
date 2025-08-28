@@ -22,6 +22,8 @@ import { Task } from "types/task";
 import { TimerProvider } from "../components/TimerProvider";
 import { getTodayStats } from "services/userDailyStatsService";
 import { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import { useTimer } from "hooks/useTimer";
+import { useCarryOverIntegration } from "hooks/useCarryOverIntegration";
 
 // Mocks
 jest.mock("hooks/useDailyPlan");
@@ -29,6 +31,19 @@ jest.mock("hooks/useTemplates");
 jest.mock("hooks/useCategories");
 jest.mock("services/dailyPlanService");
 jest.mock("services/userDailyStatsService");
+
+// Mock useTimer first to avoid initialization issues
+jest.mock("hooks/useTimer", () => ({
+  useTimer: jest.fn(),
+}));
+
+// Mock useCarryOverIntegration
+jest.mock("hooks/useCarryOverIntegration", () => ({
+  useCarryOverIntegration: jest.fn(),
+}));
+
+const mockUseTimer = useTimer as jest.MockedFunction<typeof useTimer>;
+const mockUseCarryOverIntegration = useCarryOverIntegration as jest.MockedFunction<typeof useCarryOverIntegration>;
 jest.mock("components/modals/TimeWindowModal", () => ({
   __esModule: true,
   default: ({ isOpen, editingTimeWindow }: any) =>
@@ -51,12 +66,24 @@ jest.mock("context/MessageContext", () => {
   };
 });
 
+// Cast mocked functions after they're available
 const mockedUseTodayDailyPlan = useTodayDailyPlan as jest.Mock;
 const mockedUsePrevDayDailyPlan = usePrevDayDailyPlan as jest.Mock;
 const mockedUseTemplates = useTemplates as jest.Mock;
 const mockedUseCategories = useCategories as jest.Mock;
 const mockedCreateDailyPlan = dailyPlanService.createDailyPlan as jest.Mock;
 const mockedUpdateDailyPlan = dailyPlanService.updateDailyPlan as jest.Mock;
+
+// Override the useDailyPlan module's exports - use jest.fn() directly to avoid hoisting issues
+jest.mock("hooks/useDailyPlan", () => ({
+  useTodayDailyPlan: jest.fn(),
+  usePrevDayDailyPlan: jest.fn(),
+  useDailyPlanWithReview: jest.fn(),
+}));
+
+// Get a reference to the mocked function after jest.mock
+const { useDailyPlanWithReview } = require("hooks/useDailyPlan");
+const mockUseDailyPlanWithReview = useDailyPlanWithReview as jest.Mock;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -323,12 +350,86 @@ describe("MyDayPage", () => {
     // For simplicity, if the factory mock is sufficient, this line can be removed or adjusted.
     // Let's ensure it's reset or explicitly set for clarity if tests depend on its call count/args.
     (useMessage as jest.Mock).mockReturnValue({ showMessage: jest.fn() });
+
+    // Mock useDailyPlanWithReview
+    mockUseDailyPlanWithReview.mockReturnValue({
+      dailyPlan: null,
+      isLoading: false,
+      needsReview: false,
+      reviewMode: "no-plan",
+      approvePlan: jest.fn(),
+      isApprovingPlan: false,
+    });
+
+    // Mock useCarryOverIntegration
+    mockUseCarryOverIntegration.mockReturnValue({
+      carryOverWithTimerIntegration: jest.fn(),
+      validateCarryOver: jest.fn(),
+      getTimeWindowCarryOverStatus: jest.fn(),
+      getAffectedTasks: jest.fn().mockReturnValue([]),
+      activeTimerTimeWindows: [],
+      isCurrentTaskInTimeWindow: jest.fn().mockReturnValue(false),
+      currentTaskId: undefined,
+      isCarryingOver: false,
+    });
+
+    // Mock useTimer
+    mockUseTimer.mockReturnValue({
+      // Timer state
+      mode: "work",
+      timeRemaining: 1500000,
+      isActive: false,
+      pomodorosCompleted: 0,
+
+      // Current task
+      currentTaskId: undefined,
+      currentTaskName: undefined,
+      currentTaskDescription: undefined,
+
+      // Actions
+      handleStartPause: jest.fn(),
+      handleReset: jest.fn(),
+      handleSkip: jest.fn(),
+      stopCurrentTask: jest.fn(),
+      resetForNewTask: jest.fn(),
+      handleMarkAsDone: jest.fn(),
+      formatTime: jest.fn().mockReturnValue("25:00"),
+
+      // Loading states for API calls
+      isUpdatingTaskStatus: false,
+      isUpdatingWorkingTime: false,
+      isUpdating: false,
+
+      // Setters for backward compatibility
+      setIsActive: jest.fn(),
+      setCurrentTaskId: jest.fn(),
+      setCurrentTaskName: jest.fn(),
+      setCurrentTaskDescription: jest.fn(),
+
+      // UI properties
+      isBreak: false,
+      timerColor: "#4CAF50",
+      buttonBgColor: "#4CAF50",
+      buttonTextColor: "#FFFFFF",
+      modeText: "work",
+    });
   });
 
   it("renders loading state", async () => {
     mockedUseTodayDailyPlan.mockReturnValue({ data: null, isLoading: true });
     mockedUsePrevDayDailyPlan.mockReturnValue({ data: null, isLoading: false });
     mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
+
+    // Mock useDailyPlanWithReview to also return loading state
+    mockUseDailyPlanWithReview.mockReturnValue({
+      dailyPlan: null,
+      isLoading: true, // This should match the useTodayDailyPlan loading state
+      needsReview: false,
+      reviewMode: "no-plan",
+      approvePlan: jest.fn(),
+      isApprovingPlan: false,
+    });
+
     renderComponent();
     await waitFor(() => {
       expect(screen.getByText("Loading daily plan...")).toBeInTheDocument();
@@ -584,6 +685,16 @@ describe("MyDayPage", () => {
         isLoading: false,
       });
       mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
+
+      // Mock useDailyPlanWithReview to return the daily plan
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(JSON.stringify(mockDailyPlan)),
+        isLoading: false,
+        needsReview: false,
+        reviewMode: "approved",
+        approvePlan: jest.fn(),
+        isApprovingPlan: false,
+      });
     });
 
     it("renders the existing plan", async () => {
@@ -709,6 +820,16 @@ describe("MyDayPage", () => {
       });
       mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
       mockedUpdateDailyPlan.mockResolvedValue({});
+
+      // Mock useDailyPlanWithReview to return the daily plan with multiple time windows
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(JSON.stringify(mockDailyPlanWithMultipleTimeWindows)),
+        isLoading: false,
+        needsReview: false,
+        reviewMode: "approved",
+        approvePlan: jest.fn(),
+        isApprovingPlan: false,
+      });
     });
 
     it("renders time windows in sortable context", async () => {
@@ -1208,6 +1329,22 @@ describe("MyDayPage", () => {
         data: JSON.parse(JSON.stringify(dailyPlanNoGaps)),
         isLoading: false,
       });
+// Mock useDailyPlanWithReview to return the daily plan with no gaps
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(JSON.stringify(dailyPlanNoGaps)),
+        isLoading: false,
+        needsReview: false,
+        reviewMode: "approved",
+        approvePlan: jest.fn(),
+        isApprovingPlan: false,
+      });
+
+      // Also mock usePrevDayDailyPlan and useTemplates for consistency
+      mockedUsePrevDayDailyPlan.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
 
       renderComponent();
 

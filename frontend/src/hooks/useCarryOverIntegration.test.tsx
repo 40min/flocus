@@ -4,11 +4,16 @@ import { useCarryOverIntegration } from "./useCarryOverIntegration";
 import * as dailyPlanService from "../services/dailyPlanService";
 import { DailyPlanResponse } from "../types/dailyPlan";
 import React from "react";
-
 // Mock dependencies
 jest.mock("../services/dailyPlanService");
+
+jest.mock("../stores/timerStore", () => ({
+  useTimerStore: jest.fn(),
+  useTimerCurrentTask: jest.fn(),
+  useTimerActions: jest.fn(),
+}));
+
 jest.mock("../hooks/useDailyPlan");
-jest.mock("../stores/timerStore");
 
 // Mock the message context
 const mockShowMessage = jest.fn();
@@ -27,19 +32,6 @@ const mockUseDailyPlanWithReview = {
 
 jest.mock("./useDailyPlan", () => ({
   useDailyPlanWithReview: () => mockUseDailyPlanWithReview,
-}));
-
-// Mock timer store
-const mockTimerStore = {
-  currentTaskId: null as string | null,
-  stopCurrentTask: jest.fn().mockResolvedValue(undefined),
-  resetForNewTask: jest.fn().mockResolvedValue(undefined),
-};
-
-const mockUseTimerStore = jest.fn();
-
-jest.mock("../stores/timerStore", () => ({
-  useTimerStore: mockUseTimerStore,
 }));
 
 const createWrapper = () => {
@@ -146,22 +138,29 @@ describe("useCarryOverIntegration", () => {
     mockUseDailyPlanWithReview.dailyPlan = null;
     mockUseDailyPlanWithReview.carryOverTimeWindow.mockClear();
     mockUseDailyPlanWithReview.isCarryingOver = false;
-    mockTimerStore.currentTaskId = null;
-    mockTimerStore.stopCurrentTask.mockClear();
-    mockTimerStore.resetForNewTask.mockClear();
 
-    // Set up the timer store mock to return the expected structure
-    mockUseTimerStore.mockImplementation((selector: any) => {
-      if (typeof selector === "function") {
-        return selector(mockTimerStore);
-      }
-      return mockTimerStore;
+    // Import the mocked functions
+    const { useTimerCurrentTask, useTimerActions } = require("../stores/timerStore");
+
+    // Mock useTimerCurrentTask to return the current task structure
+    useTimerCurrentTask.mockReturnValue({
+      id: null, // Will be overridden in individual tests
+    });
+
+    // Mock useTimerActions to return timer action functions
+    useTimerActions.mockReturnValue({
+      stopCurrentTask: jest.fn().mockResolvedValue(undefined),
+      resetForNewTask: jest.fn().mockResolvedValue(undefined),
     });
   });
 
   it("should identify current task in time window correctly", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = "task1";
+
+    const { useTimerCurrentTask } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: "task1",
+    });
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -190,7 +189,11 @@ describe("useCarryOverIntegration", () => {
 
   it("should get carry-over status correctly", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = "task1";
+
+    const { useTimerCurrentTask } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: "task1",
+    });
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -248,7 +251,20 @@ describe("useCarryOverIntegration", () => {
 
   it("should handle carry-over with timer integration successfully", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = "task1";
+
+    const mockStopCurrentTask = jest.fn().mockResolvedValue(undefined);
+    const mockResetForNewTask = jest.fn().mockResolvedValue(undefined);
+
+    const { useTimerCurrentTask, useTimerActions } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: "task1",
+    });
+
+    useTimerActions.mockReturnValue({
+      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
+    });
+
     mockUseDailyPlanWithReview.carryOverTimeWindow.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
@@ -266,17 +282,30 @@ describe("useCarryOverIntegration", () => {
       expect(carryOverResult.affectedTasks).toHaveLength(1);
     });
 
-    expect(mockTimerStore.stopCurrentTask).toHaveBeenCalled();
+    expect(mockStopCurrentTask).toHaveBeenCalled();
     expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
       "tw1",
       tomorrowDate
     );
-    expect(mockTimerStore.resetForNewTask).toHaveBeenCalled();
+    expect(mockResetForNewTask).toHaveBeenCalled();
   });
 
   it("should handle carry-over without timer integration", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = null; // No active timer
+
+    const mockStopCurrentTask = jest.fn().mockResolvedValue(undefined);
+    const mockResetForNewTask = jest.fn().mockResolvedValue(undefined);
+
+    const { useTimerCurrentTask, useTimerActions } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: null, // No active timer
+    });
+
+    useTimerActions.mockReturnValue({
+      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
+    });
+
     mockUseDailyPlanWithReview.carryOverTimeWindow.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
@@ -294,17 +323,30 @@ describe("useCarryOverIntegration", () => {
       expect(carryOverResult.affectedTasks).toHaveLength(1);
     });
 
-    expect(mockTimerStore.stopCurrentTask).not.toHaveBeenCalled();
+    expect(mockStopCurrentTask).not.toHaveBeenCalled();
     expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
       "tw1",
       tomorrowDate
     );
-    expect(mockTimerStore.resetForNewTask).not.toHaveBeenCalled();
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
   });
 
   it("should handle carry-over errors", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = "task1";
+
+    const mockStopCurrentTask = jest.fn().mockResolvedValue(undefined);
+    const mockResetForNewTask = jest.fn().mockResolvedValue(undefined);
+
+    const { useTimerCurrentTask, useTimerActions } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: "task1",
+    });
+
+    useTimerActions.mockReturnValue({
+      stopCurrentTask: mockStopCurrentTask,
+      resetForNewTask: mockResetForNewTask,
+    });
+
     const error = new Error("Carry over failed");
     mockUseDailyPlanWithReview.carryOverTimeWindow.mockRejectedValue(error);
 
@@ -320,18 +362,22 @@ describe("useCarryOverIntegration", () => {
       ).rejects.toThrow("Carry over failed");
     });
 
-    expect(mockTimerStore.stopCurrentTask).toHaveBeenCalled();
+    expect(mockStopCurrentTask).toHaveBeenCalled();
     expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
       "tw1",
       tomorrowDate
     );
     // resetForNewTask should not be called on error
-    expect(mockTimerStore.resetForNewTask).not.toHaveBeenCalled();
+    expect(mockResetForNewTask).not.toHaveBeenCalled();
   });
 
   it("should get active timer time windows", async () => {
     mockUseDailyPlanWithReview.dailyPlan = mockDailyPlan;
-    mockTimerStore.currentTaskId = "task1";
+
+    const { useTimerCurrentTask } = require("../stores/timerStore");
+    useTimerCurrentTask.mockReturnValue({
+      id: "task1",
+    });
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -341,7 +387,10 @@ describe("useCarryOverIntegration", () => {
     expect(result.current.activeTimerTimeWindows[0].time_window.id).toBe("tw1");
 
     // Test with no active timer
-    mockTimerStore.currentTaskId = null;
+    useTimerCurrentTask.mockReturnValue({
+      id: null,
+    });
+
     const { result: resultNoTimer } = renderHook(
       () => useCarryOverIntegration(),
       {

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTimerStore } from "stores/timerStore";
+import { useTimerStore, useTimerCurrentTask, useTimerActions } from "stores/timerStore";
 import { useDailyPlanWithReview } from "./useDailyPlan";
 import type { Task } from "types/task";
 import type { TimeWindowAllocation } from "types/dailyPlan";
@@ -14,13 +14,9 @@ export const useCarryOverIntegration = () => {
   const { dailyPlan, carryOverTimeWindow, isCarryingOver } =
     useDailyPlanWithReview();
 
-  const { currentTaskId, stopCurrentTask, resetForNewTask } = useTimerStore(
-    (state) => ({
-      currentTaskId: state.currentTaskId,
-      stopCurrentTask: state.stopCurrentTask,
-      resetForNewTask: state.resetForNewTask,
-    })
-  );
+  // Use stable selectors to prevent unnecessary re-renders
+  const { id: currentTaskId } = useTimerCurrentTask();
+  const { stopCurrentTask, resetForNewTask } = useTimerActions();
 
   // Check if current timer task is in a specific time window
   const isCurrentTaskInTimeWindow = useCallback(
@@ -74,9 +70,8 @@ export const useCarryOverIntegration = () => {
           await resetForNewTask();
         }
 
-        // Invalidate related queries to ensure data consistency
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["dailyStats"] });
+        // Note: dailyPlan query is already updated by the carryOverTimeWindow mutation
+        // No need to invalidate other queries here to prevent potential loops
 
         return {
           success: true,

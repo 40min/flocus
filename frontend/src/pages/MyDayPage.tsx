@@ -106,6 +106,7 @@ const MyDayPage: React.FC = () => {
     useState<SelfReflection | null>(null);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const [planConflicts, setPlanConflicts] = useState<any[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Use the approving state from the enhanced hook
   const isApprovingPlan = isApprovingPlanFromHook;
@@ -165,18 +166,40 @@ const MyDayPage: React.FC = () => {
     },
   });
 
+  // Initialize daily plan data only once or when the plan ID changes
   useEffect(() => {
-    if (fetchedDailyPlan) {
+    if (fetchedDailyPlan && !isInitialized) {
       const sortedTimeWindows = [...fetchedDailyPlan.time_windows].sort(
         (a, b) => a.time_window.start_time - b.time_window.start_time
       );
       setDailyPlan({ ...fetchedDailyPlan, time_windows: sortedTimeWindows });
       setLocalTimeWindows(sortedTimeWindows);
-    } else {
+      setIsInitialized(true);
+    } else if (!fetchedDailyPlan && isInitialized) {
       setDailyPlan(null);
       setLocalTimeWindows([]);
+      setIsInitialized(false);
     }
-  }, [fetchedDailyPlan]);
+  }, [fetchedDailyPlan, isInitialized]);
+
+  // Update local state when fetched data changes significantly (different plan or review status)
+  useEffect(() => {
+    if (fetchedDailyPlan && dailyPlan && isInitialized) {
+      const fetchedId = fetchedDailyPlan.id;
+      const currentId = dailyPlan.id;
+      const fetchedReviewed = fetchedDailyPlan.reviewed;
+      const currentReviewed = dailyPlan.reviewed;
+
+      // Only update if the plan ID changed or review status changed
+      if (fetchedId !== currentId || fetchedReviewed !== currentReviewed) {
+        const sortedTimeWindows = [...fetchedDailyPlan.time_windows].sort(
+          (a, b) => a.time_window.start_time - b.time_window.start_time
+        );
+        setDailyPlan({ ...fetchedDailyPlan, time_windows: sortedTimeWindows });
+        setLocalTimeWindows(sortedTimeWindows);
+      }
+    }
+  }, [fetchedDailyPlan, dailyPlan, isInitialized]);
 
   useEffect(() => {
     const shouldShowReview = !!(
@@ -198,12 +221,12 @@ const MyDayPage: React.FC = () => {
       }
 
       saveTimeoutRef.current = setTimeout(() => {
-        if (dailyPlan) {
+        if (dailyPlan && isInitialized) {
           updatePlanMutation.mutate(timeWindows);
         }
       }, 300); // 300ms debounce
     },
-    [dailyPlan, updatePlanMutation]
+    [dailyPlan, updatePlanMutation, isInitialized]
   );
 
   // Cleanup timeout on unmount
@@ -230,8 +253,10 @@ const MyDayPage: React.FC = () => {
         return alloc;
       });
 
-      // Auto-save the changes with debounce
-      debouncedSave(updatedWindows);
+      // Auto-save the changes with debounce only if initialized
+      if (isInitialized) {
+        debouncedSave(updatedWindows);
+      }
 
       return updatedWindows;
     });
@@ -252,8 +277,10 @@ const MyDayPage: React.FC = () => {
         return alloc;
       });
 
-      // Auto-save the changes with debounce
-      debouncedSave(updatedWindows);
+      // Auto-save the changes with debounce only if initialized
+      if (isInitialized) {
+        debouncedSave(updatedWindows);
+      }
 
       return updatedWindows;
     });
@@ -299,8 +326,10 @@ const MyDayPage: React.FC = () => {
     const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
     setLocalTimeWindows(recalculatedWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(recalculatedWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(recalculatedWindows);
+    }
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
@@ -319,8 +348,10 @@ const MyDayPage: React.FC = () => {
     const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
     setLocalTimeWindows(recalculatedWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(recalculatedWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(recalculatedWindows);
+    }
   };
 
   const handleOpenEditModal = (allocation: TimeWindowAllocation) => {
@@ -358,8 +389,10 @@ const MyDayPage: React.FC = () => {
 
     setLocalTimeWindows(updatedTimeWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(updatedTimeWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(updatedTimeWindows);
+    }
   };
 
   const savePrevDayReflection = async (reflection: SelfReflection) => {
@@ -504,8 +537,10 @@ const MyDayPage: React.FC = () => {
           newIndex
         );
 
-        // Auto-save the changes with debounce
-        debouncedSave(recalculatedItems);
+        // Auto-save the changes with debounce only if initialized
+        if (isInitialized) {
+          debouncedSave(recalculatedItems);
+        }
 
         return recalculatedItems;
       });

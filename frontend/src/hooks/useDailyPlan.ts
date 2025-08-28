@@ -7,7 +7,6 @@ import {
   updateDailyPlan as updateDailyPlanService,
 } from "services/dailyPlanService";
 import type {
-  DailyPlanResponse,
   CarryOverTimeWindowRequest,
   TimeWindowAllocation,
 } from "types/dailyPlan";
@@ -40,14 +39,14 @@ export const useDailyPlanWithReview = () => {
   // Determine if plan needs review
   const needsReview = useMemo(() => {
     return dailyPlan ? !dailyPlan.reviewed : false;
-  }, [dailyPlan?.reviewed]);
+  }, [dailyPlan]);
 
   // Determine review mode state
   const reviewMode = useMemo(() => {
     if (!dailyPlan) return "no-plan";
     if (needsReview) return "needs-review";
     return "approved";
-  }, [dailyPlan?.id, needsReview]);
+  }, [dailyPlan, needsReview]);
 
   // Carry over time window mutation
   const carryOverMutation = useMutation({

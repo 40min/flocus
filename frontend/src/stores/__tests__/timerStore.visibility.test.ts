@@ -1,9 +1,28 @@
 import { useTimerStore } from "../timerStore";
 
 describe("Timer Visibility API Logic", () => {
+  // Suppress expected console messages during tests
+  const originalConsoleError = console.error;
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
+    // Suppress expected "Failed to increment pomodoro count" messages (expected in timer expiration tests)
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Failed to increment pomodoro count') ||
+          (message.includes('Cross origin') && message.includes('forbidden'))) {
+        return; // Suppress expected pomodoro count error and jsdom CORS errors
+      }
+      originalConsoleError(...args); // Allow unexpected errors to show
+    });
+
     // Reset store state
     useTimerStore.getState().clearTimerState();
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
   });
 
   it("should correctly calculate elapsed time and update timer", () => {

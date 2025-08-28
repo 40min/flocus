@@ -65,6 +65,10 @@ describe("CreateTaskModal", () => {
   const onSubmitSuccessMock = jest.fn();
   let queryClient: QueryClient;
 
+  // Suppress expected console messages during tests
+  const originalConsoleError = console.error;
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
@@ -91,6 +95,20 @@ describe("CreateTaskModal", () => {
       clearMessage: jest.fn(),
       message: null,
     });
+
+    // Suppress expected "Operation failed" and "Error: API Error" messages (expected in error handling tests)
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Operation failed:') || message.includes('Error: API Error')) {
+        return; // Suppress expected error messages
+      }
+      originalConsoleError(...args); // Allow unexpected errors to show
+    });
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
   });
 
   const renderModal = (

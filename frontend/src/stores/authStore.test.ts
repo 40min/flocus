@@ -26,8 +26,21 @@ Object.defineProperty(window, "dispatchEvent", {
 });
 
 describe("AuthStore", () => {
+  // Suppress expected console messages during tests
+  const originalConsoleError = console.error;
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Suppress expected "Failed to fetch user data" messages (expected in login failure tests)
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Failed to fetch user data')) {
+        return; // Suppress expected user data fetch error
+      }
+      originalConsoleError(...args); // Allow unexpected errors to show
+    });
+
     // Reset the store state
     useAuthStore.setState({
       user: null,
@@ -35,6 +48,11 @@ describe("AuthStore", () => {
       isAuthenticated: false,
       isLoading: true,
     });
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
   });
 
   describe("login", () => {

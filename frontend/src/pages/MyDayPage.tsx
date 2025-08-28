@@ -46,7 +46,12 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useTodayDailyPlan, usePrevDayDailyPlan } from "../hooks/useDailyPlan";
+import {
+  useTodayDailyPlan,
+  usePrevDayDailyPlan,
+  useDailyPlanWithReview,
+} from "../hooks/useDailyPlan";
+import { useCarryOverIntegration } from "../hooks/useCarryOverIntegration";
 import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
 import { useTimer } from "../hooks/useTimer";
@@ -59,10 +64,26 @@ const MyDayPage: React.FC = () => {
   const { showMessage } = useMessage();
   const { stopCurrentTask, currentTaskId } = useTimer();
 
-  const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } =
-    useTodayDailyPlan();
+  // Enhanced daily plan management with review state
+  const {
+    dailyPlan: fetchedDailyPlan,
+    isLoading: isLoadingTodayPlan,
+    needsReview,
+    reviewMode,
+    approvePlan,
+    isApprovingPlan: isApprovingPlanFromHook,
+  } = useDailyPlanWithReview();
+
   const { data: prevDayPlan, isLoading: isLoadingPrevDayPlan } =
     usePrevDayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
+
+  // Enhanced carry-over integration
+  const {
+    carryOverWithTimerIntegration,
+    validateCarryOver,
+    getTimeWindowCarryOverStatus,
+    isCarryingOver,
+  } = useCarryOverIntegration();
   const { data: dayTemplates = [] } = useTemplates();
   const { data: categories = [] } = useCategories();
   const { data: dailyStats } = useDailyStats();
@@ -84,8 +105,10 @@ const MyDayPage: React.FC = () => {
   const [prevDayReflection, setPrevDayReflection] =
     useState<SelfReflection | null>(null);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
-  const [isApprovingPlan, setIsApprovingPlan] = useState(false);
   const [planConflicts, setPlanConflicts] = useState<any[]>([]);
+
+  // Use the approving state from the enhanced hook
+  const isApprovingPlan = isApprovingPlanFromHook;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -378,21 +401,32 @@ const MyDayPage: React.FC = () => {
     timeWindowId: string,
     targetDate: string
   ) => {
-    if (!dailyPlan) {
-      showMessage("No daily plan available for carry over", "error");
+    // Validate the carry-over operation first
+    const validation = validateCarryOver(timeWindowId, targetDate);
+    if (!validation.valid) {
+      showMessage(
+        validation.reason || "Cannot carry over time window",
+        "error"
+      );
       return;
     }
 
     try {
-      await carryOverTimeWindow({
-        source_plan_id: dailyPlan.id,
-        time_window_id: timeWindowId,
-        target_date: targetDate,
-      });
+      const result = await carryOverWithTimerIntegration(
+        timeWindowId,
+        targetDate
+      );
 
-      // Refresh the current plan to reflect changes
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
-      showMessage("Time window carried over successfully!", "success");
+      // Show enhanced success message with details
+      let message = "Time window carried over successfully!";
+      if (result.timerWasReset) {
+        message += " Timer was stopped as the active task was moved.";
+      }
+      if (result.affectedTasks.length > 0) {
+        message += ` ${result.affectedTasks.length} unfinished task(s) moved.`;
+      }
+
+      showMessage(message, "success");
     } catch (error) {
       console.error("Failed to carry over time window:", error);
       showMessage("Failed to carry over time window", "error");
@@ -405,24 +439,10 @@ const MyDayPage: React.FC = () => {
       return;
     }
 
-    setIsApprovingPlan(true);
     setPlanConflicts([]);
 
     try {
-      const payload = {
-        time_windows: localTimeWindows.map((alloc) => ({
-          id: alloc.time_window.id.startsWith("temp-")
-            ? undefined
-            : alloc.time_window.id,
-          description: alloc.time_window.description,
-          start_time: alloc.time_window.start_time,
-          end_time: alloc.time_window.end_time,
-          category_id: alloc.time_window.category.id,
-          task_ids: alloc.tasks.map((t) => t.id),
-        })),
-      };
-
-      const response = await updateDailyPlanService(dailyPlan.id, payload);
+      const response = await approvePlan(localTimeWindows);
 
       // Update local state with the approved plan
       if (response.plan) {
@@ -432,26 +452,12 @@ const MyDayPage: React.FC = () => {
         setDailyPlan({ ...response.plan, time_windows: sortedTimeWindows });
         setLocalTimeWindows(sortedTimeWindows);
       }
-
-      // Show merge information if any merges occurred
-      if (response.merged && response.merge_details) {
-        showMessage(
-          `Plan approved successfully! ${response.merge_details.join(", ")}`,
-          "success"
-        );
-      } else {
-        showMessage("Plan approved successfully!", "success");
-      }
-
-      // Refresh the query to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
     } catch (error: any) {
       console.error("Failed to approve plan:", error);
 
       // Handle conflict errors
       if (error.status === 400 && error.message.includes("conflict")) {
         // Parse conflict information from error message
-        // This is a simplified approach - in a real app you'd want structured error responses
         setPlanConflicts([
           {
             timeWindowIds: [],
@@ -459,12 +465,7 @@ const MyDayPage: React.FC = () => {
             type: "category_conflict" as const,
           },
         ]);
-        showMessage("Plan has conflicts that need to be resolved", "error");
-      } else {
-        showMessage("Failed to approve plan", "error");
       }
-    } finally {
-      setIsApprovingPlan(false);
     }
   };
 
@@ -616,6 +617,10 @@ const MyDayPage: React.FC = () => {
           onCarryOver={handleCarryOverTimeWindow}
           dailyPlanId={dailyPlan?.id}
           dragListeners={listeners}
+          carryOverStatus={getTimeWindowCarryOverStatus(
+            allocation.time_window.id
+          )}
+          isCarryingOver={isCarryingOver}
         />
       </div>
     );
@@ -632,11 +637,11 @@ const MyDayPage: React.FC = () => {
                   {dayjs(dailyPlan.plan_date).format("dddd, MMMM D")}
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">
-                  {dailyPlan.reviewed
+                  {reviewMode === "approved"
                     ? "Plan your perfect day"
                     : "Review and approve your plan"}
                 </p>
-                {!dailyPlan.reviewed && (
+                {needsReview && (
                   <div className="mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium inline-block">
                     Plan requires review
                   </div>
@@ -656,7 +661,7 @@ const MyDayPage: React.FC = () => {
               </div>
             </header>
 
-            {!dailyPlan.reviewed ? (
+            {reviewMode === "needs-review" ? (
               // Plan Review Mode - shown when plan needs review
               <main className="max-w-4xl mx-auto">
                 <PlanReviewMode
@@ -734,6 +739,10 @@ const MyDayPage: React.FC = () => {
                           timeWindow={activeAllocation.time_window}
                           tasks={activeAllocation.tasks}
                           isOverlay
+                          carryOverStatus={getTimeWindowCarryOverStatus(
+                            activeAllocation.time_window.id
+                          )}
+                          isCarryingOver={isCarryingOver}
                         />
                       ) : null}
                     </DragOverlay>

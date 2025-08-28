@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  AlertTriangle,
-  CheckCircle,
-  PlusCircle,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { CheckCircle, PlusCircle, ChevronDown, ChevronUp } from "lucide-react";
 import type { TimeWindowAllocation } from "../types/dailyPlan";
 import type { Task } from "../types/task";
 import TimeWindowBalloon from "./TimeWindowBalloon";
@@ -49,7 +43,6 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
   dailyPlanId,
   isApproving = false,
 }) => {
-  const [showConflictDetails, setShowConflictDetails] = useState(true);
   const [expandedConflicts, setExpandedConflicts] = useState(true);
 
   const hasConflicts = conflicts.length > 0;

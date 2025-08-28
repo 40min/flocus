@@ -115,3 +115,240 @@ describe("useDailyPlan hooks", () => {
     });
   });
 });
+// Additional tests for enhanced functionality
+import { act } from "@testing-library/react";
+import { useDailyPlanWithReview } from "hooks/useDailyPlan";
+
+// Mock the message context
+const mockShowMessage = jest.fn();
+jest.mock("context/MessageContext", () => ({
+  useMessage: () => ({
+    showMessage: mockShowMessage,
+  }),
+}));
+
+describe("useDailyPlanWithReview", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockShowMessage.mockClear();
+    queryClient.clear();
+  });
+
+  it("should determine review mode correctly for approved plan", async () => {
+    const approvedPlan = { ...mockDailyPlan, reviewed: true };
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(approvedPlan);
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(approvedPlan);
+    });
+
+    expect(result.current.needsReview).toBe(false);
+    expect(result.current.reviewMode).toBe("approved");
+  });
+
+  it("should determine review mode correctly for unreviewed plan", async () => {
+    const unreviewedPlan = { ...mockDailyPlan, reviewed: false };
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(unreviewedPlan);
+    });
+
+    expect(result.current.needsReview).toBe(true);
+    expect(result.current.reviewMode).toBe("needs-review");
+  });
+
+  it("should determine review mode correctly for no plan", async () => {
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toBeNull();
+    });
+
+    expect(result.current.needsReview).toBe(false);
+    expect(result.current.reviewMode).toBe("no-plan");
+  });
+
+  it("should handle carry over time window successfully", async () => {
+    const mockCarryOverResponse = {
+      ...mockDailyPlan,
+      reviewed: false, // Plan becomes unreviewed after carry-over
+    };
+
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(mockDailyPlan);
+    mockedDailyPlanService.carryOverTimeWindow.mockResolvedValue(
+      mockCarryOverResponse
+    );
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(mockDailyPlan);
+    });
+
+    await act(async () => {
+      await result.current.carryOverTimeWindow("tw1", "2023-01-02");
+    });
+
+    expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+      source_plan_id: mockDailyPlan.id,
+      time_window_id: "tw1",
+      target_date: "2023-01-02",
+    });
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "Time window carried over successfully!",
+      "success"
+    );
+  });
+
+  it("should handle carry over error when no plan available", async () => {
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.carryOverTimeWindow("tw1", "2023-01-02");
+    });
+
+    expect(mockedDailyPlanService.carryOverTimeWindow).not.toHaveBeenCalled();
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "No daily plan available for carry over",
+      "error"
+    );
+  });
+
+  it("should handle plan approval successfully", async () => {
+    const unreviewedPlan = { ...mockDailyPlan, reviewed: false };
+    const mockApprovalResponse = {
+      plan: { ...unreviewedPlan, reviewed: true },
+      merged: false,
+      merge_details: null,
+    };
+
+    const mockTimeWindows = [
+      {
+        time_window: {
+          id: "tw1",
+          description: "Work",
+          start_time: 540,
+          end_time: 600,
+          category: {
+            id: "cat1",
+            name: "Work",
+            color: "#blue",
+            user_id: "user1",
+            is_deleted: false,
+          },
+          day_template_id: "template1",
+          user_id: "user1",
+          is_deleted: false,
+        },
+        tasks: [],
+      },
+    ];
+
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
+    mockedDailyPlanService.updateDailyPlan.mockResolvedValue(
+      mockApprovalResponse
+    );
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(unreviewedPlan);
+    });
+
+    await act(async () => {
+      await result.current.approvePlan(mockTimeWindows);
+    });
+
+    expect(mockedDailyPlanService.updateDailyPlan).toHaveBeenCalledWith(
+      unreviewedPlan.id,
+      {
+        time_windows: [
+          {
+            id: "tw1",
+            description: "Work",
+            start_time: 540,
+            end_time: 600,
+            category_id: "cat1",
+            task_ids: [],
+          },
+        ],
+      }
+    );
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "Plan approved successfully!",
+      "success"
+    );
+  });
+
+  it("should handle plan approval with merge details", async () => {
+    const unreviewedPlan = { ...mockDailyPlan, reviewed: false };
+    const mockApprovalResponse = {
+      plan: { ...unreviewedPlan, reviewed: true },
+      merged: true,
+      merge_details: ["Merged overlapping work sessions"],
+    };
+
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
+    mockedDailyPlanService.updateDailyPlan.mockResolvedValue(
+      mockApprovalResponse
+    );
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(unreviewedPlan);
+    });
+
+    await act(async () => {
+      await result.current.approvePlan([]);
+    });
+
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "Plan approved successfully! Merged overlapping work sessions",
+      "success"
+    );
+  });
+
+  it("should handle plan approval conflicts", async () => {
+    const unreviewedPlan = { ...mockDailyPlan, reviewed: false };
+    const conflictError = {
+      status: 400,
+      message: "Plan has scheduling conflicts that need to be resolved",
+    };
+
+    mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
+    mockedDailyPlanService.updateDailyPlan.mockRejectedValue(conflictError);
+
+    const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.dailyPlan).toEqual(unreviewedPlan);
+    });
+
+    await act(async () => {
+      try {
+        await result.current.approvePlan([]);
+      } catch (error) {
+        // Expected to throw
+      }
+    });
+
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "Plan has conflicts that need to be resolved",
+      "error"
+    );
+  });
+});

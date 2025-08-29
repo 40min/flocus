@@ -124,7 +124,7 @@ export const useDailyPlanWithReview = () => {
 
       const request: CarryOverTimeWindowRequest = {
         source_plan_id: dailyPlan.id,
-        time_window_id: timeWindowId,
+        time_window_id: timeWindowId, // Now receives stable identifier from frontend
         target_date: targetDate,
       };
 

@@ -343,17 +343,16 @@ class DailyPlanService:
         time_window_index = None
 
         for i, tw in enumerate(source_plan.time_windows):
-            # Handle both ObjectId and string representations for time window identification
-            tw_id_str = str(tw.category_id) + "_" + str(tw.start_time) + "_" + str(tw.end_time)
-            if (
-                carry_over_request.time_window_id == tw_id_str
-                or str(tw.category_id) == carry_over_request.time_window_id
-            ):
+            # Generate stable identifier based on time window properties
+            stable_id = f"{tw.category_id}_{tw.start_time}_{tw.end_time}"
+
+            # Match by the stable identifier
+            if carry_over_request.time_window_id == stable_id:
                 time_window_to_carry = tw
                 time_window_index = i
                 break
 
-        if time_window_to_carry is None:
+        if time_window_to_carry is None or time_window_index is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Time window not found in the source daily plan."
             )

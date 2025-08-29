@@ -149,13 +149,16 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
       }
 
       try {
+        // Generate stable identifier that matches backend expectation
+        const stableId = `${category.id}_${start_time}_${end_time}`;
+
         if (onCarryOver) {
-          await onCarryOver(id, targetDate);
+          await onCarryOver(stableId, targetDate);
         } else {
           // Fallback to direct API call if no handler provided
           await carryOverTimeWindow({
             source_plan_id: dailyPlanId,
-            time_window_id: id,
+            time_window_id: stableId,
             target_date: targetDate,
           });
         }

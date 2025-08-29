@@ -28,6 +28,13 @@ interface PlanReviewModeProps {
   onAddTimeWindow: () => void;
   dailyPlanId?: string;
   isApproving?: boolean;
+  getTimeWindowCarryOverStatus?: (timeWindowId: string) => {
+    canCarryOver: boolean;
+    taskCount: number;
+    hasActiveTimer: boolean;
+    affectedTasks: Task[];
+  };
+  isCarryingOver?: boolean;
 }
 
 const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
@@ -42,6 +49,8 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
   onAddTimeWindow,
   dailyPlanId,
   isApproving = false,
+  getTimeWindowCarryOverStatus,
+  isCarryingOver = false,
 }) => {
   const [expandedConflicts, setExpandedConflicts] = useState(true);
 
@@ -127,6 +136,8 @@ const PlanReviewMode: React.FC<PlanReviewModeProps> = ({
             }
             onCarryOver={onCarryOver}
             dailyPlanId={dailyPlanId}
+            carryOverStatus={getTimeWindowCarryOverStatus?.(alloc.time_window.id)}
+            isCarryingOver={isCarryingOver}
           />
         </div>
       );

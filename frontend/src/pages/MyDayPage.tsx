@@ -711,6 +711,8 @@ const MyDayPage: React.FC = () => {
                   onAddTimeWindow={() => setIsTimeWindowModalOpen(true)}
                   dailyPlanId={dailyPlan.id}
                   isApproving={isApprovingPlan}
+                  getTimeWindowCarryOverStatus={getTimeWindowCarryOverStatus}
+                  isCarryingOver={isCarryingOver}
                 />
               </main>
             ) : (

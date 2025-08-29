@@ -101,6 +101,25 @@ export const updateDailyPlan = async (
         error.response.status
       );
     }
+        throw error;
+  }
+};
+
+export const approveDailyPlan = async (
+  dailyPlanId: string
+): Promise<PlanApprovalResponse> => {
+  try {
+    const response = await api.put<PlanApprovalResponse>(
+      API_ENDPOINTS.DAILY_PLAN_APPROVE(dailyPlanId)
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new ApiError(
+        error.response.data?.detail || "Failed to approve daily plan",
+        error.response.status
+      );
+    }
     throw error;
   }
 };

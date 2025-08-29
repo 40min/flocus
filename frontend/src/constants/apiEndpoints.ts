@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   DAILY_PLAN_BY_DATE: (planDate: string) => `/daily-plans/${planDate}`,
   DAILY_PLAN_BY_ID: (planId: string) => `/daily-plans/id/${planId}`,
   DAILY_PLAN_UPDATE_BY_ID: (planId: string) => `/daily-plans/${planId}`,
+  DAILY_PLAN_APPROVE: (planId: string) => `/daily-plans/${planId}/approve`,
   DAILY_PLAN_PREV_DAY: "/daily-plans/prev-day",
   DAILY_PLAN_TODAY: "/daily-plans/today",
   DAILY_PLAN_CARRY_OVER: "/daily-plans/carry-over-time-window",

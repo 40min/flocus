@@ -5,6 +5,7 @@ import {
   getPrevDayDailyPlan,
   carryOverTimeWindow,
   updateDailyPlan as updateDailyPlanService,
+  approveDailyPlan,
 } from "services/dailyPlanService";
 import type {
   CarryOverTimeWindowRequest,
@@ -67,6 +68,7 @@ export const useDailyPlanWithReview = () => {
     mutationFn: async (timeWindows: TimeWindowAllocation[]) => {
       if (!dailyPlan) throw new Error("No daily plan to approve");
 
+      // First update the plan with the current time windows
       const payload = {
         time_windows: timeWindows.map((alloc) => ({
           id: alloc.time_window.id.startsWith("temp-")
@@ -80,7 +82,11 @@ export const useDailyPlanWithReview = () => {
         })),
       };
 
-      return updateDailyPlanService(dailyPlan.id, payload);
+      // Update the plan first
+      await updateDailyPlanService(dailyPlan.id, payload);
+
+      // Then approve it to set the reviewed flag
+      return approveDailyPlan(dailyPlan.id);
     },
     onSuccess: (response) => {
       // Update query cache with approved plan

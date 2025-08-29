@@ -258,7 +258,7 @@ describe("useDailyPlanWithReview", () => {
     ];
 
     mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
-    mockedDailyPlanService.updateDailyPlan.mockResolvedValue(
+    mockedDailyPlanService.approveDailyPlan.mockResolvedValue(
       mockApprovalResponse
     );
 
@@ -272,20 +272,8 @@ describe("useDailyPlanWithReview", () => {
       await result.current.approvePlan(mockTimeWindows);
     });
 
-    expect(mockedDailyPlanService.updateDailyPlan).toHaveBeenCalledWith(
-      unreviewedPlan.id,
-      {
-        time_windows: [
-          {
-            id: "tw1",
-            description: "Work",
-            start_time: 540,
-            end_time: 600,
-            category_id: "cat1",
-            task_ids: [],
-          },
-        ],
-      }
+    expect(mockedDailyPlanService.approveDailyPlan).toHaveBeenCalledWith(
+      unreviewedPlan.id
     );
     expect(mockShowMessage).toHaveBeenCalledWith(
       "Plan approved successfully!",
@@ -302,7 +290,7 @@ describe("useDailyPlanWithReview", () => {
     };
 
     mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
-    mockedDailyPlanService.updateDailyPlan.mockResolvedValue(
+    mockedDailyPlanService.approveDailyPlan.mockResolvedValue(
       mockApprovalResponse
     );
 
@@ -330,7 +318,7 @@ describe("useDailyPlanWithReview", () => {
     };
 
     mockedDailyPlanService.getTodayDailyPlan.mockResolvedValue(unreviewedPlan);
-    mockedDailyPlanService.updateDailyPlan.mockRejectedValue(conflictError);
+    mockedDailyPlanService.approveDailyPlan.mockRejectedValue(conflictError);
 
     const { result } = renderHook(() => useDailyPlanWithReview(), { wrapper });
 

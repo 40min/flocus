@@ -26,7 +26,6 @@ jest.mock("../context/MessageContext", () => ({
 // Mock useDailyPlanWithReview
 const mockUseDailyPlanWithReview = {
   dailyPlan: null as DailyPlanResponse | null,
-  carryOverTimeWindow: jest.fn(),
   isCarryingOver: false,
 };
 
@@ -136,7 +135,6 @@ describe("useCarryOverIntegration", () => {
     jest.clearAllMocks();
     mockShowMessage.mockClear();
     mockUseDailyPlanWithReview.dailyPlan = null;
-    mockUseDailyPlanWithReview.carryOverTimeWindow.mockClear();
     mockUseDailyPlanWithReview.isCarryingOver = false;
 
     // Import the mocked functions
@@ -265,7 +263,7 @@ describe("useCarryOverIntegration", () => {
       resetForNewTask: mockResetForNewTask,
     });
 
-    mockUseDailyPlanWithReview.carryOverTimeWindow.mockResolvedValue(undefined);
+    dailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -283,10 +281,11 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).toHaveBeenCalled();
-    expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
-      "tw1",
-      tomorrowDate
-    );
+    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+      source_plan_id: mockDailyPlan.id,
+      time_window_id: "tw1",
+      target_date: tomorrowDate,
+    });
     expect(mockResetForNewTask).toHaveBeenCalled();
   });
 
@@ -306,7 +305,7 @@ describe("useCarryOverIntegration", () => {
       resetForNewTask: mockResetForNewTask,
     });
 
-    mockUseDailyPlanWithReview.carryOverTimeWindow.mockResolvedValue(undefined);
+    dailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -324,10 +323,11 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).not.toHaveBeenCalled();
-    expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
-      "tw1",
-      tomorrowDate
-    );
+    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+      source_plan_id: mockDailyPlan.id,
+      time_window_id: "tw1",
+      target_date: tomorrowDate,
+    });
     expect(mockResetForNewTask).not.toHaveBeenCalled();
   });
 
@@ -348,7 +348,7 @@ describe("useCarryOverIntegration", () => {
     });
 
     const error = new Error("Carry over failed");
-    mockUseDailyPlanWithReview.carryOverTimeWindow.mockRejectedValue(error);
+    dailyPlanService.carryOverTimeWindow.mockRejectedValue(error);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -363,10 +363,11 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).toHaveBeenCalled();
-    expect(mockUseDailyPlanWithReview.carryOverTimeWindow).toHaveBeenCalledWith(
-      "tw1",
-      tomorrowDate
-    );
+    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+      source_plan_id: mockDailyPlan.id,
+      time_window_id: "tw1",
+      target_date: tomorrowDate,
+    });
     // resetForNewTask should not be called on error
     expect(mockResetForNewTask).not.toHaveBeenCalled();
   });

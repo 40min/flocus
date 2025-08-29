@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTimerStore, useTimerCurrentTask, useTimerActions } from "stores/timerStore";
+import { useTimerCurrentTask, useTimerActions } from "stores/timerStore";
 import { useDailyPlanWithReview } from "./useDailyPlan";
 import type { Task } from "types/task";
-import type { TimeWindowAllocation } from "types/dailyPlan";
+import type { CarryOverTimeWindowRequest } from "types/dailyPlan";
+import { carryOverTimeWindow as carryOverTimeWindowService } from "services/dailyPlanService";
 
 /**
  * Hook for integrating carry-over workflow with existing task management
@@ -11,7 +12,7 @@ import type { TimeWindowAllocation } from "types/dailyPlan";
  */
 export const useCarryOverIntegration = () => {
   const queryClient = useQueryClient();
-  const { dailyPlan, carryOverTimeWindow, isCarryingOver } =
+  const { dailyPlan, isCarryingOver } =
     useDailyPlanWithReview();
 
   // Use stable selectors to prevent unnecessary re-renders
@@ -63,7 +64,17 @@ export const useCarryOverIntegration = () => {
 
       try {
         // Perform the carry over operation
-        await carryOverTimeWindow(timeWindowId, targetDate);
+        if (!dailyPlan) {
+           throw new Error("No daily plan available for carry over");
+         }
+
+         const request: CarryOverTimeWindowRequest = {
+           source_plan_id: dailyPlan.id,
+           time_window_id: timeWindowId,
+           target_date: targetDate,
+         };
+
+         await carryOverTimeWindowService(request);
 
         // If timer was affected, reset it for new task selection
         if (willAffectCurrentTask) {
@@ -88,7 +99,7 @@ export const useCarryOverIntegration = () => {
       isCurrentTaskInTimeWindow,
       getAffectedTasks,
       stopCurrentTask,
-      carryOverTimeWindow,
+      dailyPlan,
       resetForNewTask,
       queryClient,
     ]

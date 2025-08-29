@@ -6,6 +6,7 @@ import { DailyPlanResponse } from "../types/dailyPlan";
 import React from "react";
 // Mock dependencies
 jest.mock("../services/dailyPlanService");
+const mockedDailyPlanService = jest.mocked(dailyPlanService);
 
 jest.mock("../stores/timerStore", () => ({
   useTimerStore: jest.fn(),
@@ -263,7 +264,7 @@ describe("useCarryOverIntegration", () => {
       resetForNewTask: mockResetForNewTask,
     });
 
-    dailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
+    mockedDailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -281,7 +282,7 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).toHaveBeenCalled();
-    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+    expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
       time_window_id: "tw1",
       target_date: tomorrowDate,
@@ -305,7 +306,7 @@ describe("useCarryOverIntegration", () => {
       resetForNewTask: mockResetForNewTask,
     });
 
-    dailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
+    mockedDailyPlanService.carryOverTimeWindow.mockResolvedValue(mockDailyPlan);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -323,7 +324,7 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).not.toHaveBeenCalled();
-    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+    expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
       time_window_id: "tw1",
       target_date: tomorrowDate,
@@ -348,7 +349,7 @@ describe("useCarryOverIntegration", () => {
     });
 
     const error = new Error("Carry over failed");
-    dailyPlanService.carryOverTimeWindow.mockRejectedValue(error);
+    mockedDailyPlanService.carryOverTimeWindow.mockRejectedValue(error);
 
     const { result } = renderHook(() => useCarryOverIntegration(), {
       wrapper: createWrapper(),
@@ -363,7 +364,7 @@ describe("useCarryOverIntegration", () => {
     });
 
     expect(mockStopCurrentTask).toHaveBeenCalled();
-    expect(dailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
+    expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
       time_window_id: "tw1",
       target_date: tomorrowDate,

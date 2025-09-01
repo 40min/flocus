@@ -189,6 +189,7 @@ describe("timerStore", () => {
           pomodoro_long_timeout_minutes: 15,
           system_notifications_enabled: false,
           pomodoro_timer_sound: "default",
+          theme: 'summer',
         });
         result.current.setMode("work");
         result.current.setPomodorosCompleted(0);
@@ -218,6 +219,7 @@ describe("timerStore", () => {
           pomodoro_long_timeout_minutes: 15,
           system_notifications_enabled: false,
           pomodoro_timer_sound: "default",
+          theme: 'summer',
         });
         result.current.setMode("work");
         result.current.setCurrentTask("task1", "Test Task", "Test Description");
@@ -259,6 +261,7 @@ describe("timerStore", () => {
           pomodoro_long_timeout_minutes: 15,
           system_notifications_enabled: false,
           pomodoro_timer_sound: "default",
+          theme: 'summer',
         });
         result.current.setMode("work");
         result.current.setPomodorosCompleted(3); // 4th pomodoro
@@ -283,6 +286,7 @@ describe("timerStore", () => {
           pomodoro_long_timeout_minutes: 15,
           system_notifications_enabled: false,
           pomodoro_timer_sound: "default",
+          theme: 'summer',
         });
         result.current.setMode("shortBreak");
       });

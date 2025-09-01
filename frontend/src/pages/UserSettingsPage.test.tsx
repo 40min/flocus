@@ -36,6 +36,7 @@ const mockUser: User = {
     pomodoro_working_interval: 25,
     system_notifications_enabled: true,
     pomodoro_timer_sound: "none",
+    theme: 'summer',
   },
 };
 

@@ -12,6 +12,15 @@
  */
 @layer base {
   :root {
+    /* Summer Theme (Default) */
+    --background-image-url: url('/public/backgrounds/summer-1.jpg');
+    --color-background-default: #E6F5E6;
+    --color-background-card: #F0FFF0;
+    --color-text-default: #1F2937;
+    --color-text-secondary: #4B5563;
+    --color-border-default: #E5E7EB;
+
+    /* Shadcn/ui design tokens */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -32,6 +41,16 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+  }
+
+  /* Autumn Theme */
+  html.theme-autumn {
+    --background-image-url: url('/public/backgrounds/autumn.jpg');
+    --color-background-default: #FEFCE8;
+    --color-background-card: #FEF9C3;
+    --color-text-default: #422006;
+    --color-text-secondary: #78350F;
+    --color-border-default: #E7E5E4;
   }
 
   .dark {
@@ -72,7 +91,7 @@
     -moz-osx-font-smoothing: grayscale;
     background-color: #ffffff;
     color: #333333;
-    background-image: url('../../public/backgrounds/summer-1.jpg');
+    background-image: var(--background-image-url);
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;

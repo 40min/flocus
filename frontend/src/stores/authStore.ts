@@ -7,6 +7,7 @@ import { User } from "../types/user";
 interface AuthState {
   user: User | null;
   token: string | null;
+  theme: string;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (token: string) => Promise<void>;
@@ -14,6 +15,7 @@ interface AuthState {
   fetchUserData: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   setNavigate: (navigate: (path: string) => void) => void;
+  setTheme: (theme: string) => void;
 }
 
 // Global navigation function storage
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       (set, get) => ({
         user: null,
         token: null,
+        theme: 'summer',
         isAuthenticated: false,
         isLoading: true,
 
@@ -66,6 +69,10 @@ export const useAuthStore = create<AuthState>()(
           globalNavigate = navigate;
         },
 
+        setTheme: (theme: string) => {
+          set({ theme });
+        },
+
         fetchUserData: async () => {
           const { token } = get();
           if (!token) {
@@ -77,6 +84,7 @@ export const useAuthStore = create<AuthState>()(
             const userData = await getCurrentUser();
             set({
               user: userData,
+              theme: userData.preferences.theme || 'summer',
               isAuthenticated: true,
               isLoading: false,
             });
@@ -91,6 +99,7 @@ export const useAuthStore = create<AuthState>()(
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           token: state.token,
+          theme: state.theme,
           // Don't persist user data, it will be fetched on app load
         }),
       }

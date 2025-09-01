@@ -69,6 +69,7 @@ describe('AuthContext', () => {
         system_notifications_enabled: true,
         pomodoro_timer_sound: "none",
         pomodoro_long_timeout_minutes: 15,
+        theme: 'summer',
       },
     };
     // Mock getCurrentUser to simulate successful user fetch
@@ -109,6 +110,7 @@ describe('AuthContext', () => {
         system_notifications_enabled: true,
         pomodoro_long_timeout_minutes: 15,
         pomodoro_timer_sound: "none",
+        theme: 'summer',
       },
     };
     const getCurrentUserSpy = jest.spyOn(userService, 'getCurrentUser').mockResolvedValue(mockUser);
@@ -154,6 +156,7 @@ describe('AuthContext', () => {
         pomodoro_long_timeout_minutes: 15,
         system_notifications_enabled: true,
         pomodoro_timer_sound: "none",
+        theme: 'summer',
       },
     };
     localStorageMock.setItem('access_token', 'stored-token');

@@ -6,6 +6,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 import { User, UserUpdatePayload } from "../types/user";
 import { updateUser } from "../services/userService";
 import { ApiError } from "../errors/errors";
@@ -16,6 +17,7 @@ const preferencesSchema = z.object({
   pomodoro_working_interval: z.coerce.number(),
   system_notifications_enabled: z.boolean(),
   pomodoro_timer_sound: z.string(),
+  theme: z.string(),
 });
 
 const userSettingsSchema = z.object({
@@ -36,6 +38,7 @@ type UserSettingsFormInputs = z.infer<typeof userSettingsSchema>;
 
 const UserSettingsPage: React.FC = () => {
   const { user, login, token } = useAuth();
+  const { setTheme } = useTheme();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -63,6 +66,7 @@ const UserSettingsPage: React.FC = () => {
         pomodoro_long_timeout_minutes:
           user?.preferences?.pomodoro_long_timeout_minutes || 15,
         pomodoro_timer_sound: user?.preferences?.pomodoro_timer_sound || "none",
+        theme: user?.preferences?.theme || "summer",
       },
     },
   });
@@ -70,10 +74,14 @@ const UserSettingsPage: React.FC = () => {
 
   const updateUserMutation = useMutation<User, Error, UserUpdatePayload>({
     mutationFn: (payload: UserUpdatePayload) => updateUser(user!.id, payload),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setSuccessMessage("Settings saved successfully!");
       setValue("password", "");
       setHasUnsavedChanges(false);
+      // Apply the new theme immediately
+      if (data.preferences?.theme) {
+        setTheme(data.preferences.theme);
+      }
       if (token) await login(token);
       setTimeout(() => setSuccessMessage(null), 3000);
     },
@@ -111,6 +119,10 @@ const UserSettingsPage: React.FC = () => {
         setValue(
           "preferences.pomodoro_timer_sound",
           user.preferences.pomodoro_timer_sound || "none"
+        );
+        setValue(
+          "preferences.theme",
+          user.preferences.theme || "summer"
         );
       }
     } else {
@@ -377,6 +389,25 @@ const UserSettingsPage: React.FC = () => {
                   checked={watchedPreferences.system_notifications_enabled}
                 />
               </label>
+            </div>
+            <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
+              <div>
+                <h3 className="text-base font-medium text-gray-800">
+                  Theme
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Choose your preferred visual theme.
+                </p>
+              </div>
+              <Input
+                as="select"
+                className="h-11 text-sm w-40"
+                aria-label="Theme selection"
+                {...register("preferences.theme")}
+              >
+                <option value="summer">Summer</option>
+                <option value="autumn">Autumn</option>
+              </Input>
             </div>
           </div>
           <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">

@@ -26,16 +26,16 @@ module.exports = {
           dark: "#059669",
         },
         background: {
-          DEFAULT: "#E6F5E6", // A more noticeable light green for main page background
-          card: "#F0FFF0", // A slightly lighter, but still more noticeable green for component cards
+          DEFAULT: 'var(--color-background-default)',
+          card: 'var(--color-background-card)',
         },
         text: {
-          DEFAULT: "#1F2937", // Dark gray for main text
-          secondary: "#4B5563", // Slightly lighter gray for secondary text
+          DEFAULT: 'var(--color-text-default)',
+          secondary: 'var(--color-text-secondary)',
           light: "#6B7280", // Even lighter for less prominent text
         },
         border: {
-          DEFAULT: "#E5E7EB", // Light gray for borders
+          DEFAULT: 'var(--color-border-default)',
           dark: "#D1D5DB", // Slightly darker for hover/focus borders
         },
         "heading-main": "#1A1A1A",
@@ -75,6 +75,9 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+      },
+      backgroundImage: {
+        'theme-background': 'var(--background-image-url)',
       },
       borderRadius: {
         lg: "var(--radius)",

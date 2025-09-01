@@ -1,4 +1,5 @@
 import { useMenuState } from "./hooks/useMenuState";
+import { useTheme } from "./hooks/useTheme";
 import React, { useEffect } from "react";
 
 import { Route, Routes, Navigate, Outlet } from "react-router-dom";
@@ -42,6 +43,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 const AppLayout: React.FC = () => {
   const { isMenuOpen, toggleMenu } = useMenuState();
   const { logout } = useAuth();
+  // Ensure theme is applied on app load
+  useTheme();
 
   const handleLogout = () => {
     logout();

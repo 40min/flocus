@@ -20,6 +20,7 @@ class UserPreferencesSchema(BaseModel):
     pomodoro_working_interval: int
     system_notifications_enabled: bool
     pomodoro_timer_sound: str
+    theme: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,6 +42,7 @@ class UserPreferencesUpdateSchema(BaseModel):
     pomodoro_working_interval: Optional[int] = None
     system_notifications_enabled: Optional[bool] = None
     pomodoro_timer_sound: Optional[str] = None
+    theme: Optional[str] = None
 
 
 class UserUpdateRequest(BaseModel):

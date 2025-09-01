@@ -82,6 +82,7 @@ async def test_register_user_basic(async_client: AsyncClient, test_db):  # Added
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
     assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
+    assert resp.json()["preferences"]["theme"] == "summer"
     assert resp.json()["email"] == USER_DATA_BASIC["email"]
     assert resp.json()["username"] == USER_DATA_BASIC["username"]
 
@@ -109,6 +110,7 @@ async def test_get_current_user(async_client: AsyncClient, user_and_token):
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
     assert resp.json()["preferences"]["pomodoro_long_timeout_minutes"] == 15
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
+    assert resp.json()["preferences"]["theme"] == "summer"
     assert resp.json()["email"] == original_data["email"]
 
 
@@ -125,6 +127,7 @@ async def test_get_user_by_id(async_client: AsyncClient, user_and_token):
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 5
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 25
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
+    assert resp.json()["preferences"]["theme"] == "summer"
     assert resp.json()["email"] == original_data["email"]
 
 
@@ -140,6 +143,7 @@ async def test_update_user(async_client: AsyncClient, user_and_token):
             "pomodoro_long_timeout_minutes": 20,
             "pomodoro_working_interval": 30,
             "pomodoro_timer_sound": "bell.mp3",
+            "theme": "autumn",
         },
     }
     resp = await async_client.put(f"{settings.API_V1_STR}/users/{user_id}", json=update_data, headers=auth)
@@ -150,6 +154,7 @@ async def test_update_user(async_client: AsyncClient, user_and_token):
     assert resp.json()["preferences"]["pomodoro_timeout_minutes"] == 10
     assert resp.json()["preferences"]["pomodoro_working_interval"] == 30
     assert resp.json()["preferences"]["pomodoro_timer_sound"] == "bell.mp3"
+    assert resp.json()["preferences"]["theme"] == "autumn"
     # Check that non-updated preference field is untouched
     assert resp.json()["preferences"]["system_notifications_enabled"] is True
 
@@ -221,6 +226,7 @@ async def test_register_user_standalone(async_client, test_db):
     assert response_data["preferences"]["pomodoro_working_interval"] == 25
     assert response_data["preferences"]["system_notifications_enabled"] is True
     assert response_data["preferences"]["pomodoro_timer_sound"] == "none"
+    assert response_data["preferences"]["theme"] == "summer"
     assert "hashed_password" not in response_data
 
 

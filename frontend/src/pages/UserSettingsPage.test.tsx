@@ -36,6 +36,7 @@ const mockUser: User = {
     pomodoro_working_interval: 25,
     system_notifications_enabled: true,
     pomodoro_timer_sound: "none",
+    theme: 'summer',
   },
 };
 
@@ -47,6 +48,7 @@ const renderComponent = (user: User | null) => {
   mockUseAuthStore.mockReturnValue({
     user,
     token: user ? "test-token" : null,
+    theme: user?.preferences?.theme || 'summer',
     isAuthenticated: !!user,
     isLoading: false,
     login: mockLogin,
@@ -54,6 +56,7 @@ const renderComponent = (user: User | null) => {
     fetchUserData: jest.fn(),
     setLoading: jest.fn(),
     setNavigate: mockSetNavigate,
+    setTheme: jest.fn(),
   });
 
   return render(
@@ -147,6 +150,7 @@ describe("UserSettingsPage", () => {
           pomodoro_working_interval: 45,
           system_notifications_enabled: false,
           pomodoro_timer_sound: "ding.mp3",
+          theme: "summer",
         },
       });
     });
@@ -276,6 +280,7 @@ describe("UserSettingsPage", () => {
           pomodoro_working_interval: 60,
           system_notifications_enabled: true,
           pomodoro_timer_sound: "none",
+          theme: "summer",
         },
       });
     });
@@ -316,5 +321,53 @@ describe("UserSettingsPage", () => {
       screen.queryByText("Settings saved successfully!")
     ).not.toBeInTheDocument();
     jest.useRealTimers();
+  });
+
+  it("renders theme selector with current theme selected", () => {
+    renderComponent(mockUser);
+    const themeSelector = screen.getByRole("combobox", { name: "Theme selection" });
+    expect(themeSelector).toHaveValue("summer");
+    expect(themeSelector).toBeInTheDocument();
+  });
+
+  it("allows changing theme and includes it in form submission", async () => {
+    mockedUpdateUser.mockResolvedValue({
+      ...mockUser,
+      preferences: { ...mockUser.preferences, theme: "autumn" }
+    });
+    renderComponent(mockUser);
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole("combobox", { name: "Theme selection" }), {
+        target: { value: "autumn" },
+      });
+    });
+
+    // Wait for the button to be enabled
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "Save" })[0]
+      ).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Save" })[0]);
+    });
+
+    await waitFor(() => {
+      expect(mockedUpdateUser).toHaveBeenCalledWith("user1", {
+        email: "test@example.com",
+        first_name: "Test",
+        last_name: "User",
+        preferences: {
+          pomodoro_timeout_minutes: 5,
+          pomodoro_long_timeout_minutes: 15,
+          pomodoro_working_interval: 25,
+          system_notifications_enabled: true,
+          pomodoro_timer_sound: "none",
+          theme: "autumn",
+        },
+      });
+    });
   });
 });

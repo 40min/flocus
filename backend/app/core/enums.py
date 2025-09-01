@@ -1,6 +1,18 @@
 from enum import Enum
 
 
+class ThemeEnum(str, Enum):
+    """
+    Defines the available UI themes for users.
+    """
+
+    SUMMER = "summer"
+    AUTUMN = "autumn"
+
+    def __str__(self):
+        return self.value
+
+
 class LLMActionType(str, Enum):
     """
     Defines the types of actions that can be performed by the LLM service

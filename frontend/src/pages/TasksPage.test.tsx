@@ -63,6 +63,7 @@ const mockUser: User = {
     system_notifications_enabled: true,
     pomodoro_working_interval: 25,
     pomodoro_timer_sound: "bell.mp3",
+    theme: 'summer',
   },
 };
 const mockAuthContextValue: AuthContextType = {

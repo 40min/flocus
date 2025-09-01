@@ -141,6 +141,7 @@ const defaultMockUser = {
     system_notifications_enabled: true,
     pomodoro_long_timeout_minutes: 15,
     pomodoro_timer_sound: "none",
+    theme: 'summer',
   },
 };
 
@@ -219,6 +220,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };
@@ -253,6 +255,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };
@@ -293,6 +296,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };
@@ -386,6 +390,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };
@@ -417,6 +422,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };
@@ -441,6 +447,7 @@ describe("SharedTimerContext", () => {
         preferences: {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "bell.mp3",
+          theme: 'summer',
         },
       },
     };
@@ -496,6 +503,7 @@ describe("SharedTimerContext", () => {
           ...defaultMockUser.preferences,
           pomodoro_timer_sound: "none",
           system_notifications_enabled: false,
+          theme: 'summer',
         },
       },
     };

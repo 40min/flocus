@@ -99,7 +99,8 @@ describe('authService', () => {
         pomodoro_long_timeout_minutes: 15,
         system_notifications_enabled: true,
         pomodoro_working_interval: 25,
-        pomodoro_timer_sound: 'none'
+        pomodoro_timer_sound: 'none',
+        theme: 'summer'
       },
     };
 

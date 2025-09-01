@@ -45,6 +45,7 @@ describe("AuthStore", () => {
     useAuthStore.setState({
       user: null,
       token: null,
+      theme: 'summer',
       isAuthenticated: false,
       isLoading: true,
     });
@@ -69,6 +70,7 @@ describe("AuthStore", () => {
           pomodoro_working_interval: 4,
           system_notifications_enabled: true,
           pomodoro_timer_sound: "ding",
+          theme: "summer",
         },
       };
 
@@ -115,6 +117,7 @@ describe("AuthStore", () => {
         useAuthStore.setState({
           user: { id: "1" } as any,
           token: "test-token",
+          theme: 'summer',
           isAuthenticated: true,
           isLoading: false,
         });
@@ -149,6 +152,7 @@ describe("AuthStore", () => {
           pomodoro_working_interval: 4,
           system_notifications_enabled: true,
           pomodoro_timer_sound: "ding",
+          theme: "summer",
         },
       };
 
@@ -196,6 +200,7 @@ describe("AuthStore", () => {
           pomodoro_working_interval: 4,
           system_notifications_enabled: true,
           pomodoro_timer_sound: "ding",
+          theme: "summer",
         },
       };
 

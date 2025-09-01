@@ -27,6 +27,7 @@ describe("useAuth hook", () => {
     mockUseAuthStore.mockReturnValue({
       user: null,
       token: null,
+      theme: 'summer',
       isAuthenticated: false,
       isLoading: false,
       login: mockLogin,
@@ -34,6 +35,7 @@ describe("useAuth hook", () => {
       fetchUserData: jest.fn(),
       setLoading: jest.fn(),
       setNavigate: mockSetNavigate,
+      setTheme: jest.fn(),
     });
   });
 
@@ -77,12 +79,14 @@ describe("useAuth hook", () => {
         pomodoro_working_interval: 4,
         system_notifications_enabled: true,
         pomodoro_timer_sound: "ding",
+        theme: "summer",
       },
     };
 
     mockUseAuthStore.mockReturnValue({
       user: mockUser,
       token: "test-token",
+      theme: 'summer',
       isAuthenticated: true,
       isLoading: false,
       login: mockLogin,
@@ -90,6 +94,7 @@ describe("useAuth hook", () => {
       fetchUserData: jest.fn(),
       setLoading: jest.fn(),
       setNavigate: mockSetNavigate,
+      setTheme: jest.fn(),
     });
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (

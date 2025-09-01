@@ -185,4 +185,160 @@ describe("ConflictResolutionPanel", () => {
     // Check category conflict styling (red)
     expect(screen.getByText("Category Conflict")).toBeInTheDocument();
   });
+  it("handles multiple conflicts with different types", () => {
+    const multipleConflicts = [
+      {
+        timeWindowIds: ["tw1", "tw2"],
+        message: "Time windows overlap from 9:30 AM to 10:00 AM",
+        type: "overlap" as const,
+      },
+      {
+        timeWindowIds: ["tw1", "tw2"],
+        message: "Different categories scheduled at the same time",
+        type: "category_conflict" as const,
+      },
+    ];
+
+    render(
+      <ConflictResolutionPanel {...mockProps} conflicts={multipleConflicts} />
+    );
+
+    expect(screen.getByText("Scheduling Conflicts (2)")).toBeInTheDocument();
+    expect(screen.getByText("Time Window Overlap")).toBeInTheDocument();
+    expect(screen.getByText("Category Conflict")).toBeInTheDocument();
+  });
+
+  it("displays correct task count for multiple tasks", () => {
+    const timeWindowsWithMultipleTasks = [
+      ...mockTimeWindows,
+      {
+        ...mockTimeWindows[0],
+        time_window: {
+          ...mockTimeWindows[0].time_window,
+          id: "tw3",
+        },
+        tasks: [
+          {
+            id: "task2",
+            title: "Another task",
+            description: "Another task description",
+            status: "pending" as const,
+            priority: "high" as const,
+            category_id: "cat1",
+            user_id: "user1",
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+            is_deleted: false,
+          },
+          {
+            id: "task3",
+            title: "Third task",
+            description: "Third task description",
+            status: "in_progress" as const,
+            priority: "medium" as const,
+            category_id: "cat1",
+            user_id: "user1",
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+            is_deleted: false,
+          },
+        ],
+      },
+    ];
+
+    const conflictsWithThirdWindow = [
+      {
+        timeWindowIds: ["tw1", "tw2", "tw3"],
+        message: "Time windows overlap from 9:30 AM to 10:00 AM",
+        type: "overlap" as const,
+      },
+    ];
+
+    render(
+      <ConflictResolutionPanel
+        {...mockProps}
+        timeWindows={timeWindowsWithMultipleTasks}
+        conflicts={conflictsWithThirdWindow}
+      />
+    );
+
+    // Check that the first time window shows "1 task"
+    expect(screen.getByText("1 task")).toBeInTheDocument();
+    // Check that the third time window shows "2 tasks"
+    expect(screen.getByText("2 tasks")).toBeInTheDocument();
+  });
+
+  it("shows resolution guidance text", () => {
+    render(<ConflictResolutionPanel {...mockProps} />);
+
+    expect(screen.getByText("How to resolve conflicts:")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Use the edit \(✏️\) or delete \(🗑️\) buttons/)
+    ).toBeInTheDocument();
+  });
+
+  it("handles conflicts with non-existent time window IDs gracefully", () => {
+    const conflictsWithInvalidIds = [
+      {
+        timeWindowIds: ["tw1", "invalid_id"],
+        message: "Time windows overlap",
+        type: "overlap" as const,
+      },
+    ];
+
+    render(
+      <ConflictResolutionPanel
+        {...mockProps}
+        conflicts={conflictsWithInvalidIds}
+      />
+    );
+
+    // Should still render the conflict but only show valid time windows
+    expect(screen.getByText("Scheduling Conflicts (1)")).toBeInTheDocument();
+    expect(screen.getByText("Morning Work")).toBeInTheDocument();
+    // Should not crash or show undefined elements
+  });
+
+  it("displays category colors correctly", () => {
+    render(<ConflictResolutionPanel {...mockProps} />);
+
+    // Check that category color indicators are present
+    const colorIndicators = document.querySelectorAll('[style*="background-color"]');
+    expect(colorIndicators.length).toBeGreaterThan(0);
+  });
+
+  it("shows merge suggestion for overlap conflicts", () => {
+    render(<ConflictResolutionPanel {...mockProps} />);
+
+    expect(
+      screen.getByText(/Merge the time windows if they serve the same purpose/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows delete suggestion for category conflicts", () => {
+    const categoryConflicts = [
+      {
+        timeWindowIds: ["tw1", "tw2"],
+        message: "Different categories scheduled at the same time",
+        type: "category_conflict" as const,
+      },
+    ];
+
+    render(
+      <ConflictResolutionPanel {...mockProps} conflicts={categoryConflicts} />
+    );
+
+    expect(
+      screen.getByText(/Delete one of the conflicting time windows/)
+    ).toBeInTheDocument();
+  });
+
+  it("applies custom className when provided", () => {
+    const customClass = "custom-test-class";
+    const { container } = render(
+      <ConflictResolutionPanel {...mockProps} className={customClass} />
+    );
+
+    expect(container.firstChild).toHaveClass(customClass);
+  });
 });

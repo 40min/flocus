@@ -201,4 +201,158 @@ describe("TimeWindowBalloon", () => {
     fireEvent.click(unassignButton);
     expect(onUnassignTaskMock).toHaveBeenCalledWith("task1");
   });
+
+  describe("Carry-over functionality", () => {
+    const mockCarryOverStatus = {
+      canCarryOver: true,
+      taskCount: 2,
+      hasActiveTimer: false,
+      affectedTasks: mockTasks,
+    };
+
+    const mockCarryOverStatusWithTimer = {
+      canCarryOver: true,
+      taskCount: 1,
+      hasActiveTimer: true,
+      affectedTasks: [mockTasks[0]],
+    };
+
+    const mockCarryOverStatusCannotCarry = {
+      canCarryOver: false,
+      taskCount: 0,
+      hasActiveTimer: false,
+      affectedTasks: [],
+    };
+
+    it("shows carry-over button when carryOverStatus.canCarryOver is true", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={mockCarryOverStatus}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Then check if the carry-over button is visible
+      expect(screen.getByText("Carry Over (2 tasks)")).toBeInTheDocument();
+    });
+
+    it("does not show carry-over button when carryOverStatus.canCarryOver is false", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={mockCarryOverStatusCannotCarry}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Then check if the carry-over button is not visible
+      expect(screen.queryByText(/Carry Over/)).not.toBeInTheDocument();
+    });
+
+    it("shows timer indicator when carryOverStatus.hasActiveTimer is true", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={mockCarryOverStatusWithTimer}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Check for timer indicator (⏱)
+      expect(screen.getByText("⏱")).toBeInTheDocument();
+    });
+
+    it("opens DateSelectionModal when carry-over button is clicked", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={mockCarryOverStatus}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Then click the carry-over button
+      const carryOverButton = screen.getByText("Carry Over (2 tasks)");
+      fireEvent.click(carryOverButton);
+
+      // Check if DateSelectionModal is opened
+      expect(screen.getByText("Carry Over Time Window")).toBeInTheDocument();
+    });
+
+    it("shows correct task count in carry-over button", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={{ ...mockCarryOverStatus, taskCount: 1 }}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Check for singular form
+      expect(screen.getByText("Carry Over (1 task)")).toBeInTheDocument();
+    });
+
+    it("disables carry-over button when isCarryingOver is true", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          dailyPlanId="plan1"
+          carryOverStatus={mockCarryOverStatus}
+          isCarryingOver={true}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Check if the carry-over button is disabled
+      const carryOverButton = screen.getByText("Carry Over (2 tasks)");
+      expect(carryOverButton).toBeDisabled();
+    });
+
+    it("does not show carry-over button when dailyPlanId is not provided", () => {
+      renderWithClient(
+        <TimeWindowBalloon
+          timeWindow={mockTimeWindow}
+          tasks={mockTasks}
+          carryOverStatus={mockCarryOverStatus}
+        />
+      );
+
+      // First click the actions menu button to open the dropdown
+      const actionsButton = screen.getByLabelText("Time window actions");
+      fireEvent.click(actionsButton);
+
+      // Then check if the carry-over button is not visible
+      expect(screen.queryByText(/Carry Over/)).not.toBeInTheDocument();
+    });
+  });
 });

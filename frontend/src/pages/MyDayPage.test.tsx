@@ -43,7 +43,10 @@ jest.mock("hooks/useCarryOverIntegration", () => ({
 }));
 
 const mockUseTimer = useTimer as jest.MockedFunction<typeof useTimer>;
-const mockUseCarryOverIntegration = useCarryOverIntegration as jest.MockedFunction<typeof useCarryOverIntegration>;
+const mockUseCarryOverIntegration =
+  useCarryOverIntegration as jest.MockedFunction<
+    typeof useCarryOverIntegration
+  >;
 jest.mock("components/modals/TimeWindowModal", () => ({
   __esModule: true,
   default: ({ isOpen, editingTimeWindow }: any) =>
@@ -823,7 +826,9 @@ describe("MyDayPage", () => {
 
       // Mock useDailyPlanWithReview to return the daily plan with multiple time windows
       mockUseDailyPlanWithReview.mockReturnValue({
-        dailyPlan: JSON.parse(JSON.stringify(mockDailyPlanWithMultipleTimeWindows)),
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
         isLoading: false,
         needsReview: false,
         reviewMode: "approved",
@@ -1329,7 +1334,7 @@ describe("MyDayPage", () => {
         data: JSON.parse(JSON.stringify(dailyPlanNoGaps)),
         isLoading: false,
       });
-// Mock useDailyPlanWithReview to return the daily plan with no gaps
+      // Mock useDailyPlanWithReview to return the daily plan with no gaps
       mockUseDailyPlanWithReview.mockReturnValue({
         dailyPlan: JSON.parse(JSON.stringify(dailyPlanNoGaps)),
         isLoading: false,
@@ -1388,6 +1393,208 @@ describe("MyDayPage", () => {
         expect(screen.getByText("Morning work")).toBeInTheDocument();
         expect(screen.getByText("Lunch break")).toBeInTheDocument();
         expect(screen.getByText("Afternoon work")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Review Mode functionality", () => {
+    beforeEach(() => {
+      // Mock useDailyPlanWithReview to return review mode
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: true,
+        reviewMode: "needs-review",
+        approvePlan: jest.fn(),
+        isApprovingPlan: false,
+      });
+
+      mockedUseTodayDailyPlan.mockReturnValue({
+        data: JSON.parse(JSON.stringify(mockDailyPlanWithMultipleTimeWindows)),
+        isLoading: false,
+      });
+      mockedUsePrevDayDailyPlan.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      mockedUseTemplates.mockReturnValue({ data: [], isLoading: false });
+    });
+
+    it("renders PlanReviewMode when reviewMode is 'needs-review'", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan Review Required")).toBeInTheDocument();
+        expect(
+          screen.getByText("Review and approve your plan")
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("shows 'Plan requires review' indicator when needsReview is true", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan requires review")).toBeInTheDocument();
+      });
+    });
+
+    it("renders standard daily plan view when reviewMode is 'approved'", async () => {
+      // Mock useDailyPlanWithReview to return approved mode
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: false,
+        reviewMode: "approved",
+        approvePlan: jest.fn(),
+        isApprovingPlan: false,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan your perfect day")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Add Time Window" })
+        ).toBeInTheDocument();
+      });
+
+      // Should not show review mode elements
+      expect(
+        screen.queryByText("Plan Review Required")
+      ).not.toBeInTheDocument();
+    });
+
+    it("calls approvePlan when approve button is clicked in review mode", async () => {
+      const mockApprovePlan = jest.fn();
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: true,
+        reviewMode: "needs-review",
+        approvePlan: mockApprovePlan,
+        isApprovingPlan: false,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan Review Required")).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getByRole("button", {
+        name: "Approve Plan",
+      });
+      fireEvent.click(approveButton);
+
+      expect(mockApprovePlan).toHaveBeenCalledWith([
+        expect.objectContaining({
+          time_window: expect.objectContaining({ id: "tw1" }),
+        }),
+        expect.objectContaining({
+          time_window: expect.objectContaining({ id: "tw2" }),
+        }),
+        expect.objectContaining({
+          time_window: expect.objectContaining({ id: "tw3" }),
+        }),
+      ]);
+    });
+
+    it("shows approval loading state when isApprovingPlan is true", async () => {
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: true,
+        reviewMode: "needs-review",
+        approvePlan: jest.fn(),
+        isApprovingPlan: true,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Approving...")).toBeInTheDocument();
+      });
+    });
+
+    it("updates local state after successful plan approval", async () => {
+      const mockApprovePlan = jest.fn().mockResolvedValue({
+        plan: {
+          ...mockDailyPlanWithMultipleTimeWindows,
+          reviewed: true,
+        },
+      });
+
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: true,
+        reviewMode: "needs-review",
+        approvePlan: mockApprovePlan,
+        isApprovingPlan: false,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan Review Required")).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getByRole("button", {
+        name: "Approve Plan",
+      });
+      fireEvent.click(approveButton);
+
+      await waitFor(() => {
+        expect(mockApprovePlan).toHaveBeenCalled();
+      });
+    });
+
+    it("handles approval errors gracefully", async () => {
+      const mockApprovePlan = jest
+        .fn()
+        .mockRejectedValue(new Error("Approval failed"));
+      const mockShowMessage = jest.fn();
+
+      // Mock useMessage to capture error messages
+      (useMessage as jest.Mock).mockReturnValue({
+        showMessage: mockShowMessage,
+      });
+
+      mockUseDailyPlanWithReview.mockReturnValue({
+        dailyPlan: JSON.parse(
+          JSON.stringify(mockDailyPlanWithMultipleTimeWindows)
+        ),
+        isLoading: false,
+        needsReview: true,
+        reviewMode: "needs-review",
+        approvePlan: mockApprovePlan,
+        isApprovingPlan: false,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan Review Required")).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getByRole("button", {
+        name: "Approve Plan",
+      });
+      fireEvent.click(approveButton);
+
+      await waitFor(() => {
+        expect(mockApprovePlan).toHaveBeenCalled();
       });
     });
   });

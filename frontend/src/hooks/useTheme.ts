@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import { updateUser } from '../services/userService';
 
 export const useTheme = () => {
-  const { user, theme, setTheme } = useAuthStore();
+  const { user, theme, setTheme: setThemeInStore } = useAuthStore();
 
   useEffect(() => {
     const htmlElement = document.documentElement;
@@ -19,13 +19,13 @@ export const useTheme = () => {
 
     try {
       // Update local state immediately for instant UI feedback
-      setTheme(newTheme);
+      setThemeInStore(newTheme);
       // Update backend
       await updateUser(user.id, { preferences: { theme: newTheme } });
     } catch (error) {
       console.error('Failed to update theme:', error);
       // Revert on error
-      setTheme(theme);
+      setThemeInStore(theme);
     }
   };
 

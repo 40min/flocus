@@ -149,20 +149,20 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
       }
 
       try {
-        // Generate stable identifier that matches backend expectation
-        const stableId = `${category.id}_${start_time}_${end_time}`;
-
         if (onCarryOver) {
-          await onCarryOver(stableId, targetDate);
+          // Pass the original time window ID, let the integration hook handle the stable ID generation
+          await onCarryOver(id, targetDate);
         } else {
           // Fallback to direct API call if no handler provided
+          // Generate stable identifier that matches backend expectation
+          const stableId = `${category.id}_${start_time}_${end_time}`;
           await carryOverTimeWindow({
             source_plan_id: dailyPlanId,
             time_window_id: stableId,
             target_date: targetDate,
           });
+          showMessage("Time window carried over successfully!", "success");
         }
-        showMessage("Time window carried over successfully!", "success");
       } catch (error) {
         console.error("Failed to carry over time window:", error);
         showMessage("Failed to carry over time window", "error");

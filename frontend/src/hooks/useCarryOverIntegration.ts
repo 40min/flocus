@@ -53,6 +53,22 @@ export const useCarryOverIntegration = () => {
   // Enhanced carry over function that handles timer state
   const handleCarryOverWithTimerIntegration = useCallback(
     async (timeWindowId: string, targetDate: string) => {
+      if (!dailyPlan) {
+        throw new Error("No daily plan available for carry over");
+      }
+
+      // Find the time window by actual ID
+      const timeWindow = dailyPlan.time_windows.find(
+        (tw) => tw.time_window.id === timeWindowId
+      );
+
+      if (!timeWindow) {
+        throw new Error("Time window not found for carry over");
+      }
+
+      // Generate stable identifier that matches backend expectation
+      const stableTimeWindowId = `${timeWindow.time_window.category.id}_${timeWindow.time_window.start_time}_${timeWindow.time_window.end_time}`;
+
       // Check if current timer task is in the time window being carried over
       const willAffectCurrentTask = isCurrentTaskInTimeWindow(timeWindowId);
       const affectedTasks = getAffectedTasks(timeWindowId);
@@ -63,26 +79,21 @@ export const useCarryOverIntegration = () => {
       }
 
       try {
-        // Perform the carry over operation
-        if (!dailyPlan) {
-           throw new Error("No daily plan available for carry over");
-         }
+        const request: CarryOverTimeWindowRequest = {
+          source_plan_id: dailyPlan.id,
+          time_window_id: stableTimeWindowId, // Use stable ID format
+          target_date: targetDate,
+        };
 
-         const request: CarryOverTimeWindowRequest = {
-           source_plan_id: dailyPlan.id,
-           time_window_id: timeWindowId,
-           target_date: targetDate,
-         };
+        const updatedSourcePlan = await carryOverTimeWindowService(request);
 
-         await carryOverTimeWindowService(request);
+        // Update the cache directly with the updated source plan to prevent refetch issues
+        queryClient.setQueryData(["dailyPlan", "today"], updatedSourcePlan);
 
         // If timer was affected, reset it for new task selection
         if (willAffectCurrentTask) {
           await resetForNewTask();
         }
-
-        // Note: dailyPlan query is already updated by the carryOverTimeWindow mutation
-        // No need to invalidate other queries here to prevent potential loops
 
         return {
           success: true,

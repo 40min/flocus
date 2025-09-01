@@ -284,7 +284,7 @@ describe("useCarryOverIntegration", () => {
     expect(mockStopCurrentTask).toHaveBeenCalled();
     expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
-      time_window_id: "tw1",
+      time_window_id: "cat1_540_600",
       target_date: tomorrowDate,
     });
     expect(mockResetForNewTask).toHaveBeenCalled();
@@ -326,7 +326,7 @@ describe("useCarryOverIntegration", () => {
     expect(mockStopCurrentTask).not.toHaveBeenCalled();
     expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
-      time_window_id: "tw1",
+      time_window_id: "cat1_540_600",
       target_date: tomorrowDate,
     });
     expect(mockResetForNewTask).not.toHaveBeenCalled();
@@ -366,7 +366,7 @@ describe("useCarryOverIntegration", () => {
     expect(mockStopCurrentTask).toHaveBeenCalled();
     expect(mockedDailyPlanService.carryOverTimeWindow).toHaveBeenCalledWith({
       source_plan_id: mockDailyPlan.id,
-      time_window_id: "tw1",
+      time_window_id: "cat1_540_600",
       target_date: tomorrowDate,
     });
     // resetForNewTask should not be called on error

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
   createDailyPlan,
   updateDailyPlan as updateDailyPlanService,
-  carryOverTimeWindow,
 } from "../services/dailyPlanService";
 import type {
   DailyPlanResponse,
@@ -47,7 +46,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  useTodayDailyPlan,
   usePrevDayDailyPlan,
   useDailyPlanWithReview,
 } from "../hooks/useDailyPlan";
@@ -449,6 +447,14 @@ const MyDayPage: React.FC = () => {
         timeWindowId,
         targetDate
       );
+
+      // Remove the carried-over time window from local state immediately
+      setLocalTimeWindows((currentWindows) => {
+        const updatedWindows = currentWindows.filter(
+          (alloc) => alloc.time_window.id !== timeWindowId
+        );
+        return updatedWindows;
+      });
 
       // Show enhanced success message with details
       let message = "Time window carried over successfully!";

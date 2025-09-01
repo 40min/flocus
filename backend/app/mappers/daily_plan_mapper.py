@@ -64,6 +64,7 @@ class DailyPlanMapper:
             plan_date=daily_plan_model.plan_date,
             self_reflection=self_reflection,
             time_windows=populated_time_window_responses,
+            reviewed=daily_plan_model.reviewed,
         )
 
     @staticmethod

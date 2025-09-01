@@ -45,22 +45,43 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useTodayDailyPlan, usePrevDayDailyPlan } from "../hooks/useDailyPlan";
+import {
+  usePrevDayDailyPlan,
+  useDailyPlanWithReview,
+} from "../hooks/useDailyPlan";
+import { useCarryOverIntegration } from "../hooks/useCarryOverIntegration";
 import { useTemplates } from "../hooks/useTemplates";
 import { useCategories } from "../hooks/useCategories";
 import { useTimer } from "../hooks/useTimer";
 import SelfReflectionComponent from "components/SelfReflectionComponent";
 import GapIndicator from "../components/GapIndicator";
+import PlanReviewMode from "../components/PlanReviewMode";
 
 const MyDayPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showMessage } = useMessage();
   const { stopCurrentTask, currentTaskId } = useTimer();
 
-  const { data: fetchedDailyPlan, isLoading: isLoadingTodayPlan } =
-    useTodayDailyPlan();
+  // Enhanced daily plan management with review state
+  const {
+    dailyPlan: fetchedDailyPlan,
+    isLoading: isLoadingTodayPlan,
+    needsReview,
+    reviewMode,
+    approvePlan,
+    isApprovingPlan: isApprovingPlanFromHook,
+  } = useDailyPlanWithReview();
+
   const { data: prevDayPlan, isLoading: isLoadingPrevDayPlan } =
     usePrevDayDailyPlan(!isLoadingTodayPlan && !fetchedDailyPlan);
+
+  // Enhanced carry-over integration
+  const {
+    carryOverWithTimerIntegration,
+    validateCarryOver,
+    getTimeWindowCarryOverStatus,
+    isCarryingOver,
+  } = useCarryOverIntegration();
   const { data: dayTemplates = [] } = useTemplates();
   const { data: categories = [] } = useCategories();
   const { data: dailyStats } = useDailyStats();
@@ -82,6 +103,11 @@ const MyDayPage: React.FC = () => {
   const [prevDayReflection, setPrevDayReflection] =
     useState<SelfReflection | null>(null);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [planConflicts, setPlanConflicts] = useState<any[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Use the approving state from the enhanced hook
+  const isApprovingPlan = isApprovingPlanFromHook;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -138,18 +164,40 @@ const MyDayPage: React.FC = () => {
     },
   });
 
+  // Initialize daily plan data only once or when the plan ID changes
   useEffect(() => {
-    if (fetchedDailyPlan) {
+    if (fetchedDailyPlan && !isInitialized) {
       const sortedTimeWindows = [...fetchedDailyPlan.time_windows].sort(
         (a, b) => a.time_window.start_time - b.time_window.start_time
       );
       setDailyPlan({ ...fetchedDailyPlan, time_windows: sortedTimeWindows });
       setLocalTimeWindows(sortedTimeWindows);
-    } else {
+      setIsInitialized(true);
+    } else if (!fetchedDailyPlan && isInitialized) {
       setDailyPlan(null);
       setLocalTimeWindows([]);
+      setIsInitialized(false);
     }
-  }, [fetchedDailyPlan]);
+  }, [fetchedDailyPlan, isInitialized]);
+
+  // Update local state when fetched data changes significantly (different plan or review status)
+  useEffect(() => {
+    if (fetchedDailyPlan && dailyPlan && isInitialized) {
+      const fetchedId = fetchedDailyPlan.id;
+      const currentId = dailyPlan.id;
+      const fetchedReviewed = fetchedDailyPlan.reviewed;
+      const currentReviewed = dailyPlan.reviewed;
+
+      // Only update if the plan ID changed or review status changed
+      if (fetchedId !== currentId || fetchedReviewed !== currentReviewed) {
+        const sortedTimeWindows = [...fetchedDailyPlan.time_windows].sort(
+          (a, b) => a.time_window.start_time - b.time_window.start_time
+        );
+        setDailyPlan({ ...fetchedDailyPlan, time_windows: sortedTimeWindows });
+        setLocalTimeWindows(sortedTimeWindows);
+      }
+    }
+  }, [fetchedDailyPlan, dailyPlan, isInitialized]);
 
   useEffect(() => {
     const shouldShowReview = !!(
@@ -171,12 +219,12 @@ const MyDayPage: React.FC = () => {
       }
 
       saveTimeoutRef.current = setTimeout(() => {
-        if (dailyPlan) {
+        if (dailyPlan && isInitialized) {
           updatePlanMutation.mutate(timeWindows);
         }
       }, 300); // 300ms debounce
     },
-    [dailyPlan, updatePlanMutation]
+    [dailyPlan, updatePlanMutation, isInitialized]
   );
 
   // Cleanup timeout on unmount
@@ -203,8 +251,10 @@ const MyDayPage: React.FC = () => {
         return alloc;
       });
 
-      // Auto-save the changes with debounce
-      debouncedSave(updatedWindows);
+      // Auto-save the changes with debounce only if initialized
+      if (isInitialized) {
+        debouncedSave(updatedWindows);
+      }
 
       return updatedWindows;
     });
@@ -225,8 +275,10 @@ const MyDayPage: React.FC = () => {
         return alloc;
       });
 
-      // Auto-save the changes with debounce
-      debouncedSave(updatedWindows);
+      // Auto-save the changes with debounce only if initialized
+      if (isInitialized) {
+        debouncedSave(updatedWindows);
+      }
 
       return updatedWindows;
     });
@@ -272,8 +324,10 @@ const MyDayPage: React.FC = () => {
     const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
     setLocalTimeWindows(recalculatedWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(recalculatedWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(recalculatedWindows);
+    }
   };
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
@@ -292,8 +346,10 @@ const MyDayPage: React.FC = () => {
     const recalculatedWindows = recalculateTimeWindows(updatedTimeWindows);
     setLocalTimeWindows(recalculatedWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(recalculatedWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(recalculatedWindows);
+    }
   };
 
   const handleOpenEditModal = (allocation: TimeWindowAllocation) => {
@@ -331,8 +387,10 @@ const MyDayPage: React.FC = () => {
 
     setLocalTimeWindows(updatedTimeWindows);
 
-    // Auto-save the changes with debounce
-    debouncedSave(updatedTimeWindows);
+    // Auto-save the changes with debounce only if initialized
+    if (isInitialized) {
+      debouncedSave(updatedTimeWindows);
+    }
   };
 
   const savePrevDayReflection = async (reflection: SelfReflection) => {
@@ -367,6 +425,86 @@ const MyDayPage: React.FC = () => {
       await savePrevDayReflection(prevDayReflection);
       setShowYesterdayReview(false);
       setIsTemplateModalOpen(true);
+    }
+  };
+
+  const handleCarryOverTimeWindow = async (
+    timeWindowId: string,
+    targetDate: string
+  ) => {
+    // Validate the carry-over operation first
+    const validation = validateCarryOver(timeWindowId, targetDate);
+    if (!validation.valid) {
+      showMessage(
+        validation.reason || "Cannot carry over time window",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      const result = await carryOverWithTimerIntegration(
+        timeWindowId,
+        targetDate
+      );
+
+      // Remove the carried-over time window from local state immediately
+      setLocalTimeWindows((currentWindows) => {
+        const updatedWindows = currentWindows.filter(
+          (alloc) => alloc.time_window.id !== timeWindowId
+        );
+        return updatedWindows;
+      });
+
+      // Show enhanced success message with details
+      let message = "Time window carried over successfully!";
+      if (result.timerWasReset) {
+        message += " Timer was stopped as the active task was moved.";
+      }
+      if (result.affectedTasks.length > 0) {
+        message += ` ${result.affectedTasks.length} unfinished task(s) moved.`;
+      }
+
+      showMessage(message, "success");
+    } catch (error) {
+      console.error("Failed to carry over time window:", error);
+      showMessage("Failed to carry over time window", "error");
+    }
+  };
+
+  const handleApprovePlan = async () => {
+    if (!dailyPlan) {
+      showMessage("No daily plan available for approval", "error");
+      return;
+    }
+
+    setPlanConflicts([]);
+
+    try {
+      const response = await approvePlan(localTimeWindows);
+
+      // Update local state with the approved plan
+      if (response.plan) {
+        const sortedTimeWindows = [...response.plan.time_windows].sort(
+          (a, b) => a.time_window.start_time - b.time_window.start_time
+        );
+        setDailyPlan({ ...response.plan, time_windows: sortedTimeWindows });
+        setLocalTimeWindows(sortedTimeWindows);
+      }
+    } catch (error: any) {
+      console.error("Failed to approve plan:", error);
+
+      // Handle conflict errors
+      if (error.status === 400 && error.message.includes("conflict")) {
+        // Parse conflict information from error message
+        setPlanConflicts([
+          {
+            timeWindowIds: [],
+            message: error.message,
+            type: "category_conflict" as const,
+          },
+        ]);
+      }
     }
   };
 
@@ -405,8 +543,10 @@ const MyDayPage: React.FC = () => {
           newIndex
         );
 
-        // Auto-save the changes with debounce
-        debouncedSave(recalculatedItems);
+        // Auto-save the changes with debounce only if initialized
+        if (isInitialized) {
+          debouncedSave(recalculatedItems);
+        }
 
         return recalculatedItems;
       });
@@ -515,7 +655,13 @@ const MyDayPage: React.FC = () => {
           onEdit={onEdit}
           onAssignTask={onAssignTask}
           onUnassignTask={onUnassignTask}
+          onCarryOver={handleCarryOverTimeWindow}
+          dailyPlanId={dailyPlan?.id}
           dragListeners={listeners}
+          carryOverStatus={getTimeWindowCarryOverStatus(
+            allocation.time_window.id
+          )}
+          isCarryingOver={isCarryingOver}
         />
       </div>
     );
@@ -532,8 +678,15 @@ const MyDayPage: React.FC = () => {
                   {dayjs(dailyPlan.plan_date).format("dddd, MMMM D")}
                 </h1>
                 <p className="text-slate-600 text-sm md:text-base">
-                  Plan your perfect day
+                  {reviewMode === "approved"
+                    ? "Plan your perfect day"
+                    : "Review and approve your plan"}
                 </p>
+                {needsReview && (
+                  <div className="mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium inline-block">
+                    Plan requires review
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <p className="text-slate-600 text-sm md:text-base">
@@ -548,83 +701,110 @@ const MyDayPage: React.FC = () => {
                 )}
               </div>
             </header>
-            <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
-              <Timeline
-                className="ml-6"
-                timeWindows={localTimeWindows
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      a.time_window.start_time - b.time_window.start_time
-                  )
-                  .map(({ time_window }) => {
-                    const planDate = new Date(dailyPlan.plan_date);
-                    const startDate = new Date(
-                      planDate.getFullYear(),
-                      planDate.getMonth(),
-                      planDate.getDate(),
-                      0,
-                      time_window.start_time
-                    );
-                    const endDate = new Date(
-                      planDate.getFullYear(),
-                      planDate.getMonth(),
-                      planDate.getDate(),
-                      0,
-                      time_window.end_time
-                    );
 
-                    return {
-                      id: time_window.id,
-                      start_time: startDate.toISOString(),
-                      end_time: endDate.toISOString(),
-                      category: {
-                        ...time_window.category,
-                        color: time_window.category.color || "#A0AEC0",
-                      },
-                    };
-                  })}
-              />
-              <section className="flex-1 space-y-4">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  data-testid="dnd-context"
-                >
-                  <SortableContext
-                    items={localTimeWindows.map(
-                      (alloc) => alloc.time_window.id
-                    )}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {renderTimeWindowsWithGaps()}
-                  </SortableContext>
-                  <DragOverlay>
-                    {activeAllocation ? (
-                      <TimeWindowBalloon
-                        timeWindow={activeAllocation.time_window}
-                        tasks={activeAllocation.tasks}
-                        isOverlay
-                      />
-                    ) : null}
-                  </DragOverlay>
-                </DndContext>
+            {reviewMode === "needs-review" ? (
+              // Plan Review Mode - shown when plan needs review
+              <main className="max-w-4xl mx-auto">
+                <PlanReviewMode
+                  timeWindows={localTimeWindows}
+                  conflicts={planConflicts}
+                  onApprove={handleApprovePlan}
+                  onEdit={handleOpenEditModal}
+                  onDelete={handleDeleteTimeWindow}
+                  onAssignTask={handleAssignTask}
+                  onUnassignTask={handleUnassignTask}
+                  onCarryOver={handleCarryOverTimeWindow}
+                  onAddTimeWindow={() => setIsTimeWindowModalOpen(true)}
+                  dailyPlanId={dailyPlan.id}
+                  isApproving={isApprovingPlan}
+                  getTimeWindowCarryOverStatus={getTimeWindowCarryOverStatus}
+                  isCarryingOver={isCarryingOver}
+                />
+              </main>
+            ) : (
+              // Standard Daily Plan View - shown when plan is approved
+              <main className="flex flex-row gap-8 p-8 rounded-xl shadow-sm">
+                <Timeline
+                  className="ml-6"
+                  timeWindows={localTimeWindows
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        a.time_window.start_time - b.time_window.start_time
+                    )
+                    .map(({ time_window }) => {
+                      const planDate = new Date(dailyPlan.plan_date);
+                      const startDate = new Date(
+                        planDate.getFullYear(),
+                        planDate.getMonth(),
+                        planDate.getDate(),
+                        0,
+                        time_window.start_time
+                      );
+                      const endDate = new Date(
+                        planDate.getFullYear(),
+                        planDate.getMonth(),
+                        planDate.getDate(),
+                        0,
+                        time_window.end_time
+                      );
 
-                <div className="flex justify-start gap-4 mt-8">
-                  <Button
-                    variant="slate"
-                    size="medium"
-                    onClick={() => setIsTimeWindowModalOpen(true)}
-                    className="flex items-center gap-2"
+                      return {
+                        id: time_window.id,
+                        start_time: startDate.toISOString(),
+                        end_time: endDate.toISOString(),
+                        category: {
+                          ...time_window.category,
+                          color: time_window.category.color || "#A0AEC0",
+                        },
+                      };
+                    })}
+                />
+                <section className="flex-1 space-y-4">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    data-testid="dnd-context"
                   >
-                    <PlusCircle size={18} />
-                    Add Time Window
-                  </Button>
-                </div>
-              </section>
-            </main>
+                    <SortableContext
+                      items={localTimeWindows.map(
+                        (alloc) => alloc.time_window.id
+                      )}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {renderTimeWindowsWithGaps()}
+                    </SortableContext>
+                    <DragOverlay>
+                      {activeAllocation ? (
+                        <TimeWindowBalloon
+                          timeWindow={activeAllocation.time_window}
+                          tasks={activeAllocation.tasks}
+                          isOverlay
+                          carryOverStatus={getTimeWindowCarryOverStatus(
+                            activeAllocation.time_window.id
+                          )}
+                          isCarryingOver={isCarryingOver}
+                        />
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
+
+                  <div className="flex justify-start gap-4 mt-8">
+                    <Button
+                      variant="slate"
+                      size="medium"
+                      onClick={() => setIsTimeWindowModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <PlusCircle size={18} />
+                      Add Time Window
+                    </Button>
+                  </div>
+                </section>
+              </main>
+            )}
           </>
         ) : (
           <>

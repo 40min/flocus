@@ -36,6 +36,12 @@ global.Audio = jest.fn().mockImplementation(() => ({
 }));
 
 describe("timerStore", () => {
+  // Suppress expected console messages during tests
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  let consoleErrorSpy: jest.SpyInstance;
+  let consoleWarnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocalStorage.getItem.mockReturnValue(null);
@@ -46,6 +52,24 @@ describe("timerStore", () => {
     });
     mockIncrementPomodoro.mockResolvedValue(undefined);
     mockUpdateTask.mockResolvedValue({} as any);
+
+    // Suppress expected "Failed to play timer sound" messages (expected in jsdom environment)
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Failed to play timer sound')) {
+        return; // Suppress expected timer sound errors
+      }
+      originalConsoleError(...args); // Allow unexpected errors to show
+    });
+
+    // Suppress expected "Cannot start work timer without a task assigned" warnings
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Cannot start work timer without a task assigned')) {
+        return; // Suppress expected timer validation warnings
+      }
+      originalConsoleWarn(...args); // Allow unexpected warnings to show
+    });
 
     // Reset store state
     useTimerStore.setState({
@@ -59,6 +83,12 @@ describe("timerStore", () => {
       timestamp: Date.now(),
       userPreferences: undefined,
     });
+  });
+
+  afterEach(() => {
+    // Restore console spies
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 
   describe("basic functionality", () => {

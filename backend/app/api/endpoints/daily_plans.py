@@ -5,7 +5,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Path, status
 from odmantic import ObjectId
 
-from app.api.schemas.daily_plan import DailyPlanCreateRequest, DailyPlanResponse, DailyPlanUpdateRequest
+from app.api.schemas.daily_plan import (
+    CarryOverTimeWindowRequest,
+    DailyPlanCreateRequest,
+    DailyPlanResponse,
+    DailyPlanUpdateRequest,
+    PlanApprovalResponse,
+)
 from app.api.schemas.llm import LLMReflectionRequest, LLMReflectionResponse
 from app.core.dependencies import get_current_active_user_id, get_llm_service
 from app.services.daily_plan_service import DailyPlanService
@@ -107,6 +113,42 @@ async def improve_reflection(
     )
     improved_text = await llm_service.improve_text(request.text, prompt)
     return LLMReflectionResponse(improved_text=improved_text)
+
+
+@router.post(
+    "/carry-over-time-window",
+    response_model=DailyPlanResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Carry over a time window to another date",
+    description="Transfers a time window with its unfinished tasks from one daily plan to another date. "
+    "Completed tasks remain in the original time window. "
+    "The target daily plan is marked as requiring review (reviewed: false).",
+)
+async def carry_over_time_window(
+    carry_over_request: CarryOverTimeWindowRequest,
+    service: DailyPlanService = Depends(DailyPlanService),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
+):
+    logger.info(f"Received carry-over request: {carry_over_request.model_dump_json()}")
+    return await service.carry_over_time_window(carry_over_request, current_user_id)
+
+
+@router.put(
+    "/{plan_id}/approve",
+    response_model=PlanApprovalResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Approve a Daily Plan",
+    description="Approves a daily plan by processing auto-merging of same-category overlapping time windows "
+    "and validating for conflicts. Sets the reviewed flag to true if no conflicts exist. "
+    "Returns detailed information about any merges performed and conflicts found.",
+)
+async def approve_daily_plan(
+    plan_id: ObjectId = Path(..., description="The ID of the daily plan to approve"),
+    service: DailyPlanService = Depends(DailyPlanService),
+    current_user_id: ObjectId = Depends(get_current_active_user_id),
+):
+    logger.info(f"Received approval request for plan_id: {plan_id}")
+    return await service.approve_daily_plan(plan_id=plan_id, current_user_id=current_user_id)
 
 
 @router.put(

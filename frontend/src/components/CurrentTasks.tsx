@@ -251,12 +251,14 @@ interface CurrentTasksProps {
   dailyPlan: DailyPlanResponse | null | undefined;
   onSelectTask: (taskId: string) => void;
   isUpdatingTask?: boolean;
+  isPlanReviewed?: boolean;
 }
 
 const CurrentTasks: React.FC<CurrentTasksProps> = ({
   dailyPlan,
   onSelectTask,
   isUpdatingTask = false,
+  isPlanReviewed = true,
 }) => {
   const { currentTimeWindow, currentTasks } = useCurrentTimeWindow(
     dailyPlan || null
@@ -295,37 +297,46 @@ const CurrentTasks: React.FC<CurrentTasksProps> = ({
       </div>
       <section className="w-full" aria-label="Task List">
         <div className="space-y-4">
-          <ul
-            ref={animationParent}
-            className="space-y-3 h-full overflow-y-auto pr-2 relative z-10"
-          >
-            {currentTimeWindow === null ? (
+          {!isPlanReviewed ? (
+            <div className="text-center py-8">
+              <p className="text-yellow-400 mb-2">Plan Review Required</p>
               <p className="text-text-secondary text-sm">
-                No works planned for this time.
+                Tasks will be available after your daily plan is reviewed and approved.
               </p>
-            ) : currentTasks.length === 0 ? (
-              <p className="text-text-secondary text-sm">
-                No tasks for the current time window.
-              </p>
-            ) : (
-              currentTasks
-                .filter(
-                  (task) =>
-                    task.status !== "done" &&
-                    task.status !== "blocked" &&
-                    !task.is_deleted
-                )
-                .map((task: Task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onSelectTask={onSelectTask}
-                    onEditTask={openEditModal}
-                    isUpdatingFromParent={isUpdatingTask}
-                  />
-                ))
-            )}
-          </ul>
+            </div>
+          ) : (
+            <ul
+              ref={animationParent}
+              className="space-y-3 h-full overflow-y-auto pr-2 relative z-10"
+            >
+              {currentTimeWindow === null ? (
+                <p className="text-text-secondary text-sm">
+                  No works planned for this time.
+                </p>
+              ) : currentTasks.length === 0 ? (
+                <p className="text-text-secondary text-sm">
+                  No tasks for the current time window.
+                </p>
+              ) : (
+                currentTasks
+                  .filter(
+                    (task) =>
+                      task.status !== "done" &&
+                      task.status !== "blocked" &&
+                      !task.is_deleted
+                  )
+                  .map((task: Task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onSelectTask={onSelectTask}
+                      onEditTask={openEditModal}
+                      isUpdatingFromParent={isUpdatingTask}
+                    />
+                  ))
+              )}
+            </ul>
+          )}
         </div>
       </section>
 

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { dayjs } from "../utils/dateUtils";
 import CurrentTasks, { TaskCard } from "../components/CurrentTasks";
 import PomodoroTimer from "../components/PomodoroTimer";
-import { useTodayDailyPlan } from "../hooks/useDailyPlan";
+import { useTodayDailyPlan, useDailyPlanWithReview } from "../hooks/useDailyPlan";
+import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   DragEndEvent,
@@ -16,6 +17,7 @@ import { Task } from "types/task";
 import DailyStats from "components/DailyStats";
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentTaskId, setIsActive, isActive } = useTimer();
 
   // Get the setCurrentTask function directly from the store
@@ -25,8 +27,28 @@ const DashboardPage: React.FC = () => {
   const { mutate: updateTaskMutation, isPending: isUpdatingTask } =
     useUpdateTask();
 
-  const { data: dailyPlan, isLoading, isError } = useTodayDailyPlan();
+  // Use the enhanced hook with reviewed flag handling
+  const {
+    dailyPlan,
+    isLoading,
+    error,
+    needsReview,
+    reviewMode
+  } = useDailyPlanWithReview();
+
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // Redirect to MyDay page if plan needs review
+  useEffect(() => {
+    if (!isLoading && needsReview) {
+      navigate('/my-day', {
+        state: {
+          message: 'Your daily plan needs to be reviewed and approved before you can access the dashboard.',
+          from: 'dashboard'
+        }
+      });
+    }
+  }, [needsReview, isLoading, navigate]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -114,13 +136,21 @@ const DashboardPage: React.FC = () => {
                 <div className="sticky top-8 h-[450px] flex flex-col">
                   {isLoading ? (
                     <p className="text-white">Loading daily plan...</p>
-                  ) : isError ? (
+                  ) : error ? (
                     <p className="text-red-500">Error loading daily plan.</p>
+                  ) : needsReview ? (
+                    <div className="text-center py-8">
+                      <p className="text-yellow-400 mb-2">Plan Review Required</p>
+                      <p className="text-text-secondary text-sm">
+                        Redirecting to review your daily plan...
+                      </p>
+                    </div>
                   ) : (
                     <CurrentTasks
                       dailyPlan={dailyPlan}
                       onSelectTask={activateAndStartTask}
                       isUpdatingTask={isUpdatingTask}
+                      isPlanReviewed={!needsReview}
                     />
                   )}
                 </div>

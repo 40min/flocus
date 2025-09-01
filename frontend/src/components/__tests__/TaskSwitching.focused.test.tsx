@@ -50,7 +50,30 @@ const mockTask2: Task = {
 };
 
 describe("Task Switching Focused Tests", () => {
+  // Suppress expected console messages during tests
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  let consoleErrorSpy: jest.SpyInstance;
+  let consoleWarnSpy: jest.SpyInstance;
+
   beforeEach(() => {
+    // Suppress expected console messages (expected in error handling and validation tests)
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Failed to update task status')) {
+        return; // Suppress expected task status update error
+      }
+      originalConsoleError(...args); // Allow unexpected errors to show
+    });
+
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Cannot start work timer without a task assigned')) {
+        return; // Suppress expected timer validation warning
+      }
+      originalConsoleWarn(...args); // Allow unexpected warnings to show
+    });
+
     // Reset timer store
     useTimerStore.getState().clearTimerState();
 
@@ -69,6 +92,9 @@ describe("Task Switching Focused Tests", () => {
   });
 
   afterEach(() => {
+    // Restore console methods
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
     jest.clearAllMocks();
   });
 

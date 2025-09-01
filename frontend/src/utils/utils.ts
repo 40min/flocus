@@ -17,6 +17,7 @@ import {
   isValidTimeFormat,
   roundToInterval,
   normalizeTimeMinutes,
+  formatTimeFromMinutes,
   formatDurationFromMinutes,
   formatDurationFromSeconds,
 } from "./dateUtils";
@@ -444,6 +445,7 @@ export {
   isValidTimeFormat,
   roundToInterval,
   normalizeTimeMinutes,
+  formatTimeFromMinutes,
   formatDurationFromMinutes,
   formatDurationFromSeconds,
 };

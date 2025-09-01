@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { TimeWindow as TimeWindowType } from "types/timeWindow";
 import type { Task as TaskType } from "types/task";
@@ -8,10 +8,27 @@ import {
   formatDurationFromMinutes,
 } from "../utils/utils";
 import { Button } from "@/components/ui/button";
-import { Clock, XCircle, PlusCircle, Edit3 } from "lucide-react";
+import {
+  Clock,
+  XCircle,
+  PlusCircle,
+  Edit3,
+  ArrowRight,
+  MoreHorizontal,
+} from "lucide-react";
 import AssignedTaskBalloon from "./AssignedTaskBalloon";
 import TaskPicker from "./TaskPicker";
+import DateSelectionModal from "./modals/DateSelectionModal";
 import { useTimer } from "../hooks/useTimer";
+import { carryOverTimeWindow } from "../services/dailyPlanService";
+import { useMessage } from "../context/MessageContext";
+
+interface CarryOverStatus {
+  canCarryOver: boolean;
+  taskCount: number;
+  hasActiveTimer: boolean;
+  affectedTasks: TaskType[];
+}
 
 interface TimeWindowBalloonProps extends React.HTMLAttributes<HTMLDivElement> {
   timeWindow: TimeWindowType;
@@ -20,8 +37,12 @@ interface TimeWindowBalloonProps extends React.HTMLAttributes<HTMLDivElement> {
   onEdit?: () => void;
   onAssignTask?: (task: TaskType) => void;
   onUnassignTask?: (taskId: string) => void;
+  onCarryOver?: (timeWindowId: string, targetDate: string) => void;
   isOverlay?: boolean;
   dragListeners?: any;
+  dailyPlanId?: string;
+  carryOverStatus?: CarryOverStatus;
+  isCarryingOver?: boolean;
 }
 
 const getTextColor = (bgColor: string): string => {
@@ -59,14 +80,40 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
       onEdit,
       onAssignTask,
       onUnassignTask,
+      onCarryOver,
       isOverlay,
       dragListeners,
+      dailyPlanId,
+      carryOverStatus,
+      isCarryingOver = false,
       ...props
     },
     ref
   ) => {
     const { currentTaskId, stopCurrentTask } = useTimer();
+    const { showMessage } = useMessage();
     const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
+    const [isDateSelectionOpen, setIsDateSelectionOpen] = useState(false);
+    const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+    const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close actions menu when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          actionsMenuRef.current &&
+          !actionsMenuRef.current.contains(event.target as Node)
+        ) {
+          setIsActionsMenuOpen(false);
+        }
+      };
+
+      if (isActionsMenuOpen) {
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+          document.removeEventListener("mousedown", handleClickOutside);
+      }
+    }, [isActionsMenuOpen]);
 
     const { id, description, start_time, end_time, category } = timeWindow;
     const categoryColor = category?.color || "#A0AEC0"; // Default to a neutral gray
@@ -92,6 +139,33 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
           stopCurrentTask();
         }
         onDelete(id);
+      }
+    };
+
+    const handleCarryOverConfirm = async (targetDate: string) => {
+      if (!dailyPlanId) {
+        showMessage("Cannot carry over: Daily plan ID not available", "error");
+        return;
+      }
+
+      try {
+        if (onCarryOver) {
+          // Pass the original time window ID, let the integration hook handle the stable ID generation
+          await onCarryOver(id, targetDate);
+        } else {
+          // Fallback to direct API call if no handler provided
+          // Generate stable identifier that matches backend expectation
+          const stableId = `${category.id}_${start_time}_${end_time}`;
+          await carryOverTimeWindow({
+            source_plan_id: dailyPlanId,
+            time_window_id: stableId,
+            target_date: targetDate,
+          });
+          showMessage("Time window carried over successfully!", "success");
+        }
+      } catch (error) {
+        console.error("Failed to carry over time window:", error);
+        showMessage("Failed to carry over time window", "error");
       }
     };
 
@@ -123,35 +197,75 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
                   </p>
                 )}
               </div>
-              <div className="flex items-center">
-                {onEdit && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit();
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Edit time window"
-                  >
-                    <Edit3 className="h-5 w-5" />
-                  </Button>
-                )}
-                {onDelete && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete();
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    variant="ghost"
-                    size="icon"
-                    className="text-slate-400 hover:text-red-500"
-                    aria-label="Delete time window"
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </Button>
+              <div className="flex items-center relative" ref={actionsMenuRef}>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsActionsMenuOpen(!isActionsMenuOpen);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Time window actions"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+
+                {isActionsMenuOpen && (
+                  <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+                    {onEdit && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit();
+                          setIsActionsMenuOpen(false);
+                        }}
+                        variant="ghost"
+                        className="w-full justify-start text-left px-3 py-2 text-sm hover:bg-slate-50"
+                        aria-label="Edit time window"
+                      >
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    )}
+                    {(onCarryOver || dailyPlanId) &&
+                      carryOverStatus?.canCarryOver && (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsDateSelectionOpen(true);
+                            setIsActionsMenuOpen(false);
+                          }}
+                          variant="ghost"
+                          className="w-full justify-start text-left px-3 py-2 text-sm hover:bg-slate-50"
+                          disabled={isCarryingOver}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Carry Over ({carryOverStatus.taskCount} task
+                          {carryOverStatus.taskCount !== 1 ? "s" : ""})
+                          {carryOverStatus.hasActiveTimer && (
+                            <span className="ml-1 text-xs text-amber-600">
+                              ⏱
+                            </span>
+                          )}
+                        </Button>
+                      )}
+                    {onDelete && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete();
+                          setIsActionsMenuOpen(false);
+                        }}
+                        variant="ghost"
+                        className="w-full justify-start text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600"
+                        aria-label="Delete time window"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -231,6 +345,26 @@ const TimeWindowBalloon = forwardRef<HTMLDivElement, TimeWindowBalloonProps>(
               />,
               document.body
             )}
+
+          <DateSelectionModal
+            isOpen={isDateSelectionOpen}
+            onClose={() => setIsDateSelectionOpen(false)}
+            onConfirm={handleCarryOverConfirm}
+            title="Carry Over Time Window"
+            description={
+              carryOverStatus
+                ? `Carry over "${category.name}" time window with ${
+                    carryOverStatus.taskCount
+                  } unfinished task${
+                    carryOverStatus.taskCount !== 1 ? "s" : ""
+                  } to a future date:${
+                    carryOverStatus.hasActiveTimer
+                      ? " (Active timer will be stopped)"
+                      : ""
+                  }`
+                : `Carry over "${category.name}" time window to a future date:`
+            }
+          />
         </div>
       </article>
     );

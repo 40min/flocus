@@ -25,10 +25,12 @@ class DailyPlan(Model):
     self_reflection: SelfReflection = Field(
         default_factory=lambda: SelfReflection(positive=None, negative=None, follow_up_notes=None)
     )
+    reviewed: bool = Field(default=False)
 
     model_config = {
         "collection": "daily_plans",
         "indexes": lambda: [
             Index(DailyPlan.user_id, DailyPlan.plan_date, unique=True),
+            Index(DailyPlan.user_id, DailyPlan.reviewed),
         ],
     }

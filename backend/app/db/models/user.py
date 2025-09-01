@@ -12,6 +12,7 @@ class UserPreferences(EmbeddedModel):
     pomodoro_working_interval: int = ODMField(default=25)
     system_notifications_enabled: bool = ODMField(default=True)
     pomodoro_timer_sound: str = ODMField(default="none")
+    theme: str = ODMField(default="summer")
 
 
 class User(Model):

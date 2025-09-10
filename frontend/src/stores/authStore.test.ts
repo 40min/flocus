@@ -48,6 +48,7 @@ describe("AuthStore", () => {
       theme: 'summer',
       isAuthenticated: false,
       isLoading: true,
+      isFetchingUserData: false,
     });
   });
 
@@ -120,6 +121,7 @@ describe("AuthStore", () => {
           theme: 'summer',
           isAuthenticated: true,
           isLoading: false,
+          isFetchingUserData: false,
         });
       });
 
@@ -183,6 +185,53 @@ describe("AuthStore", () => {
 
       expect(mockGetCurrentUser).not.toHaveBeenCalled();
       expect(result.current.isLoading).toBe(false);
+    });
+
+    it("should prevent duplicate fetchUserData calls", async () => {
+      const mockUser = {
+        id: "1",
+        username: "testuser",
+        email: "test@example.com",
+        first_name: "Test",
+        last_name: "User",
+        preferences: {
+          pomodoro_timeout_minutes: 25,
+          pomodoro_long_timeout_minutes: 15,
+          pomodoro_working_interval: 4,
+          system_notifications_enabled: true,
+          pomodoro_timer_sound: "ding",
+          theme: "summer",
+        },
+      };
+
+      mockGetCurrentUser.mockResolvedValue(mockUser);
+
+      const { result } = renderHook(() => useAuthStore());
+
+      // Set token first
+      act(() => {
+        useAuthStore.setState({ token: "test-token" });
+      });
+
+      // Start first fetch
+      const firstFetchPromise = act(async () => {
+        await result.current.fetchUserData();
+      });
+
+      // Immediately try to fetch again - this should be prevented
+      const secondFetchPromise = act(async () => {
+        await result.current.fetchUserData();
+      });
+
+      // Wait for both to complete
+      await Promise.all([firstFetchPromise, secondFetchPromise]);
+
+      // Should only be called once
+      expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isFetchingUserData).toBe(false);
     });
   });
 

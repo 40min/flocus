@@ -10,6 +10,7 @@ interface AuthState {
   theme: string;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isFetchingUserData: boolean;
   login: (token: string) => Promise<void>;
   logout: () => void;
   fetchUserData: () => Promise<void>;
@@ -30,40 +31,42 @@ export const useAuthStore = create<AuthState>()(
         theme: 'summer',
         isAuthenticated: false,
         isLoading: true,
+        isFetchingUserData: false,
 
         setLoading: (loading: boolean) => {
           set({ isLoading: loading });
         },
 
         login: async (token: string) => {
-          set({ isLoading: true });
-          try {
-            localStorage.setItem("access_token", token);
-            set({ token });
-            await get().fetchUserData();
-          } catch (error) {
-            console.error("Login failed:", error);
-            get().logout();
-          }
-        },
+           set({ isLoading: true, isFetchingUserData: false });
+           try {
+             localStorage.setItem("access_token", token);
+             set({ token });
+             await get().fetchUserData();
+           } catch (error) {
+             console.error("Login failed:", error);
+             get().logout();
+           }
+         },
 
         logout: () => {
-          localStorage.removeItem("access_token");
-          set({
-            user: null,
-            token: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+           localStorage.removeItem("access_token");
+           set({
+             user: null,
+             token: null,
+             isAuthenticated: false,
+             isLoading: false,
+             isFetchingUserData: false,
+           });
 
-          // Navigate to login page if navigation function is available
-          if (globalNavigate) {
-            globalNavigate("/login");
-          }
+           // Navigate to login page if navigation function is available
+           if (globalNavigate) {
+             globalNavigate("/login");
+           }
 
-          // Trigger logout event for other components that might be listening
-          window.dispatchEvent(new CustomEvent("triggerLogout"));
-        },
+           // Trigger logout event for other components that might be listening
+           window.dispatchEvent(new CustomEvent("triggerLogout"));
+         },
 
         setNavigate: (navigate: (path: string) => void) => {
           globalNavigate = navigate;
@@ -74,25 +77,30 @@ export const useAuthStore = create<AuthState>()(
         },
 
         fetchUserData: async () => {
-          const { token } = get();
-          if (!token) {
-            set({ isLoading: false });
-            return;
-          }
+           const { token, isFetchingUserData } = get();
+           if (!token || isFetchingUserData) {
+             if (!token) {
+               set({ isLoading: false });
+             }
+             return;
+           }
 
-          try {
-            const userData = await getCurrentUser();
-            set({
-              user: userData,
-              theme: userData.preferences.theme || 'summer',
-              isAuthenticated: true,
-              isLoading: false,
-            });
-          } catch (error) {
-            console.error("Failed to fetch user data:", error);
-            get().logout();
-          }
-        },
+           set({ isFetchingUserData: true });
+           try {
+             const userData = await getCurrentUser();
+             set({
+               user: userData,
+               theme: userData.preferences.theme || 'summer',
+               isAuthenticated: true,
+               isLoading: false,
+               isFetchingUserData: false,
+             });
+           } catch (error) {
+             console.error("Failed to fetch user data:", error);
+             set({ isFetchingUserData: false });
+             get().logout();
+           }
+         },
       }),
       {
         name: "auth-storage",
@@ -100,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
         partialize: (state) => ({
           token: state.token,
           theme: state.theme,
-          // Don't persist user data, it will be fetched on app load
+          // Don't persist user data or temporary flags, they will be fetched/reset on app load
         }),
       }
     ),

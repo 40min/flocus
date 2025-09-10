@@ -132,7 +132,6 @@ describe("TimerProvider", () => {
 
         // Internal actions
         switchToNextMode: jest.fn(),
-        initializeFromStats: jest.fn(),
         tick: jest.fn(),
       };
       return selector(state);
@@ -263,7 +262,6 @@ describe("TimerProvider", () => {
 
         // Internal actions
         switchToNextMode: jest.fn(),
-        initializeFromStats: jest.fn(),
         tick: jest.fn(),
       };
       return selector(state);

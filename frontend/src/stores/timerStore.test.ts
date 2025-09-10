@@ -331,23 +331,6 @@ describe("timerStore", () => {
   });
 
   describe("initialization", () => {
-    it("should initialize from stats", async () => {
-      mockGetTodayStats.mockResolvedValue({
-        date: new Date().toISOString(),
-        total_seconds_spent: 0,
-        pomodoros_completed: 3,
-      });
-
-      // Manually call initializeFromStats since initializeTimer is disabled in tests
-      await act(async () => {
-        const { initializeFromStats } = useTimerStore.getState();
-        await initializeFromStats();
-      });
-
-      const state = useTimerStore.getState();
-      expect(state.pomodorosCompleted).toBe(3);
-    });
-
     it("should handle stats fetch error gracefully", async () => {
       mockGetTodayStats.mockRejectedValue(new Error("Network error"));
 

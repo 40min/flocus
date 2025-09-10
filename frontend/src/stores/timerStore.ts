@@ -81,7 +81,6 @@ interface TimerState {
 
   // Internal actions
   switchToNextMode: () => Promise<void>;
-  initializeFromStats: () => Promise<void>;
   tick: () => void;
 }
 
@@ -174,17 +173,6 @@ export const useTimerStore = create<TimerState>()(
           }
         },
 
-        // Initialize from daily stats and check for in-progress tasks
-        initializeFromStats: async () => {
-          try {
-            const stats = await getTodayStats();
-            if (stats) {
-              set({ pomodorosCompleted: stats.pomodoros_completed });
-            }
-          } catch (error) {
-            console.error("Failed to fetch initial pomodoro stats:", error);
-          }
-        },
 
         // Stop current task
         stopCurrentTask: async () => {
@@ -686,9 +674,7 @@ export const initializeTimer = async () => {
 
   // Zustand persist middleware will automatically restore state from localStorage
   // with our custom onRehydrateStorage logic handling timer continuation
-
-  const { initializeFromStats } = useTimerStore.getState();
-  await initializeFromStats();
+  // Stats are now initialized via React Query in the DailyStats component
 
   startTimerInterval();
 };

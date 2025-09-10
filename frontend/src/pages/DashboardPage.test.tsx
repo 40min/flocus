@@ -81,7 +81,6 @@ jest.mock("../stores/timerStore", () => ({
 
       // Internal actions
       switchToNextMode: jest.fn(),
-      initializeFromStats: jest.fn(),
       tick: jest.fn(),
     };
     return selector ? selector(state) : state;
@@ -253,7 +252,6 @@ describe("DashboardPage - handleDragEnd", () => {
 
         // Internal actions
         switchToNextMode: jest.fn(),
-        initializeFromStats: jest.fn(),
         tick: jest.fn(),
       };
       return selector ? selector(state) : state;

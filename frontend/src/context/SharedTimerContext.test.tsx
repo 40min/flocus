@@ -16,10 +16,12 @@ import {
 } from "@tanstack/react-query";
 import { AuthContext, AuthContextType } from "../context/AuthContext";
 import { MemoryRouter } from "react-router-dom";
+import { useDailyStats } from "../hooks/useDailyStats";
 
 jest.mock("../hooks/useTasks");
 jest.mock("../services/userDailyStatsService");
 jest.mock("../hooks/useAuth");
+jest.mock("../hooks/useDailyStats");
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
   useQueryClient: jest.fn(),
@@ -31,6 +33,7 @@ jest.mock("../services/notificationService", () => ({
 const mockedShowNotification =
   notificationService.showNotification as jest.Mock;
 const mockedUseAuth = useAuth as jest.Mock;
+const mockedUseDailyStats = useDailyStats as jest.Mock;
 
 // Mock Notification API
 const mockNotification = jest.fn();
@@ -196,6 +199,11 @@ describe("SharedTimerContext", () => {
       mutateAsync: jest.fn().mockResolvedValue({}),
     });
     (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 0 });
+    mockedUseDailyStats.mockReturnValue({
+      data: { pomodoros_completed: 0 },
+      isLoading: false,
+      isError: false,
+    });
     mockedUseQueryClient.mockReturnValue({
       invalidateQueries: jest.fn(),
     });
@@ -374,6 +382,11 @@ describe("SharedTimerContext", () => {
 
   it("saves and loads state from localStorage", async () => {
     (getTodayStats as jest.Mock).mockResolvedValue({ pomodoros_completed: 2 });
+    mockedUseDailyStats.mockReturnValue({
+      data: { pomodoros_completed: 2 },
+      isLoading: false,
+      isError: false,
+    });
     const state = {
       mode: "shortBreak",
       timeRemaining: 100,

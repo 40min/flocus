@@ -25,5 +25,5 @@ export const API_ENDPOINTS = {
   LLM_IMPROVE_REFLECTION: "/daily-plans/llm/improve-reflection",
   DAILY_STATS_INCREMENT_TIME: "/daily-stats/increment-time",
   DAILY_STATS_INCREMENT_POMODORO: "/daily-stats/increment-pomodoro",
-  DAILY_STATS_TODAY: "/daily-stats",
+  DAILY_STATS_TODAY: "/daily-stats/",
 };

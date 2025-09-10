@@ -1,3 +1,4 @@
+import { UserDailyStats } from "../types/userDailyStats";
 import React, {
   createContext,
   useContext,
@@ -10,11 +11,11 @@ import React, {
 import { useUpdateTask } from "../hooks/useTasks";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getTodayStats,
   incrementPomodoro,
 } from "../services/userDailyStatsService";
 import * as notificationService from "../services/notificationService";
 import { useAuth } from "../hooks/useAuth";
+import { useDailyStats } from "../hooks/useDailyStats";
 
 const CYCLES_BEFORE_LONG_BREAK = 4;
 const LOCAL_STORAGE_KEY = "pomodoroTimerState";
@@ -140,6 +141,7 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({
   const { mutateAsync: updateTask } = useUpdateTask();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: dailyStats } = useDailyStats();
 
   const DURATION_MAP = useMemo(
     () => ({
@@ -150,20 +152,12 @@ export const SharedTimerProvider: React.FC<{ children: ReactNode }> = ({
     [user?.preferences]
   );
 
+  // Sync pomodorosCompleted with the React Query data
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const stats = await getTodayStats();
-        if (stats) {
-          setPomodorosCompleted(stats.pomodoros_completed);
-        }
-      } catch (error) {
-        console.error("Failed to fetch initial pomodoro stats:", error);
-      }
-    };
-
-    fetchStats();
-  }, []); // Empty dependency array to run only on mount
+    if (dailyStats?.pomodoros_completed !== undefined) {
+      setPomodorosCompleted(dailyStats.pomodoros_completed);
+    }
+  }, [dailyStats?.pomodoros_completed]);
 
   const stopCurrentTask = useCallback(async () => {
     if (currentTaskId) {

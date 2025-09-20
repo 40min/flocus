@@ -13,6 +13,7 @@ class TimeWindowInputSchema(BaseModel):
     These will be validated to be within the correct range.
     """
 
+    id: Optional[ObjectId] = Field(None, description="Optional ID for existing time windows when updating")
     description: Optional[str] = Field(None, max_length=100)
     category_id: ObjectId
     start_time: int

@@ -71,30 +71,40 @@ const EditTemplatePage: React.FC = () => {
   };
 
   const handleTimeWindowSubmit = (timeWindowData: TimeWindowInput) => {
-    const selectedCategory = availableCategories.find(
-      (cat) => cat.id === timeWindowData.category_id
-    );
-    if (!selectedCategory) {
-      // This should be caught by form validation, but as a fallback
+    // Check if categories are still loading
+    if (isLoadingCategories) {
       return;
     }
+
+    // Find the selected category with robust type-safe comparison
+    // Handle potential type mismatches between string and ObjectId
+    const selectedCategory = availableCategories.find(
+      (cat) => String(cat.id) === String(timeWindowData.category_id)
+    );
+
+    if (!selectedCategory) {
+      return;
+    }
+
     if (editingTimeWindow) {
       // Edit - preserve the original time window structure but update the editable fields
-      setTemplateTimeWindows((prev) =>
-        prev.map((tw) =>
-          tw.id === editingTimeWindow.id
-            ? {
-                ...tw,
-                description: timeWindowData.description,
-                start_time: timeWindowData.start_time,
-                end_time: timeWindowData.end_time,
-                category: selectedCategory,
-              }
-            : tw
-        )
+      const updatedTimeWindows = templateTimeWindows.map((tw) =>
+        tw.id === editingTimeWindow.id
+          ? {
+              ...tw,
+              description: timeWindowData.description,
+              start_time: timeWindowData.start_time,
+              end_time: timeWindowData.end_time,
+              category: selectedCategory,
+            }
+          : tw
       );
+      setTemplateTimeWindows(updatedTimeWindows);
+
+      // Auto-save after editing
+      autoSaveTemplate(updatedTimeWindows);
     } else {
-      // Create
+      // Create new time window
       const newLocalTimeWindow: TimeWindow = {
         id: `temp-${Date.now()}`,
         description: timeWindowData.description,
@@ -105,8 +115,14 @@ const EditTemplatePage: React.FC = () => {
         user_id: "",
         is_deleted: false,
       };
-      setTemplateTimeWindows((prev) => [...prev, newLocalTimeWindow]);
+
+      const updatedTimeWindows = [...templateTimeWindows, newLocalTimeWindow];
+      setTemplateTimeWindows(updatedTimeWindows);
+
+      // Auto-save after adding new time window
+      autoSaveTemplate(updatedTimeWindows);
     }
+
     setIsTimeWindowModalOpen(false);
     setEditingTimeWindow(null);
   };
@@ -181,13 +197,15 @@ const EditTemplatePage: React.FC = () => {
   }, [hasUnsavedChanges]);
 
   const handleDeleteTimeWindow = (timeWindowId: string) => {
-    setTemplateTimeWindows((prev) =>
-      prev.filter((tw) => tw.id !== timeWindowId)
-    );
+    const updatedTimeWindows = templateTimeWindows.filter((tw) => tw.id !== timeWindowId);
+    setTemplateTimeWindows(updatedTimeWindows);
+
+    // Auto-save after deleting time window
+    autoSaveTemplate(updatedTimeWindows);
   };
 
   const createTemplateMutation = useMutation({
-    mutationFn: createDayTemplate,
+    mutationFn: (data: DayTemplateCreateRequest) => createDayTemplate(data),
     onSuccess: (savedTemplate: DayTemplateResponse) => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
       navigate(`/templates/edit/${savedTemplate.id}`);
@@ -225,6 +243,43 @@ const EditTemplatePage: React.FC = () => {
       // Form error handling would go here if needed
     },
   });
+
+  const autoSaveTemplate = useCallback((timeWindows: TimeWindow[]) => {
+    if (!routeTemplateId) {
+      console.error('Cannot auto-save: no template ID');
+      return;
+    }
+
+    // Get current form values using react-hook-form
+    const currentFormValues = {
+      name: (document.getElementById('templateName') as HTMLInputElement)?.value || template?.name || '',
+      description: (document.getElementById('description') as HTMLTextAreaElement)?.value || template?.description || ''
+    };
+
+    const time_windows_payload = timeWindows.map((tw) => {
+      const timeWindowPayload: TimeWindowInput = {
+        description: tw.description || "",
+        start_time: tw.start_time,
+        end_time: tw.end_time,
+        category_id: tw.category.id,
+      };
+      if (tw.id && !tw.id.startsWith("temp-")) {
+        timeWindowPayload.id = tw.id;
+      }
+      return timeWindowPayload;
+    });
+
+    const updatePayload: DayTemplateUpdateRequest = {
+      name: currentFormValues.name,
+      description: currentFormValues.description,
+      time_windows: time_windows_payload,
+    };
+
+    updateTemplateMutation.mutate({
+      id: routeTemplateId,
+      data: updatePayload,
+    });
+  }, [routeTemplateId, template, updateTemplateMutation]);
 
   const onSubmit = (data: TemplateFormData) => {
     const time_windows_payload = templateTimeWindows.map((tw) => {
@@ -434,24 +489,6 @@ const EditTemplatePage: React.FC = () => {
           </Button>
         </div>
 
-        <CreateTemplateTimeWindowModal
-          isOpen={isTimeWindowModalOpen}
-          onClose={() => {
-            setIsTimeWindowModalOpen(false);
-            setEditingTimeWindow(null);
-          }}
-          onSubmit={handleTimeWindowSubmit}
-          availableCategories={availableCategories}
-          existingTimeWindows={
-            editingTimeWindow
-              ? templateTimeWindows.filter(
-                  (tw) => tw.id !== editingTimeWindow.id
-                )
-              : templateTimeWindows
-          }
-          editingTimeWindow={editingTimeWindow}
-        />
-
         <div className="flex justify-end gap-3 mt-8">
           <Button
             type="button"
@@ -497,6 +534,24 @@ const EditTemplatePage: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      <CreateTemplateTimeWindowModal
+        isOpen={isTimeWindowModalOpen}
+        onClose={() => {
+          setIsTimeWindowModalOpen(false);
+          setEditingTimeWindow(null);
+        }}
+        onSubmit={handleTimeWindowSubmit}
+        availableCategories={availableCategories}
+        existingTimeWindows={
+          editingTimeWindow
+            ? templateTimeWindows.filter(
+                (tw) => tw.id !== editingTimeWindow.id
+              )
+            : templateTimeWindows
+        }
+        editingTimeWindow={editingTimeWindow}
+      />
     </div>
   );
 };

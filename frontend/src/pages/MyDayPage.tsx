@@ -112,7 +112,7 @@ const MyDayPage: React.FC = () => {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const createPlanMutation = useMutation({
-    mutationFn: createDailyPlan,
+    mutationFn: (timeWindows: any[]) => createDailyPlan(timeWindows),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dailyPlan", "today"] });
       setShowYesterdayReview(false);

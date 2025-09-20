@@ -51,7 +51,7 @@ export const useDailyPlanWithReview = () => {
 
   // Carry over time window mutation
   const carryOverMutation = useMutation({
-    mutationFn: carryOverTimeWindow,
+    mutationFn: (request: CarryOverTimeWindowRequest) => carryOverTimeWindow(request),
     onSuccess: (response) => {
       // Update the cache directly instead of invalidating to prevent loops
       queryClient.setQueryData(["dailyPlan", "today"], response);

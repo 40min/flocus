@@ -163,7 +163,26 @@ class DayTemplateService:
                     "category_id" in tw_input_data
                 ):  # Should always be true if category_ids_in_update_payload was populated
                     # We trust _fetch_and_map_categories to have validated these IDs
-                    new_time_window_schemas.append(EmbeddedTimeWindowSchema(**tw_input_data))
+                    # Create a copy of the input data to avoid modifying the original
+                    tw_data = dict(tw_input_data)
+
+                    # If an id is provided and it's not a temporary frontend ID, use it to preserve
+                    # existing time windows
+                    # If no id is provided or it's a temp ID, let EmbeddedTimeWindowSchema generate
+                    # a new ObjectId
+                    provided_id = tw_data.get("id")
+                    if provided_id and not str(provided_id).startswith("temp-"):
+                        # Keep the existing ID for real time windows
+                        try:
+                            tw_data["id"] = ObjectId(provided_id)
+                        except Exception:
+                            # Invalid ObjectId, remove it and let a new one be generated
+                            tw_data.pop("id", None)
+                    else:
+                        # Remove temp or missing id to let EmbeddedTimeWindowSchema generate a new one
+                        tw_data.pop("id", None)
+
+                    new_time_window_schemas.append(EmbeddedTimeWindowSchema(**tw_data))
             day_template_model.time_windows = new_time_window_schemas
         else:
             # Time windows are not being updated, so we need to fetch categories

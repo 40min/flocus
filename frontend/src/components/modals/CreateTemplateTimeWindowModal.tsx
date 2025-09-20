@@ -69,7 +69,15 @@ const CreateTemplateTimeWindowModal: React.FC<
     reset(initialData);
   }, [initialData, reset]);
 
-  const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data) => {
+  const handleFormSubmit: SubmitHandler<TimeWindowFormInputs> = (data, event) => {
+    // Prevent the form submission from bubbling up to the parent form
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
+    if (event?.stopPropagation) {
+      event.stopPropagation();
+    }
+
     const { description, startTime, endTime, categoryId } = data;
     if (!startTime || !endTime || !categoryId) return;
 

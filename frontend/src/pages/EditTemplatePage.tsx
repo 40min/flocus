@@ -79,11 +79,17 @@ const EditTemplatePage: React.FC = () => {
       return;
     }
     if (editingTimeWindow) {
-      // Edit
+      // Edit - preserve the original time window structure but update the editable fields
       setTemplateTimeWindows((prev) =>
         prev.map((tw) =>
           tw.id === editingTimeWindow.id
-            ? { ...tw, ...timeWindowData, category: selectedCategory }
+            ? {
+                ...tw,
+                description: timeWindowData.description,
+                start_time: timeWindowData.start_time,
+                end_time: timeWindowData.end_time,
+                category: selectedCategory,
+              }
             : tw
         )
       );
@@ -91,7 +97,9 @@ const EditTemplatePage: React.FC = () => {
       // Create
       const newLocalTimeWindow: TimeWindow = {
         id: `temp-${Date.now()}`,
-        ...timeWindowData,
+        description: timeWindowData.description,
+        start_time: timeWindowData.start_time,
+        end_time: timeWindowData.end_time,
         category: selectedCategory,
         day_template_id: routeTemplateId || "",
         user_id: "",

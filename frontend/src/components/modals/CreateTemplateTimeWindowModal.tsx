@@ -95,6 +95,12 @@ const CreateTemplateTimeWindowModal: React.FC<
       end_time: endTimeMinutes,
       category_id: categoryId,
     };
+
+    // Include the id for existing time windows when editing
+    if (editingTimeWindow) {
+      newTimeWindow.id = editingTimeWindow.id;
+    }
+
     onSubmit(newTimeWindow);
   };
 
